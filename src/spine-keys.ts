@@ -31,7 +31,7 @@ export const BUNDLE_TOP_LEVEL_KEYS: readonly string[] = ["version", "projects"];
 export function assertNoUnknownKeys(
   obj: Record<string, unknown>,
   allowed: readonly string[],
-  ctx: { readonly locate: string; readonly prefix?: string; readonly fieldKind?: string },
+  ctx: { readonly locate: string; readonly prefix?: string; readonly fieldKind?: "spine" | "bundle" },
 ): void {
   const prefix = ctx.prefix ?? "";
   const fieldKind = ctx.fieldKind ?? "spine";
