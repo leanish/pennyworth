@@ -1,0 +1,36 @@
+{
+  "name": "@leanish/agent-secureit",
+  "version": "0.0.0",
+  "private": true,
+  "description": "agent-secureit — phase-2 Layer-3 agent that opens draft PRs for security alerts. Built on @leanish/agent-runtime.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo",
+    "src",
+    "agent.yaml",
+    "SCOPE.md"
+  ],
+  "scripts": {
+    "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('.tsbuildinfo',{force:true});\"",
+    "build": "npm run clean && tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "check": "npm run typecheck && npm run build && npm test"
+  },
+  "dependencies": {
+    "@leanish/agent-runtime": "file:../agent-runtime"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
+  }
+}
