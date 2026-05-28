@@ -1,0 +1,66 @@
+{
+  "name": "@leanish/agent-runtime",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Runtime library every leanish Layer-3 agent depends on. Queue consumer + skill execution + working-copy sync + catalog access + idempotency.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./local": {
+      "types": "./dist/runtime/local.d.ts",
+      "import": "./dist/runtime/local.js"
+    },
+    "./lambda": {
+      "types": "./dist/runtime/lambda.d.ts",
+      "import": "./dist/runtime/lambda.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "agent-runtime": "./dist/bin/agent-runtime.js"
+  },
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo",
+    "src",
+    "skills"
+  ],
+  "scripts": {
+    "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('.tsbuildinfo',{force:true});\"",
+    "build": "npm run clean && tsc -b && chmod +x dist/bin/agent-runtime.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "typecheck": "tsc -b --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "check": "npm run typecheck && npm run build && npm test",
+    "check:full": "npm run check && npm run test:integration"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1053.0",
+    "@aws-sdk/client-eventbridge": "^3.1053.0",
+    "@aws-sdk/client-s3": "^3.1053.0",
+    "@aws-sdk/client-sqs": "^3.1053.0",
+    "@aws-sdk/client-ssm": "^3.1050.0",
+    "@leanish/catalogit": "file:../catalogit",
+    "ajv": "^8.20.0",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "@vitest/coverage-v8": "^4.1.7",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
+  }
+}

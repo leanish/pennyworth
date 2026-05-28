@@ -1,0 +1,66 @@
+# syntax=docker/dockerfile:1.7
+#
+# Shared Lambda runtime base for every Layer-3 leanish agent.
+#
+# Carries the bulk of the per-agent image that's actually agent-agnostic:
+#   - The AWS-managed Lambda Node 24 base (Amazon Linux 2023 + Node + the
+#     Lambda Runtime client) (~330 MB).
+#   - The two coding-agent CLIs (`@anthropic-ai/claude-code` and
+#     `@openai/codex`) installed globally so they're on `$PATH` for the
+#     `spawn(...)` calls in `ClaudeCodeRunner` / `CodexRunner` (~410 MB).
+#
+# Per-agent Dockerfiles (`agent-atc/Dockerfile`, `agent-secureit/Dockerfile`,
+# …) `FROM` this image and add only their own `dist/`, `agent.yaml`, and
+# production `node_modules` on top — ~20 LoC each, ~17 MB on top of the
+# shared base.
+#
+# Owner: `agent-infra` (per ATC ADR-0008 § Multi-agent Dockerfile shape).
+# Phase-1 build is local-only; phase-1+ pushes to a shared ECR repo with
+# the tag scheme `leanish/agent-runtime-base:<node-major>-cc<claude>-codex<codex>`.
+#
+# Build (from the agentic-development/ aggregation root):
+#
+#   docker build -f agent-infra/Dockerfile.base \
+#     -t leanish/agent-runtime-base:latest agent-infra/
+#
+# Or, with the helper script (also rebuilds when CLI versions are bumped
+# via --build-arg):
+#
+#   bash agent-infra/scripts/build-base.sh
+
+FROM public.ecr.aws/lambda/nodejs:24
+
+# Install the two coding-agent CLIs globally so `claude` and `codex` are
+# on $PATH for the spawn(...) calls in the runners. Pinned via ARGs so
+# they're override-able with `docker build --build-arg CLAUDE_VERSION=…`.
+#
+# Two gotchas in this base image:
+#   1. The default shell is `/bin/sh` (dash-like), which mis-parses
+#      `@scope/[email protected]` specs (npm reports
+#      `Invalid tag name "protected]"`). Switching to bash fixes it.
+#   2. The default WORKDIR is `/var/task`, where npm 11.x's
+#      "is-this-a-file-path?" detector mis-classifies the scoped
+#      package specs as local paths under /var/task. Running from
+#      /tmp sidesteps this.
+#
+# Specs are built into shell variables before the npm call rather than
+# embedded as literals — the latter form triggers a misparse somewhere
+# in the npm 11.x / bash interaction (npm treats the spec as a local-fs
+# path and reports ENOENT).
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+WORKDIR /tmp
+ARG CLAUDE_VERSION=2.1.150
+ARG CODEX_VERSION=0.133.0
+RUN CLAUDE_SPEC="@anthropic-ai/claude-code@${CLAUDE_VERSION}" \
+ && CODEX_SPEC="@openai/codex@${CODEX_VERSION}" \
+ && npm install -g --no-audit --no-fund "$CLAUDE_SPEC" "$CODEX_SPEC" \
+ && claude --version \
+ && codex --version
+# Restore Lambda's canonical WORKDIR for downstream agent images.
+WORKDIR /var/task
+
+# Label so `docker image ls --filter label=leanish.role=runtime-base` can
+# find this image without grep gymnastics.
+LABEL leanish.role=runtime-base
+LABEL leanish.claude-version=${CLAUDE_VERSION}
+LABEL leanish.codex-version=${CODEX_VERSION}
