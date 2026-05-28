@@ -136,13 +136,7 @@ export async function runDiscover(
         skeleton: o.skeleton,
         isTty: o.isTty,
       },
-      {
-        runProcess: d.runProcess,
-        runGh: d.runGh,
-        runGit: d.runGit,
-        confirm: d.confirm,
-        stderr: d.stderr,
-      },
+      d,
     );
 
     const bucket = writtenBucket(r.status);

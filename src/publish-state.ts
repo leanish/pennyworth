@@ -31,7 +31,7 @@ export async function readPublishState(catalogRoot: string): Promise<PublishStat
     // a directory in its place, I/O error) is present-but-unusable — reporting
     // it as missing would send the operator to `pull`, which won't help.
     const code = (err as NodeJS.ErrnoException).code;
-    if (code === "ENOENT" || code === "ENOTDIR") return { kind: "missing" };
+    if (code === "ENOENT") return { kind: "missing" };
     return { kind: "malformed", reason: code ?? (err instanceof Error ? err.message : "read error") };
   }
   let parsed: unknown;
