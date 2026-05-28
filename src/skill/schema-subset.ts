@@ -48,8 +48,6 @@ const ALLOWED_KEYWORDS = new Set([
   "examples",
 ]);
 
-const ANNOTATION_KEYWORDS = new Set(["description", "title", "examples"]);
-
 export function assertSubset(schema: unknown, entrypoint: string): void {
   walk(schema, "#", entrypoint);
 }
@@ -82,12 +80,8 @@ function walk(schema: unknown, pointer: string, entrypoint: string): void {
     }
   }
 
-  // annotation keywords — accept without validation
-  for (const annotation of ANNOTATION_KEYWORDS) {
-    if (annotation in obj) {
-      // Permitted; runtime ignores.
-    }
-  }
+  // annotation keywords (description / title / examples) are accepted via
+  // ALLOWED_KEYWORDS above and ignored by validation — no descent needed.
 
   // properties
   if ("properties" in obj) {

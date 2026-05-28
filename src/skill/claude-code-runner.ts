@@ -1,5 +1,5 @@
-import { spawn } from "node:child_process";
-
+import { buildSlashCommandPrompt } from "./slash-command-prompt.js";
+import { spawnCapture } from "./spawn-capture.js";
 import { stageSkills } from "./stage-skills.js";
 import type {
   CodingAgentRunner,
@@ -68,7 +68,7 @@ export class ClaudeCodeRunner implements CodingAgentRunner {
       ...(this.#stagingParentDir !== undefined ? { parentDir: this.#stagingParentDir } : {}),
     });
     try {
-      const prompt = buildPrompt(invocation);
+      const prompt = buildSlashCommandPrompt(invocation);
       const mount = resolveWorkingCopyMount(invocation.workingCopies);
       const args: string[] = ["--print", "--plugin-dir", staged.dir];
       for (const dir of mount.addDirs) {
@@ -82,72 +82,18 @@ export class ClaudeCodeRunner implements CodingAgentRunner {
       }
       args.push(prompt);
 
-      const result = await this.#runProcess({ args, cwd: mount.cwd });
-      return result;
+      return await spawnCapture({
+        bin: this.#bin,
+        args,
+        cwd: mount.cwd,
+        env: this.#env,
+        timeoutMs: this.#timeoutMs,
+        captureCapBytes: this.#captureCapBytes,
+        label: "ClaudeCodeRunner",
+      });
     } finally {
       await staged.cleanup();
     }
-  }
-
-  #runProcess(args: { args: ReadonlyArray<string>; cwd: string }): Promise<SkillInvocationResult> {
-    return new Promise((resolve, reject) => {
-      const child = spawn(this.#bin, [...args.args], {
-        cwd: args.cwd,
-        env: { ...process.env, ...this.#env },
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-
-      let stdoutBytes = 0;
-      let stderrBytes = 0;
-      let stdout = "";
-      let stderr = "";
-
-      const onStdout = (chunk: Buffer): void => {
-        stdoutBytes += chunk.length;
-        if (stdoutBytes <= this.#captureCapBytes) {
-          stdout += chunk.toString("utf8");
-        }
-      };
-      const onStderr = (chunk: Buffer): void => {
-        stderrBytes += chunk.length;
-        if (stderrBytes <= this.#captureCapBytes) {
-          stderr += chunk.toString("utf8");
-        }
-      };
-
-      child.stdout.on("data", onStdout);
-      child.stderr.on("data", onStderr);
-
-      const timer = setTimeout(() => {
-        child.kill("SIGKILL");
-        reject(
-          new Error(
-            `ClaudeCodeRunner: '${this.#bin}' did not return within ${this.#timeoutMs}ms`,
-          ),
-        );
-      }, this.#timeoutMs);
-
-      child.on("error", (err) => {
-        clearTimeout(timer);
-        reject(err);
-      });
-
-      child.on("close", (code) => {
-        clearTimeout(timer);
-        if (code !== 0) {
-          reject(
-            new Error(
-              `ClaudeCodeRunner: '${this.#bin}' exited with code ${code}; stderr tail: ${tail(stderr)}`,
-            ),
-          );
-          return;
-        }
-        resolve({
-          responseText: stdout,
-          ...(stderr.length > 0 ? { stderrTail: tail(stderr) } : {}),
-        });
-      });
-    });
   }
 }
 
@@ -166,21 +112,4 @@ export class ClaudeCodeRunner implements CodingAgentRunner {
  */
 export function mapEffortForClaudeCli(effort: string): string {
   return effort === "minimal" ? "low" : effort;
-}
-
-function buildPrompt(invocation: SkillInvocation): string {
-  // The skill body is mounted as a plugin slash-command; we trigger it
-  // with `/<entrypoint>` and pass the rendered YAML as the body. Multi-line
-  // args are fine inside a single quoted CLI argument because we spawn the
-  // process directly (no shell parsing).
-  if (invocation.renderedArguments.length === 0) {
-    return `/${invocation.entrypoint.name}`;
-  }
-  return `/${invocation.entrypoint.name}\n${invocation.renderedArguments}`;
-}
-
-const TAIL_BYTES = 4096;
-function tail(s: string): string {
-  if (s.length <= TAIL_BYTES) return s;
-  return s.slice(-TAIL_BYTES);
 }

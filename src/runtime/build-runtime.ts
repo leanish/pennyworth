@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 
 import type { CatalogReadOnly, Project } from "@leanish/catalogit";
 
-import { MissingNeedError, RouterNotConfiguredError } from "../errors.js";
+import { RouterNotConfiguredError } from "../errors.js";
+import { gateClientsByNeeds } from "../needs/wire-clients.js";
 import { createExecutionHelper } from "../execution/resolve.js";
 import { ConsoleLogger } from "../logger/console-logger.js";
 import { SchemaValidator } from "../skill/validator.js";
@@ -126,31 +127,9 @@ export async function buildRuntime(options: BuildRuntimeOptions): Promise<Runtim
         args,
       );
     },
-    clients: enforceNeedsGating(options.descriptor.needs, options.clients),
+    clients: gateClientsByNeeds(options.descriptor.needs, options.clients),
     logger: baseLogger,
   };
-}
-
-/**
- * Wrap the provided `clients` in a Proxy that throws `MissingNeedError`
- * when handler code reads a property the descriptor hasn't declared in
- * `needs:`. Declared-but-unwired access returns the underlying property
- * (likely `undefined`), which is the existing developer-error path.
- */
-function enforceNeedsGating(
-  needs: ReadonlyArray<string>,
-  clients: Clients,
-): Clients {
-  const declared = new Set(needs);
-  return new Proxy(clients, {
-    get(target, prop) {
-      if (typeof prop !== "string") return undefined;
-      if (!declared.has(prop)) {
-        throw new MissingNeedError(prop);
-      }
-      return (target as Record<string, unknown>)[prop];
-    },
-  });
 }
 
 /**

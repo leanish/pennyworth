@@ -32,16 +32,11 @@ export async function dispatch<P extends AgentPayloadBase, R>(
   runtime: Runtime,
   message: RuntimeMessage<P>,
 ): Promise<R> {
-  if (!isStage(message.stage)) {
+  // Reject a stage that isn't in the canonical vocabulary *or* isn't in this
+  // descriptor's declared `stages:` set — both are the same rejection.
+  if (!isStage(message.stage) || !descriptor.stages.includes(message.stage)) {
     throw new UnhandledStageError(
       String(message.stage),
-      descriptor.stages,
-      descriptor.identifier,
-    );
-  }
-  if (!descriptor.stages.includes(message.stage)) {
-    throw new UnhandledStageError(
-      message.stage,
       descriptor.stages,
       descriptor.identifier,
     );

@@ -1,6 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import { parseArgs as nodeParseArgs } from "node:util";
 
 import { randomUUID } from "node:crypto";
@@ -28,7 +28,7 @@ import { InMemoryWorkspace } from "../working-copy/in-memory-workspace.js";
 import { LocalGitWorkspace } from "../working-copy/local-git-workspace.js";
 import type { Workspace } from "../working-copy/workspace.js";
 
-import { buildRuntime } from "./build-runtime.js";
+import { buildRuntime, defaultRuntimeSkillsDir } from "./build-runtime.js";
 import { runLocal } from "./run-local.js";
 
 /**
@@ -235,14 +235,6 @@ async function runLocalCommand(args: ParsedArgs, ctx: RunLocalContext): Promise<
   ctx.stdout.write(JSON.stringify(reply ?? null) + "\n");
 }
 
-function defaultRuntimeSkillsDir(): string {
-  // Mirrors `defaultSkillsDir()` in build-runtime.ts. We resolve it from
-  // the CLI side so that `--skills-dir` can default cleanly when omitted
-  // and the same path lands in both `SkillLoader` (inside `buildRuntime`)
-  // and the runtime's logging output.
-  return join(dirname(fileURLToPath(import.meta.url)), "..", "..", "skills");
-}
-
 async function loadAgentModule(modulePath: string): Promise<AgentDefinition> {
   const abs = isAbsolute(modulePath) ? modulePath : resolve(modulePath);
   await stat(abs).catch(() => {
@@ -314,10 +306,13 @@ async function loadMessage(
   // unavailable locally.
   const obj = parsed as Record<string, unknown>;
   if (looksLikeEnvelope(obj)) {
-    if (options.consumerSecret !== undefined) {
-      await verifyEnvelopeWithSecret(obj, options.consumerSecret);
-    }
-    return envelopeToRuntimeMessage(obj as unknown as SignedEnvelope, {
+    // With a secret, HMAC-verify and use the parsed result. Without one,
+    // trust the shape as-is (the documented replay-and-debug default).
+    const envelope =
+      options.consumerSecret !== undefined
+        ? await verifyEnvelopeWithSecret(obj, options.consumerSecret)
+        : (obj as unknown as SignedEnvelope);
+    return envelopeToRuntimeMessage(envelope, {
       sqsMessageId: `local-${randomUUID()}`,
       receivedAt: clock(),
     }) as RuntimeMessage;
@@ -328,7 +323,7 @@ async function loadMessage(
 async function verifyEnvelopeWithSecret(
   envelope: Record<string, unknown>,
   secret: string,
-): Promise<void> {
+): Promise<SignedEnvelope> {
   const consumerId = envelope["consumer"];
   if (typeof consumerId !== "string" || consumerId.length === 0) {
     // `looksLikeEnvelope` already guarantees this, but TypeScript doesn't
@@ -344,7 +339,7 @@ async function verifyEnvelopeWithSecret(
       allowedKinds,
     },
   ]);
-  await verifyEnvelope({
+  return verifyEnvelope({
     envelope,
     consumerRegistry: registry,
   });

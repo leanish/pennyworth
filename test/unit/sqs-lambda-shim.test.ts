@@ -26,6 +26,19 @@ const DESCRIPTOR: AgentDescriptor = {
   extensions: {},
 };
 
+const UNSIGNED_DESCRIPTOR: AgentDescriptor = {
+  ...DESCRIPTOR,
+  triggers: [{ type: "consumer", queueArnRef: "q", dlqArnRef: "dlq", signedEnvelope: false }],
+};
+
+/** An envelope-shaped body with no `signature` field (the `signedEnvelope:false` path). */
+function unsignedRecord(
+  messageId: string,
+  envelope: Record<string, unknown>,
+): { messageId: string; body: string } {
+  return { messageId, body: JSON.stringify(envelope) };
+}
+
 function signedRecord(
   messageId: string,
   payload: Record<string, unknown>,
@@ -87,6 +100,65 @@ describe("createSqsLambdaShim", () => {
     expect(result.batchItemFailures).toHaveLength(0);
     expect(handle).toHaveBeenCalledOnce();
     expect(idempotency.inspect("msg-1")).toMatchObject({ status: "completed" });
+  });
+
+  it("accepts an unsigned consumer envelope (signedEnvelope:false) with no signature", async () => {
+    const idempotency = new MemoryIdempotencyStore();
+    const handle = vi.fn(async () => {});
+    const agent = defineAgent({ identifier: "atc", handle });
+
+    // No consumerRegistry: unsigned triggers don't require one.
+    const shim = createSqsLambdaShim({
+      agent,
+      descriptor: UNSIGNED_DESCRIPTOR,
+      runtime: {} as Runtime,
+      idempotencyStore: idempotency,
+      logger: QUIET_LOGGER,
+    });
+
+    const record = unsignedRecord("msg-unsigned", {
+      kind: "ask",
+      requestId: "msg-unsigned",
+      consumer: "atc-ui",
+      endUser: "github:U1",
+      timestamp: new Date().toISOString(),
+      payload: { question: "X?" },
+      // no `signature`
+    });
+    const result = await shim({ Records: [record] });
+
+    expect(result.batchItemFailures).toHaveLength(0);
+    expect(result.results[0]?.status).toBe("handled");
+    expect(handle).toHaveBeenCalledOnce();
+    expect(idempotency.inspect("msg-unsigned")).toMatchObject({ status: "completed" });
+  });
+
+  it("rejects an unsigned consumer envelope that is structurally malformed", async () => {
+    const idempotency = new MemoryIdempotencyStore();
+    const handle = vi.fn(async () => {});
+    const agent = defineAgent({ identifier: "atc", handle });
+
+    const shim = createSqsLambdaShim({
+      agent,
+      descriptor: UNSIGNED_DESCRIPTOR,
+      runtime: {} as Runtime,
+      idempotencyStore: idempotency,
+      logger: QUIET_LOGGER,
+    });
+
+    // Missing `kind` — shape validation still runs even without a signature.
+    const record = unsignedRecord("msg-unsigned-bad", {
+      requestId: "msg-unsigned-bad",
+      consumer: "atc-ui",
+      endUser: "github:U1",
+      timestamp: new Date().toISOString(),
+      payload: { question: "X?" },
+    });
+    const result = await shim({ Records: [record] });
+
+    expect(result.batchItemFailures).toEqual([{ itemIdentifier: "msg-unsigned-bad" }]);
+    expect(result.results[0]?.status).toBe("envelope-rejected");
+    expect(handle).not.toHaveBeenCalled();
   });
 
   it("ACKs (no failure) when the same MessageId has already completed", async () => {

@@ -48,7 +48,23 @@ export function wireClients(args: WireClientsArgs): Clients {
     (backing as Record<string, unknown>)[need] = client;
   }
 
-  return new Proxy(backing as Clients, {
+  return gateClientsByNeeds(args.needs, backing as Clients);
+}
+
+/**
+ * Wrap `clients` in a Proxy that throws `MissingNeedError` when handler code
+ * reads a property not in `needs:`. Declared-but-unwired access returns the
+ * underlying property (likely `undefined`) — the existing developer-error
+ * path. Shared by `wireClients` (gates its own output) and `buildRuntime`
+ * (gates whatever clients it's handed); each layer guards its own boundary,
+ * so this is the single source for the trap.
+ */
+export function gateClientsByNeeds(
+  needs: ReadonlyArray<string>,
+  clients: Clients,
+): Clients {
+  const declared = new Set(needs);
+  return new Proxy(clients, {
     get(target, prop) {
       if (typeof prop !== "string") return undefined;
       if (!declared.has(prop)) {

@@ -40,7 +40,7 @@ export interface VerifyEnvelopeArgs {
 const DEFAULT_SKEW_MS = 5 * 60 * 1000;
 
 export async function verifyEnvelope(args: VerifyEnvelopeArgs): Promise<SignedEnvelope> {
-  const env = parseEnvelope(args.envelope);
+  const env = parseEnvelopeShape(args.envelope, { requireSignature: true });
   checkTimestamp(env, args.now ?? Date.now(), args.clockSkewMs ?? DEFAULT_SKEW_MS);
 
   const record = await args.consumerRegistry.get(env.consumer);
@@ -68,7 +68,19 @@ export async function verifyEnvelope(args: VerifyEnvelopeArgs): Promise<SignedEn
   return env;
 }
 
-function parseEnvelope(value: unknown): SignedEnvelope {
+/**
+ * Parse + shape-validate an envelope, without HMAC / clock-skew / registry
+ * checks. Shared by `verifyEnvelope` (which calls it with
+ * `requireSignature: true`, then layers the cryptographic checks) and the
+ * SQS shim's unsigned-consumer path (`requireSignature: false`, used for
+ * local-dev / `signedEnvelope: false` triggers where the signature is
+ * absent and trusted). Throws `EnvelopeVerificationError("malformed-envelope")`
+ * on any shape failure.
+ */
+export function parseEnvelopeShape(
+  value: unknown,
+  options: { readonly requireSignature: boolean },
+): SignedEnvelope {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw malformed("envelope must be an object");
   }
@@ -93,7 +105,7 @@ function parseEnvelope(value: unknown): SignedEnvelope {
   const consumer = requireString("consumer");
   const endUser = requireString("endUser");
   const timestamp = requireString("timestamp");
-  const signature = requireString("signature");
+  const signature = options.requireSignature ? requireString("signature") : optionalString("signature") ?? "";
   const conversationKey = optionalString("conversationKey");
   const replyTo = optionalString("replyTo");
 

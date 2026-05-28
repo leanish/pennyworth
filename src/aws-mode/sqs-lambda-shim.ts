@@ -2,7 +2,7 @@ import { dispatch } from "../dispatch/dispatch.js";
 import type { ConsumerRegistry, ConsumerRecord } from "../consumer-registry/store.js";
 import { EnvelopeVerificationError } from "../errors.js";
 import { envelopeToRuntimeMessage } from "../envelope/to-runtime-message.js";
-import { verifyEnvelope } from "../envelope/verify.js";
+import { parseEnvelopeShape, verifyEnvelope } from "../envelope/verify.js";
 import type { IdempotencyStore } from "../idempotency/store.js";
 import type { AgentDefinition } from "../types/agent.js";
 import type { AgentDescriptor, ConsumerTrigger } from "../types/descriptor.js";
@@ -136,8 +136,9 @@ async function processRecord<P extends AgentPayloadBase>(args: {
   let verified;
   try {
     if (!requireVerification) {
-      // For unsigned consumer messages (local-dev, etc.) — accept the parsed shape as-is.
-      verified = parseShallowEnvelope(envelopeRaw);
+      // For unsigned consumer messages (local-dev, etc.) — shape-validate and
+      // trust as-is (HMAC + clock-skew skipped; signature optional).
+      verified = parseEnvelopeShape(envelopeRaw, { requireSignature: false });
     } else {
       verified = await verifyEnvelope({
         envelope: envelopeRaw,
@@ -230,59 +231,6 @@ async function processRecord<P extends AgentPayloadBase>(args: {
     log.error("handler threw; idempotency expired for fast retry", { error });
     return { messageId: record.messageId, status: "handler-failed", error };
   }
-}
-
-/**
- * Treat an inbound parsed envelope as already-trusted (used when
- * `signedEnvelope: false`, primarily for local development or tests).
- * Field validation matches `verifyEnvelope`'s parser; HMAC + clock-skew
- * are skipped.
- */
-function parseShallowEnvelope(value: unknown): import("../envelope/verify.js").SignedEnvelope {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new EnvelopeVerificationError("malformed-envelope", "envelope must be an object");
-  }
-  const v = value as Record<string, unknown>;
-  const requireString = (field: string): string => {
-    const raw = v[field];
-    if (typeof raw !== "string" || raw.length === 0) {
-      throw new EnvelopeVerificationError(
-        "malformed-envelope",
-        `envelope.${field} must be a non-empty string`,
-      );
-    }
-    return raw;
-  };
-  const optionalString = (field: string): string | undefined => {
-    const raw = v[field];
-    if (raw === undefined) return undefined;
-    if (typeof raw !== "string") {
-      throw new EnvelopeVerificationError(
-        "malformed-envelope",
-        `envelope.${field} must be a string when present`,
-      );
-    }
-    return raw;
-  };
-  const payload = v["payload"];
-  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
-    throw new EnvelopeVerificationError("malformed-envelope", "envelope.payload must be an object");
-  }
-  return {
-    kind: requireString("kind"),
-    requestId: requireString("requestId"),
-    consumer: requireString("consumer"),
-    endUser: requireString("endUser"),
-    timestamp: requireString("timestamp"),
-    signature: optionalString("signature") ?? "",
-    payload: payload as Readonly<Record<string, unknown>>,
-    ...(optionalString("conversationKey") !== undefined
-      ? { conversationKey: optionalString("conversationKey")! }
-      : {}),
-    ...(optionalString("replyTo") !== undefined
-      ? { replyTo: optionalString("replyTo")! }
-      : {}),
-  };
 }
 
 function errorMessage(err: unknown): string {

@@ -1,5 +1,7 @@
 import { EntrypointInvocationError } from "../errors.js";
 
+import { tail } from "./tail.js";
+
 /**
  * Extract + parse the terminal fenced-`json` block from an Entry-point
  * Skill's response. Per ADR-0004:
@@ -79,9 +81,4 @@ function* findJsonFences(text: string): Generator<JsonFence> {
   }
 }
 
-const TAIL_BYTES = 4096; // ADR-0004: each captured field capped at 4 KiB
 const MESSAGE_TAIL_BYTES = 200; // user-visible message; deeper detail lives on `captured`
-function tail(s: string): string {
-  if (s.length <= TAIL_BYTES) return s;
-  return s.slice(-TAIL_BYTES);
-}
