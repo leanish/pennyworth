@@ -63,6 +63,12 @@ function makeOpts(overrides: Partial<DiscoverOptions> & { catalogRoot: string })
   return { ...base, ...overrides };
 }
 
+/** Capturing output sink — collects writes so tests can assert on emitted text. */
+function captureSink(): { sink: { write(chunk: string): void }; text: () => string } {
+  const chunks: string[] = [];
+  return { sink: { write: (chunk) => void chunks.push(chunk) }, text: () => chunks.join("") };
+}
+
 function makeDeps(overrides: Partial<DiscoverDeps> = {}): DiscoverDeps {
   return {
     runProcess: makeRunProcess(),
@@ -71,6 +77,8 @@ function makeDeps(overrides: Partial<DiscoverDeps> = {}): DiscoverDeps {
     confirm: async (_msg) => true,
     listRepos: fakeListRepos,
     select: makeSelect([]),
+    stdout: { write: () => {} },
+    stderr: { write: () => {} },
     ...overrides,
   };
 }
@@ -113,6 +121,16 @@ describe("runDiscover", () => {
     expect(result.summary.skeleton).toContain("leanish/a");
     expect(result.summary.skeleton).toContain("leanish/c");
     expect(result.summary.skeleton).not.toContain("leanish/b");
+  });
+
+  it("routes the no-TTY error through the injected stderr sink (not a global)", async () => {
+    const cap = captureSink();
+    const result = await runDiscover(
+      makeOpts({ catalogRoot }), // isTty:false default + no --add → no-TTY branch
+      makeDeps({ stderr: cap.sink }),
+    );
+    expect(result.exitCode).toBe(1);
+    expect(cap.text()).toContain("no TTY and no --add");
   });
 
   it("--add [a,c] case-insensitive: 'A' and 'C' match repos named a and c", async () => {

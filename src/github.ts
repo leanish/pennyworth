@@ -20,6 +20,8 @@ export type RunGh = (args: readonly string[]) => Promise<RunResult>;
 
 export class GhError extends Error {}
 
+const GH_AUTH_HINT = "Ensure the `gh` CLI is installed and authenticated: `gh auth login`";
+
 interface RawRepoEntry {
   name: string;
   owner: { login: string };
@@ -73,8 +75,7 @@ export async function listRepos(opts: {
   const result = await runGh(args);
   if (result.code !== 0) {
     throw new GhError(
-      `gh repo list failed (exit ${result.code}): ${result.stderr}\n` +
-        "Ensure the `gh` CLI is installed and authenticated: `gh auth login`",
+      `gh repo list failed (exit ${result.code}): ${result.stderr}\n${GH_AUTH_HINT}`,
     );
   }
 
@@ -102,8 +103,7 @@ export async function getRepoMeta(opts: {
 
   if (result.code !== 0) {
     throw new GhError(
-      `gh repo view failed (exit ${result.code}): ${result.stderr}\n` +
-        "Ensure the `gh` CLI is installed and authenticated: `gh auth login`",
+      `gh repo view failed (exit ${result.code}): ${result.stderr}\n${GH_AUTH_HINT}`,
     );
   }
 

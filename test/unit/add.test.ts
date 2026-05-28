@@ -50,12 +50,19 @@ function makeOpts(
   return { ...base, ...overrides };
 }
 
+/** Capturing output sink — collects writes so tests can assert on emitted text. */
+function captureSink(): { sink: { write(chunk: string): void }; text: () => string } {
+  const chunks: string[] = [];
+  return { sink: { write: (chunk) => void chunks.push(chunk) }, text: () => chunks.join("") };
+}
+
 function makeDeps(overrides: Partial<AddDeps> = {}): AddDeps {
   return {
     runProcess: makeRunProcess(0),
     runGh: runGhOk,
     runGit: runGitOk,
     confirm: confirmFn(true),
+    stderr: { write: () => {} },
     ...overrides,
   };
 }
@@ -103,6 +110,16 @@ describe("runAdd", () => {
     const catalog = await FilesystemCatalog.load({ catalogRoot });
     const project = catalog.get("leanish/foo");
     expect(project?.description).toBeUndefined();
+  });
+
+  it("routes error output through the injected stderr sink (not a global)", async () => {
+    const cap = captureSink();
+    const result = await runAdd(
+      makeOpts({ catalogRoot, id: "Bad Owner/repo" }),
+      makeDeps({ stderr: cap.sink }),
+    );
+    expect(result).toEqual({ status: "skipped", exitCode: 1 });
+    expect(cap.text()).toContain(`invalid id "Bad Owner/repo"`);
   });
 
   // --- existing + force: spine preserved ------------------------------------

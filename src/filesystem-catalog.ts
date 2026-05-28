@@ -6,6 +6,11 @@ import { parse as parseYaml } from "yaml";
 import type { CatalogReadOnly, ConsumerCatalogView } from "./catalog.js";
 import { isEnabledForConsumer } from "./consumer-filter.js";
 import type { Project } from "./project.js";
+import {
+  assertNoUnknownKeys,
+  PROJECT_SOURCE_KEYS,
+  PROJECT_SPINE_KEYS,
+} from "./spine-keys.js";
 
 /**
  * Local-mode catalog client. Reads catalogit's per-project YAML layout
@@ -76,10 +81,11 @@ export function parseProjectYaml(raw: string, source: string): Project {
     throw new Error(`project YAML at ${source} must be a mapping`);
   }
   const value = parsed as Record<string, unknown>;
-  assertNoUnknownKeys(value, PROJECT_SPINE_KEYS, "", source);
+  const locate = `project YAML at ${source}`;
+  assertNoUnknownKeys(value, PROJECT_SPINE_KEYS, { locate });
   const id = expectStringRaw(value["id"], "id", source);
   const sourceField = expectObjectRaw(value["source"], "source", source);
-  assertNoUnknownKeys(sourceField, PROJECT_SOURCE_KEYS, "source.", source);
+  assertNoUnknownKeys(sourceField, PROJECT_SOURCE_KEYS, { locate, prefix: "source." });
   const url = expectStringRaw(sourceField["url"], "source.url", source);
   const branchRaw = sourceField["branch"];
   const branch =
@@ -102,32 +108,6 @@ export function parseProjectYaml(raw: string, source: string): Project {
     ...(description !== undefined ? { description } : {}),
     extensions,
   };
-}
-
-/** Closed set of top-level spine keys allowed on a project record. */
-const PROJECT_SPINE_KEYS: readonly string[] = ["id", "source", "description", "extensions"];
-
-/** Closed set of keys allowed inside the `source` object. */
-const PROJECT_SOURCE_KEYS: readonly string[] = ["url", "branch"];
-
-/**
- * Reject any key in `obj` that is not in `allowed`. Strict-by-default
- * spine validation per ADR-0014: unknown fields fail loud at edit time
- * rather than silently dropping on read.
- */
-function assertNoUnknownKeys(
-  obj: Record<string, unknown>,
-  allowed: readonly string[],
-  pathPrefix: string,
-  source: string,
-): void {
-  for (const key of Object.keys(obj)) {
-    if (!allowed.includes(key)) {
-      throw new Error(
-        `project YAML at ${source} has unknown spine field '${pathPrefix}${key}' (allowed: ${allowed.map((k) => `'${pathPrefix}${k}'`).join(", ")})`,
-      );
-    }
-  }
 }
 
 function expectStringRaw(raw: unknown, field: string, source: string): string {

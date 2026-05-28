@@ -17,11 +17,23 @@ import type { Project, ProjectSource } from "./project.js";
 import { projectFileExists, writeProjectYaml, writeSkeleton } from "./project-writer.js";
 import { mapRepoToId } from "./repo-id.js";
 
+/**
+ * Minimal output sink. The CLI wires its injected `stderr` stream; tests pass
+ * a capture or no-op sink. Keeping the surface to `write(string)` means both
+ * `NodeJS.WritableStream` (process / CLI streams) and a plain `{ write }` test
+ * double satisfy it without casts.
+ */
+export interface OutputSink {
+  write(chunk: string): void;
+}
+
 export interface AddDeps {
   readonly runProcess: RunProcess;
   readonly runGh: RunGh;
   readonly runGit: RunGit;
   readonly confirm: (message: string) => Promise<boolean>;
+  /** Diagnostic / error output. Replaces the old direct `console.error`. */
+  readonly stderr: OutputSink;
 }
 
 export interface AddOptions {
@@ -39,6 +51,14 @@ export type AddStatus = "added" | "overridden" | "skeleton" | "skipped";
 
 const URL_RE = /^https?:\/\/|^git@/;
 
+/** Split `"owner/repo"` on the first slash. `repo` is `""` when there's no slash. */
+function splitOwnerRepo(input: string): { owner: string; repo: string } {
+  const slash = input.indexOf("/");
+  return slash === -1
+    ? { owner: input, repo: "" }
+    : { owner: input.slice(0, slash), repo: input.slice(slash + 1) };
+}
+
 /** Returns true when `path` is an existing directory on the local filesystem. */
 async function isLocalDir(path: string): Promise<boolean> {
   try {
@@ -54,12 +74,10 @@ export async function runAdd(
   d: AddDeps,
 ): Promise<{ status: AddStatus; exitCode: number }> {
   // 1. Validate id
-  const slash = o.id.indexOf("/");
-  const rawOwner = slash === -1 ? o.id : o.id.slice(0, slash);
-  const rawRepo = slash === -1 ? "" : o.id.slice(slash + 1);
+  const { owner: rawOwner, repo: rawRepo } = splitOwnerRepo(o.id);
   const mapped = mapRepoToId(rawOwner, rawRepo);
   if (!mapped.ok) {
-    console.error(`catalogit add: invalid id "${o.id}": ${mapped.reason}`);
+    d.stderr.write(`catalogit add: invalid id "${o.id}": ${mapped.reason}\n`);
     return { status: "skipped", exitCode: 1 };
   }
   const { id, owner, slug } = mapped;
@@ -73,8 +91,8 @@ export async function runAdd(
       );
       if (!ok) return { status: "skipped", exitCode: 0 };
     } else {
-      console.error(
-        `catalogit add: "${id}" is already cataloged. Use --force to re-draft, or edit the file directly.`,
+      d.stderr.write(
+        `catalogit add: "${id}" is already cataloged. Use --force to re-draft, or edit the file directly.\n`,
       );
       return { status: "skipped", exitCode: 1 };
     }
@@ -85,23 +103,16 @@ export async function runAdd(
   const sourceUrl =
     o.from !== undefined && URL_RE.test(o.from) ? o.from : derivedUrl;
 
-  // 4. Spine preservation
-  let source: ProjectSource;
-  let extensions: Readonly<Record<string, unknown>>;
-
+  // 4. Spine preservation: default to a fresh spine; when overriding an
+  // existing record, preserve its source + extensions (curator opt-outs).
+  let source: ProjectSource = { url: sourceUrl, branch: "main" };
+  let extensions: Readonly<Record<string, unknown>> = {};
   if (exists) {
-    const catalog = await FilesystemCatalog.load({ catalogRoot: o.catalogRoot });
-    const existing = catalog.get(id);
+    const existing = (await FilesystemCatalog.load({ catalogRoot: o.catalogRoot })).get(id);
     if (existing !== undefined) {
       source = existing.source;
       extensions = existing.extensions;
-    } else {
-      source = { url: sourceUrl, branch: "main" };
-      extensions = {};
     }
-  } else {
-    source = { url: sourceUrl, branch: "main" };
-    extensions = {};
   }
 
   // 5. --skeleton → no drafting
@@ -121,9 +132,7 @@ export async function runAdd(
   // 6. Draft (with one retry on DraftError)
   let githubMeta: { description: string | null; topics: readonly string[] } | undefined;
   if (o.fromGithub !== undefined) {
-    const ghSlash = o.fromGithub.indexOf("/");
-    const ghOwner = ghSlash === -1 ? o.fromGithub : o.fromGithub.slice(0, ghSlash);
-    const ghRepo = ghSlash === -1 ? "" : o.fromGithub.slice(ghSlash + 1);
+    const { owner: ghOwner, repo: ghRepo } = splitOwnerRepo(o.fromGithub);
     githubMeta = await getRepoMeta({ owner: ghOwner, repo: ghRepo, runGh: d.runGh });
   }
 
@@ -155,8 +164,8 @@ export async function runAdd(
     }
   } catch (err) {
     if (err instanceof DraftError) {
-      console.error(
-        `catalogit add: agent failed twice for "${id}"; writing skeleton. Run again to retry.`,
+      d.stderr.write(
+        `catalogit add: agent failed twice for "${id}"; writing skeleton. Run again to retry.\n`,
       );
       await writeSkeleton(o.catalogRoot, id, source.url);
       return { status: "skeleton", exitCode: 4 };

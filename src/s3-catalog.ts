@@ -3,6 +3,12 @@ import { GetObjectCommand, type S3Client as AwsS3Client } from "@aws-sdk/client-
 import type { CatalogReadOnly, ConsumerCatalogView } from "./catalog.js";
 import { isEnabledForConsumer } from "./consumer-filter.js";
 import type { Project } from "./project.js";
+import {
+  assertNoUnknownKeys,
+  BUNDLE_TOP_LEVEL_KEYS,
+  PROJECT_SOURCE_KEYS,
+  PROJECT_SPINE_KEYS,
+} from "./spine-keys.js";
 
 /**
  * AWS-mode catalog client. Reads the deployed `catalog.json` bundle from
@@ -248,7 +254,10 @@ export function parseBundle(raw: string, source: string): CatalogBundle {
     throw new Error(`S3Catalog: ${source} is not a JSON object`);
   }
   const value = parsed as Record<string, unknown>;
-  assertNoUnknownBundleKeys(value, source);
+  assertNoUnknownKeys(value, BUNDLE_TOP_LEVEL_KEYS, {
+    locate: `S3Catalog: ${source}`,
+    fieldKind: "bundle",
+  });
   const version = value["version"];
   if (typeof version !== "string" || version.length === 0) {
     throw new Error(`S3Catalog: ${source} missing 'version'`);
@@ -272,7 +281,8 @@ function parseProjectEntry(value: unknown, source: string, index: number): Proje
     throw new Error(`S3Catalog: ${source} projects[${index}] is not an object`);
   }
   const v = value as Record<string, unknown>;
-  assertNoUnknownProjectKeys(v, source, index, "");
+  const locate = `S3Catalog: ${source} projects[${index}]`;
+  assertNoUnknownKeys(v, PROJECT_SPINE_KEYS, { locate });
   const id = v["id"];
   if (typeof id !== "string" || id.length === 0) {
     throw new Error(`S3Catalog: ${source} projects[${index}] missing 'id'`);
@@ -282,7 +292,7 @@ function parseProjectEntry(value: unknown, source: string, index: number): Proje
     throw new Error(`S3Catalog: ${source} projects[${index}] missing 'source'`);
   }
   const srcMap = src as Record<string, unknown>;
-  assertNoUnknownProjectKeys(srcMap, source, index, "source.");
+  assertNoUnknownKeys(srcMap, PROJECT_SOURCE_KEYS, { locate, prefix: "source." });
   const url = srcMap["url"];
   if (typeof url !== "string" || url.length === 0) {
     throw new Error(`S3Catalog: ${source} projects[${index}].source.url missing`);
@@ -304,51 +314,6 @@ function parseProjectEntry(value: unknown, source: string, index: number): Proje
     ...(description !== undefined ? { description } : {}),
     extensions,
   };
-}
-
-/** Closed set of top-level bundle keys allowed in `catalog.json`. */
-const BUNDLE_TOP_LEVEL_KEYS: readonly string[] = ["version", "projects"];
-
-/** Closed set of top-level spine keys allowed on a project record. */
-const PROJECT_SPINE_KEYS: readonly string[] = ["id", "source", "description", "extensions"];
-
-/** Closed set of keys allowed inside the `source` object. */
-const PROJECT_SOURCE_KEYS: readonly string[] = ["url", "branch"];
-
-/**
- * Reject any unknown bundle-level key (strict-by-default per ADR-0014).
- * Anything outside `{version, projects}` fails loud rather than being
- * silently dropped.
- */
-function assertNoUnknownBundleKeys(obj: Record<string, unknown>, source: string): void {
-  for (const key of Object.keys(obj)) {
-    if (!BUNDLE_TOP_LEVEL_KEYS.includes(key)) {
-      throw new Error(
-        `S3Catalog: ${source} has unknown bundle field '${key}' (allowed: ${BUNDLE_TOP_LEVEL_KEYS.map((k) => `'${k}'`).join(", ")})`,
-      );
-    }
-  }
-}
-
-/**
- * Reject any unknown spine key on a project entry (strict-by-default per
- * ADR-0014). `pathPrefix` is `""` for top-level entries and `"source."`
- * for the nested source object.
- */
-function assertNoUnknownProjectKeys(
-  obj: Record<string, unknown>,
-  source: string,
-  index: number,
-  pathPrefix: string,
-): void {
-  const allowed = pathPrefix === "" ? PROJECT_SPINE_KEYS : PROJECT_SOURCE_KEYS;
-  for (const key of Object.keys(obj)) {
-    if (!allowed.includes(key)) {
-      throw new Error(
-        `S3Catalog: ${source} projects[${index}] has unknown spine field '${pathPrefix}${key}' (allowed: ${allowed.map((k) => `'${pathPrefix}${k}'`).join(", ")})`,
-      );
-    }
-  }
 }
 
 function indexById(projects: ReadonlyArray<Project>): ReadonlyMap<string, Project> {

@@ -1,4 +1,4 @@
-import { rm, writeFile } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 
 import { GetObjectCommand, type S3Client as AwsS3Client } from "@aws-sdk/client-s3";
@@ -6,6 +6,7 @@ import { GetObjectCommand, type S3Client as AwsS3Client } from "@aws-sdk/client-
 import { FilesystemCatalog } from "./filesystem-catalog.js";
 import type { Project } from "./project.js";
 import { projectFileExists, writeProjectYaml } from "./project-writer.js";
+import { writePublishState } from "./publish-state.js";
 import { idToFilename } from "./repo-id.js";
 import { parseBundle } from "./s3-catalog.js";
 
@@ -98,9 +99,8 @@ export async function pullCatalog(opts: PullOptions, deps: PullDeps): Promise<Pu
     }
   }
 
-  // Step 5: Write state file
-  const stateContent = JSON.stringify({ etag }) + "\n";
-  await writeFile(join(opts.catalogRoot, ".catalogit-state.json"), stateContent, "utf8");
+  // Step 5: Write the conflict-detection baseline for the next publish.
+  await writePublishState(opts.catalogRoot, etag);
 
   return { etag, written, overwritten, localOnlyDeleted, localOnlyKept };
 }

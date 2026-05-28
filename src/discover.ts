@@ -11,13 +11,15 @@ import type { GhRepo } from "./github.js";
 import { listRepos } from "./github.js";
 import { projectFileExists } from "./project-writer.js";
 import { mapRepoToId } from "./repo-id.js";
-import { type AddDeps, type AddStatus, runAdd } from "./add.js";
+import { type AddDeps, type AddStatus, type OutputSink, runAdd } from "./add.js";
 
 export interface DiscoverDeps extends AddDeps {
   readonly listRepos: typeof listRepos;
   readonly select: (
     choices: { name: string; value: string; checked?: boolean }[],
   ) => Promise<string[]>;
+  /** Summary / progress output. `stderr` is inherited from `AddDeps`. */
+  readonly stdout: OutputSink;
 }
 
 export interface DiscoverOptions {
@@ -87,7 +89,7 @@ export async function runDiscover(
     }
   } else {
     if (!o.isTty) {
-      process.stderr.write(
+      d.stderr.write(
         "discover: no TTY and no --add; pass --add <names> or --add '*'\n",
       );
       return { summary: EMPTY_SUMMARY, exitCode: 1 };
@@ -139,6 +141,7 @@ export async function runDiscover(
         runGh: d.runGh,
         runGit: d.runGit,
         confirm: d.confirm,
+        stderr: d.stderr,
       },
     );
 
@@ -151,12 +154,12 @@ export async function runDiscover(
 
   // 4. Print summary
   const writtenCount = added.length + overridden.length + skeleton.length;
-  process.stdout.write(
+  d.stdout.write(
     `discover: ${writtenCount} written (${added.length} added, ${overridden.length} overridden, ${skeleton.length} skeleton), ${skipped.length} skipped\n`,
   );
   if (skipped.length > 0) {
     for (const s of skipped) {
-      process.stdout.write(`  skipped ${s.repo}: ${s.reason}\n`);
+      d.stdout.write(`  skipped ${s.repo}: ${s.reason}\n`);
     }
   }
 

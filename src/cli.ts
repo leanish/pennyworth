@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs as nodeParseArgs } from "node:util";
@@ -15,6 +15,7 @@ import { FilesystemCatalog } from "./filesystem-catalog.js";
 import { listRepos, type RunGh } from "./github.js";
 import { type RunGit } from "./inspection-clone.js";
 import { publishCatalog } from "./publish.js";
+import { readPublishState, writePublishState } from "./publish-state.js";
 import { pullCatalog } from "./pull.js";
 import { validateCatalog } from "./validate.js";
 
@@ -86,8 +87,8 @@ async function runValidate(
   stdout: NodeJS.WritableStream,
   stderr: NodeJS.WritableStream,
 ): Promise<number> {
-  const args = parseFlags(argv, ["catalog-root"]);
-  const catalogRoot = resolveCatalogRoot(args);
+  const args = parseMixedFlags(argv, { strings: ["catalog-root"], booleans: [] });
+  const catalogRoot = resolveCatalogRoot(args.strings);
 
   const result = await validateCatalog({ catalogRoot });
   if (result.issues.length === 0) {
@@ -160,12 +161,9 @@ async function runPublish(
     // Bypass state-file check; publish unconditionally
     ifMatch = undefined;
   } else {
-    // Safety default: read the state file written by pull
-    const stateFilePath = join(catalogRoot, ".catalogit-state.json");
-    let stateRaw: string;
-    try {
-      stateRaw = await readFile(stateFilePath, "utf8");
-    } catch {
+    // Safety default: read the conflict-detection baseline written by pull.
+    const state = await readPublishState(catalogRoot);
+    if (state.kind === "missing") {
       stderr.write(
         `catalogit publish: no .catalogit-state.json at ${catalogRoot}. ` +
           "Run `catalogit pull` first to establish the conflict-detection baseline, " +
@@ -173,30 +171,14 @@ async function runPublish(
       );
       return 5;
     }
-    let state: unknown;
-    try {
-      state = JSON.parse(stateRaw);
-    } catch {
+    if (state.kind === "malformed") {
       stderr.write(
-        `catalogit publish: no .catalogit-state.json at ${catalogRoot}. ` +
-          "Run `catalogit pull` first to establish the conflict-detection baseline, " +
-          "or pass --force to skip.\n",
+        `catalogit publish: .catalogit-state.json at ${catalogRoot} could not be used (${state.reason}). ` +
+          "Re-run `catalogit pull` to rewrite it, or pass --force to skip.\n",
       );
       return 5;
     }
-    if (
-      typeof state !== "object" ||
-      state === null ||
-      typeof (state as Record<string, unknown>)["etag"] !== "string"
-    ) {
-      stderr.write(
-        `catalogit publish: no .catalogit-state.json at ${catalogRoot}. ` +
-          "Run `catalogit pull` first to establish the conflict-detection baseline, " +
-          "or pass --force to skip.\n",
-      );
-      return 5;
-    }
-    ifMatch = (state as { etag: string }).etag;
+    ifMatch = state.etag;
   }
 
   // Build the S3 client (or use injected one for tests)
@@ -235,14 +217,9 @@ async function runPublish(
     throw err;
   }
 
-  // On success: update state file if we got an ETag back
+  // On success: update the conflict-detection baseline if we got an ETag back
   if (result.etag !== undefined) {
-    const stateFilePath = join(catalogRoot, ".catalogit-state.json");
-    await writeFile(
-      stateFilePath,
-      JSON.stringify({ etag: result.etag }) + "\n",
-      "utf8",
-    );
+    await writePublishState(catalogRoot, result.etag);
   }
 
   stdout.write(
@@ -340,7 +317,7 @@ async function runAddCmd(
   });
 
   const addOptions = buildAddOptionsFromFlags(id, args);
-  const deps = buildLiveDeps();
+  const deps = buildLiveDeps(stderr);
   const result = await runAdd(addOptions, deps);
 
   if (result.status === "added") {
@@ -356,8 +333,8 @@ async function runAddCmd(
 
 async function runDiscoverCmd(
   argv: ReadonlyArray<string>,
-  _stdout: NodeJS.WritableStream,
-  _stderr: NodeJS.WritableStream,
+  stdout: NodeJS.WritableStream,
+  stderr: NodeJS.WritableStream,
 ): Promise<number> {
   const args = parseMixedFlags(argv, {
     strings: ["owner", "add", "catalog-root", "coding-agent"],
@@ -365,7 +342,7 @@ async function runDiscoverCmd(
   });
 
   const discoverOptions = buildDiscoverOptionsFromFlags(args);
-  const deps = buildLiveDiscoverDeps();
+  const deps = buildLiveDiscoverDeps(stdout, stderr);
   const result = await runDiscover(discoverOptions, deps);
   return result.exitCode;
 }
@@ -452,12 +429,15 @@ const select = (
   choices: { name: string; value: string; checked?: boolean }[],
 ): Promise<string[]> => checkbox({ message: "Select repos to import", choices });
 
-function buildLiveDeps(): AddDeps {
-  return { runProcess, runGh, runGit, confirm };
+function buildLiveDeps(stderr: NodeJS.WritableStream): AddDeps {
+  return { runProcess, runGh, runGit, confirm, stderr };
 }
 
-function buildLiveDiscoverDeps(): DiscoverDeps {
-  return { runProcess, runGh, runGit, confirm, select, listRepos };
+function buildLiveDiscoverDeps(
+  stdout: NodeJS.WritableStream,
+  stderr: NodeJS.WritableStream,
+): DiscoverDeps {
+  return { runProcess, runGh, runGit, confirm, select, listRepos, stdout, stderr };
 }
 
 // ---------------------------------------------------------------------------
@@ -526,39 +506,6 @@ function parseMixedFlags(
     else if (typeof v === "boolean") booleans[k] = v;
   }
   return { strings, booleans };
-}
-
-function parseFlags(
-  argv: ReadonlyArray<string>,
-  known: ReadonlyArray<string>,
-): Record<string, string> {
-  const options: Record<string, { type: "string" }> = {};
-  for (const name of known) options[name] = { type: "string" };
-  let values: Record<string, string | boolean | undefined>;
-  try {
-    ({ values } = nodeParseArgs({
-      args: [...argv],
-      options,
-      allowPositionals: false,
-      strict: true,
-    }));
-  } catch (err) {
-    // Normalize util.parseArgs's error to the wording the CLI used to emit
-    // (the surrounding subcommands and tests rely on those strings).
-    const message = err instanceof Error ? err.message : String(err);
-    if (/Unknown option/.test(message)) {
-      throw new Error(`unknown flag for this subcommand: ${message.replace(/.*'(--[^']+)'.*/, "$1")}`);
-    }
-    if (/argument missing/i.test(message) || /requires a value/i.test(message)) {
-      throw new Error(message.replace(/^.*?(?=')/, "flag "));
-    }
-    throw err;
-  }
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(values)) {
-    if (typeof v === "string") out[k] = v;
-  }
-  return out;
 }
 
 /**
