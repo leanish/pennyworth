@@ -1,0 +1,25 @@
+identifier: atc
+compute: lambda
+
+triggers:
+  - type: consumer
+    queueArnRef: atc-requests
+    dlqArnRef: atc-requests-dlq
+    signedEnvelope: true
+
+stages: [init]
+
+codingAgent: claude-code
+model: claude-sonnet-4-6
+
+skills:
+  entrypoints:
+    - ask
+  support:
+    - karpathy-guidelines
+    - diagnose
+
+needs:
+  - eventbridge       # ATC emits its own lifecycle events (consumer contract)
+  - sqs               # AWS-mode terminal reply delivery to envelope.replyTo
+  - s3                # Attachment blob fetcher (per queue-api.md §kind: "ask" attachments)
