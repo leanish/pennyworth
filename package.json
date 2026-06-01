@@ -47,7 +47,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1053.0",
     "@aws-sdk/client-s3": "^3.1053.0",
-    "@aws-sdk/client-ssm": "^3.1050.0",
+    "@aws-sdk/client-ssm": "^3.1053.0",
     "@leanish/agent-runtime": "file:../agent-runtime"
   },
   "devDependencies-comment": "EventBridge + SQS + catalogit pulled in via @leanish/agent-runtime at runtime; declared explicitly only for integration-test code that constructs SDK clients directly.",
