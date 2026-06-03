@@ -39,18 +39,21 @@ export function spawnCapture(options: SpawnCaptureOptions): Promise<SkillInvocat
       stdio: ["ignore", "pipe", "pipe"],
     });
 
-    let stdoutBytes = 0;
-    let stderrBytes = 0;
     let stdout = "";
     let stderr = "";
+    const cap = options.captureCapBytes;
 
+    // Keep the most-recent `cap` chars of each stream (a bounded tail), not the
+    // first `cap`: the terminal JSON block lands at the END of stdout, and a
+    // failure's useful stderr (stack trace / OOM line) is its tail. Trimming
+    // the front bounds memory without dropping the part we actually need.
     child.stdout.on("data", (chunk: Buffer) => {
-      stdoutBytes += chunk.length;
-      if (stdoutBytes <= options.captureCapBytes) stdout += chunk.toString("utf8");
+      stdout += chunk.toString("utf8");
+      if (stdout.length > cap) stdout = stdout.slice(stdout.length - cap);
     });
     child.stderr.on("data", (chunk: Buffer) => {
-      stderrBytes += chunk.length;
-      if (stderrBytes <= options.captureCapBytes) stderr += chunk.toString("utf8");
+      stderr += chunk.toString("utf8");
+      if (stderr.length > cap) stderr = stderr.slice(stderr.length - cap);
     });
 
     const timer = setTimeout(() => {
@@ -62,6 +65,14 @@ export function spawnCapture(options: SpawnCaptureOptions): Promise<SkillInvocat
 
     child.on("error", (err) => {
       clearTimeout(timer);
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+        reject(
+          new Error(
+            `${options.label}: '${options.bin}' not found on PATH — install the coding-agent CLI, or run with --fake-runner (no subprocess)`,
+          ),
+        );
+        return;
+      }
       reject(err);
     });
 

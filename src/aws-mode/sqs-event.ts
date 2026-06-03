@@ -27,6 +27,12 @@ export interface SqsRecord {
  *                              already reclaimed the row by the time
  *                              `complete()` ran (ADR-0006 watchdog race);
  *                              the work itself completed, so SQS ACKs.
+ *   - `handled-complete-write-failed` — handler succeeded (for ATC the terminal
+ *                              reply was already delivered) but the `complete()`
+ *                              marker write THREW after SDK retries. Re-running
+ *                              would duplicate side effects, so SQS ACKs and the
+ *                              in-flight row lingers to its `claimUntil` bound
+ *                              (ADR-0006 § complete() write-failure).
  *   - `duplicate-completed`  — idempotency hit, prior completion; SQS ACKs.
  *   - `duplicate-in-flight`  — idempotency hit, prior still in-flight; SQS keeps the message.
  *   - `envelope-parse-failed`— body wasn't JSON; treated as malformed, kept for DLQ via max-receive.
@@ -37,6 +43,7 @@ export interface SqsRecord {
 export type SqsRecordStatus =
   | "handled"
   | "handled-stale-complete"
+  | "handled-complete-write-failed"
   | "duplicate-completed"
   | "duplicate-in-flight"
   | "envelope-parse-failed"

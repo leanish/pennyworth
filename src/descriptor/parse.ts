@@ -157,13 +157,15 @@ function requireString(
   value: Record<string, unknown>,
   field: string,
   issues: DescriptorIssue[],
+  pathPrefix?: string,
 ): string | undefined {
+  const path = pathPrefix !== undefined ? `${pathPrefix}.${field}` : field;
   const v = value[field];
   if (typeof v !== "string" || v.length === 0) {
     issues.push({
-      path: field,
+      path,
       category: v === undefined ? "missing-required" : "invalid-shape",
-      message: `'${field}' must be a non-empty string`,
+      message: `'${path}' must be a non-empty string`,
     });
     return undefined;
   }
@@ -497,8 +499,8 @@ function parseConsumerTrigger(
       });
     }
   }
-  const queueArnRef = requireString(entry, "queueArnRef", issues);
-  const dlqArnRef = requireString(entry, "dlqArnRef", issues);
+  const queueArnRef = requireString(entry, "queueArnRef", issues, prefix);
+  const dlqArnRef = requireString(entry, "dlqArnRef", issues, prefix);
   const signedEnvelopeRaw = entry["signedEnvelope"];
   let signedEnvelope = false;
   if (signedEnvelopeRaw !== undefined) {
@@ -531,8 +533,8 @@ function parseSchedulerTrigger(
       });
     }
   }
-  const queueArnRef = requireString(entry, "queueArnRef", issues);
-  const dlqArnRef = requireString(entry, "dlqArnRef", issues);
+  const queueArnRef = requireString(entry, "queueArnRef", issues, prefix);
+  const dlqArnRef = requireString(entry, "dlqArnRef", issues, prefix);
   if (queueArnRef === undefined || dlqArnRef === undefined) return undefined;
   return { type: "scheduler", queueArnRef, dlqArnRef };
 }

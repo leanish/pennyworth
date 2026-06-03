@@ -84,14 +84,33 @@ export class EntrypointSchemaError extends RuntimeError {
  * reason set per ADR-0004.
  */
 export class EntrypointInvocationError extends RuntimeError {
+  #captured: EntrypointInvocationCapture | undefined;
+
   constructor(
     readonly reason: EntrypointInvocationReason,
     readonly entrypoint: string,
     message: string,
     readonly schemaErrors?: ReadonlyArray<SchemaErrorItem>,
-    readonly captured?: EntrypointInvocationCapture,
+    captured?: EntrypointInvocationCapture,
   ) {
     super(message);
+    this.#captured = captured;
+  }
+
+  /** Diagnostic capture bag (terminal JSON block, trailing content, stdout/stderr tails). */
+  get captured(): EntrypointInvocationCapture | undefined {
+    return this.#captured;
+  }
+
+  /**
+   * Merge a stderr tail into the capture bag after construction. The parse
+   * step that throws this error only sees stdout; `runSkill` merges in the
+   * runner's stderr tail here so the class — not an external cast — owns the
+   * mutation of its own diagnostic state.
+   */
+  attachStderrTail(stderrTail: string): void {
+    if (stderrTail.length === 0) return;
+    this.#captured = { ...(this.#captured ?? {}), stderrTail };
   }
 }
 

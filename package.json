@@ -52,7 +52,7 @@
     "@aws-sdk/client-eventbridge": "^3.1053.0",
     "@aws-sdk/client-s3": "^3.1053.0",
     "@aws-sdk/client-sqs": "^3.1053.0",
-    "@aws-sdk/client-ssm": "^3.1050.0",
+    "@aws-sdk/client-ssm": "^3.1053.0",
     "@leanish/catalogit": "file:../catalogit",
     "ajv": "^8.20.0",
     "yaml": "^2.9.0"

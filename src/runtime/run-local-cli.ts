@@ -330,6 +330,11 @@ async function verifyEnvelopeWithSecret(
     // know that. Defensive narrow.
     throw new Error("envelope verification: envelope.consumer is missing or empty");
   }
+  // Local replay intentionally trusts the captured envelope's own `kind`: we
+  // register exactly that kind as allowed, so the registry's `kind-not-allowed`
+  // check never fires on this path. HMAC over the captured signature is the
+  // only real verification here — this CLI re-checks a single captured
+  // envelope, not an arbitrary consumer's allow-list.
   const allowedKindsRaw = envelope["kind"];
   const allowedKinds = typeof allowedKindsRaw === "string" ? [allowedKindsRaw] : [];
   const registry = new MemoryConsumerRegistry([

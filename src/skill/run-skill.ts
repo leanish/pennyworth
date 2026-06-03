@@ -84,7 +84,7 @@ export async function runSkill<TInput, TOutput>(
     parsed = extractTerminalJson(responseText, args.entrypoint);
   } catch (err) {
     if (err instanceof EntrypointInvocationError) {
-      attachStderr(err, stderrTail);
+      if (stderrTail !== undefined) err.attachStderrTail(stderrTail);
       logEntrypointFailure(logger, "error", args.entrypoint, err.reason, {
         captured: err.captured,
       });
@@ -107,16 +107,6 @@ export async function runSkill<TInput, TOutput>(
   }
 
   return parsed as TOutput;
-}
-
-function attachStderr(err: EntrypointInvocationError, stderrTail: string | undefined): void {
-  if (stderrTail === undefined || stderrTail.length === 0) return;
-  // Patch in stderr — `captured` is readonly externally, but we own the
-  // instance here and want the diagnostic merge.
-  (err as { captured?: object }).captured = {
-    ...(err.captured ?? {}),
-    stderrTail,
-  };
 }
 
 function logEntrypointFailure(

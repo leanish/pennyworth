@@ -14,21 +14,28 @@
 # production `node_modules` on top — ~20 LoC each, ~17 MB on top of the
 # shared base.
 #
-# Owner: `agent-infra` (per ATC ADR-0008 § Multi-agent Dockerfile shape).
-# Phase-1 build is local-only; phase-1+ pushes to a shared ECR repo with
-# the tag scheme `leanish/agent-runtime-base:<node-major>-cc<claude>-codex<codex>`.
+# Lives in `agent-runtime/` (it bundles the runtime's coding-agent runner
+# CLIs); `agent-infra` is the deploy owner that builds and pushes it (ATC
+# ADR-0008 § Multi-agent Dockerfile shape). Phase-1 build is local-only;
+# phase-1+ pushes to a shared ECR repo with the tag scheme
+# `leanish/agent-runtime-base:<node-major>-cc<claude>-codex<codex>`.
 #
 # Build (from the agentic-development/ aggregation root):
 #
-#   docker build -f agent-infra/Dockerfile.base \
-#     -t leanish/agent-runtime-base:latest agent-infra/
+#   docker build -f agent-runtime/Dockerfile.base \
+#     -t leanish/agent-runtime-base:latest agent-runtime/
 #
 # Or, with the helper script (also rebuilds when CLI versions are bumped
 # via --build-arg):
 #
-#   bash agent-infra/scripts/build-base.sh
+#   bash agent-runtime/scripts/build-base.sh
 
 FROM public.ecr.aws/lambda/nodejs:24
+
+# `git` is required by the runtime's `LocalGitWorkspace`, which shells out to
+# `git clone` / `git fetch` for working-copy sync. The AL2023 Lambda base image
+# does not ship git, so install it here (verify via `npm run lambda:rehearsal`).
+RUN dnf install -y git && dnf clean all
 
 # Install the two coding-agent CLIs globally so `claude` and `codex` are
 # on $PATH for the spawn(...) calls in the runners. Pinned via ARGs so

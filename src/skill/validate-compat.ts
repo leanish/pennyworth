@@ -1,4 +1,4 @@
-import { DescriptorValidationError, type DescriptorIssue } from "../errors.js";
+import { DescriptorValidationError, EntrypointSchemaError, type DescriptorIssue } from "../errors.js";
 import type { AgentDescriptor } from "../types/descriptor.js";
 
 import type { SkillLoader } from "./skill-loader.js";
@@ -38,9 +38,13 @@ export async function validateSkillsCompatibility(
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      // A skill that loads but has an invalid input/output schema is an
+      // `entrypoint-schema` problem, not a missing skill — preserve the
+      // distinction so callers can triage the two differently.
+      const category = err instanceof EntrypointSchemaError ? "entrypoint-schema" : "unknown-skill";
       issues.push({
         path: `skills.${role}`,
-        category: "unknown-skill",
+        category,
         message: `failed to load skill '${name}': ${message}`,
       });
     }

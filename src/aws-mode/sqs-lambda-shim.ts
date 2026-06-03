@@ -101,13 +101,15 @@ export function createSqsLambdaShim<P extends AgentPayloadBase>(
  * Map a per-record status to whether it should appear in `batchItemFailures`.
  * ACK paths: `handled`, `handled-stale-complete` (work succeeded, another
  * worker had reclaimed the row by the time we wrote — the message is done
- * either way), `duplicate-completed`. Everything else makes SQS keep the
- * message.
+ * either way), `handled-complete-write-failed` (work + reply succeeded, only
+ * the marker write failed — re-running would duplicate side effects), and
+ * `duplicate-completed`. Everything else makes SQS keep the message.
  */
 function isFailureStatus(status: SqsRecordOutcome["status"]): boolean {
   return (
     status !== "handled" &&
     status !== "handled-stale-complete" &&
+    status !== "handled-complete-write-failed" &&
     status !== "duplicate-completed"
   );
 }
@@ -188,7 +190,10 @@ async function processRecord<P extends AgentPayloadBase>(args: {
     return { messageId: record.messageId, status: "duplicate-in-flight" };
   }
 
-  // 5 — dispatch (carrying the original claim window for the finalize guard)
+  // 5 — dispatch (carrying the original claim window for the finalize guard).
+  // The dispatch and the completed-marker write are deliberately in SEPARATE
+  // try blocks: a handler failure and a finalize-write failure are different
+  // outcomes (ADR-0006 § post-handler) and must not be conflated.
   const ownedUntil = claimOutcome.record.claimUntil;
   try {
     await dispatch(
@@ -197,19 +202,9 @@ async function processRecord<P extends AgentPayloadBase>(args: {
       options.runtime,
       message as never,
     );
-    const finalize = await options.idempotencyStore.complete(
-      record.messageId,
-      ownedUntil,
-      clock(),
-    );
-    if (finalize.status === "stale") {
-      log.warn("idempotency complete() was stale; another worker reclaimed", {
-        ownedUntil,
-      });
-      return { messageId: record.messageId, status: "handled-stale-complete" };
-    }
-    return { messageId: record.messageId, status: "handled" };
   } catch (err) {
+    // The handler itself failed: expire the claim so the next redelivery
+    // reclaims and retries on its first try.
     const expireOutcome = await options.idempotencyStore
       .expire(record.messageId, ownedUntil, clock())
       .catch((expireErr: unknown) => {
@@ -230,6 +225,34 @@ async function processRecord<P extends AgentPayloadBase>(args: {
     const error = errorMessage(err);
     log.error("handler threw; idempotency expired for fast retry", { error });
     return { messageId: record.messageId, status: "handler-failed", error };
+  }
+
+  // Handler succeeded (for ATC, the terminal reply has already been delivered).
+  // Writing the completed marker is best-effort finalisation:
+  //   - a `stale` return is a benign race — another worker owns the claim;
+  //   - a genuine write THROW must NOT re-run the handler, because the work +
+  //     delivery already happened. We ACK + warn instead. The in-flight record
+  //     lingers until its `claimUntil` bound, but the SQS message is deleted on
+  //     ACK so no redelivery re-runs it (ADR-0006 § complete() write-failure).
+  try {
+    const finalize = await options.idempotencyStore.complete(
+      record.messageId,
+      ownedUntil,
+      clock(),
+    );
+    if (finalize.status === "stale") {
+      log.warn("idempotency complete() was stale; another worker reclaimed", {
+        ownedUntil,
+      });
+      return { messageId: record.messageId, status: "handled-stale-complete" };
+    }
+    return { messageId: record.messageId, status: "handled" };
+  } catch (completeErr) {
+    log.warn(
+      "idempotency complete() write failed after a successful handler; ACKing (work already done)",
+      { ownedUntil, error: errorMessage(completeErr) },
+    );
+    return { messageId: record.messageId, status: "handled-complete-write-failed" };
   }
 }
 

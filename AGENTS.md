@@ -9,7 +9,7 @@ Working rules for any agent editing this repo. Inherits from `~/dev/repos/leanis
 ## Vocabulary
 - **American English everywhere.** Anchored on `catalog`.
 - **Stage / sourceTrigger** are orthogonal (ADR-0012). Don't conflate.
-- **Employer-neutral.** No `example-shop`, `example-co`, etc.
+- **Employer-neutral.** No prior-employer names or company-specific references.
 - **No `codex` in commits / PR titles / branch names** unless the change is specifically about Codex itself.
 
 ## Code

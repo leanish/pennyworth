@@ -305,6 +305,55 @@ describe("createSqsLambdaShim", () => {
     expect(handle).toHaveBeenCalledOnce();
   });
 
+  it("ACKs handled-complete-write-failed when complete() throws after a successful handler (no re-run)", async () => {
+    const key = randomBytes(32);
+    const registry = new MemoryConsumerRegistry([
+      {
+        consumerId: "atc-ui",
+        signingKey: { kind: "literal", base64: key.toString("base64") },
+        allowedKinds: ["ask"],
+      },
+    ]);
+    // claim succeeds; the handler succeeds; the completed-marker write THROWS
+    // (transient DynamoDB error, post-SDK-retry). The work + reply already
+    // happened, so the shim must ACK + warn — NOT expire and re-run.
+    const idempotency = {
+      claim: vi.fn(async () => ({
+        status: "claimed" as const,
+        record: {
+          status: "in-flight" as const,
+          startedAt: "2026-05-23T00:00:00.000Z",
+          claimUntil: "2026-05-23T00:16:00.000Z",
+          agent: "atc",
+        },
+      })),
+      complete: vi.fn(async () => {
+        throw new Error("dynamo 500 on PutItem");
+      }),
+      expire: vi.fn(async () => ({ status: "ok" as const })),
+    };
+    const handle = vi.fn(async () => {});
+    const agent = defineAgent({ identifier: "atc", handle });
+
+    const shim = createSqsLambdaShim({
+      agent,
+      descriptor: DESCRIPTOR,
+      runtime: {} as Runtime,
+      idempotencyStore: idempotency,
+      consumerRegistry: registry,
+      logger: QUIET_LOGGER,
+    });
+
+    const result = await shim({
+      Records: [signedRecord("msg-complete-throw", { question: "X?" }, key)],
+    });
+
+    expect(result.batchItemFailures).toHaveLength(0); // ACK — message deleted, no retry
+    expect(result.results[0]?.status).toBe("handled-complete-write-failed");
+    expect(handle).toHaveBeenCalledOnce(); // work ran exactly once
+    expect(idempotency.expire).not.toHaveBeenCalled(); // crucially: NOT expired → no re-run
+  });
+
   it("returns a richer per-record status alongside batchItemFailures", async () => {
     const key = randomBytes(32);
     const registry = new MemoryConsumerRegistry([
