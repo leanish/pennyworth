@@ -156,8 +156,10 @@ export async function createAtcLambdaHandler(
     },
   });
   const workspace = new LocalGitWorkspace({ workspaceRoot });
+  const signingKeyTtlMs = parseOptionalInt("ATC_SIGNING_KEY_TTL_MS");
   const resolveSigningKey = createSigningKeyResolver({
     ssmClient: ssm,
+    ...(signingKeyTtlMs !== undefined ? { cacheTtlMs: signingKeyTtlMs } : {}),
   });
 
   const runners =

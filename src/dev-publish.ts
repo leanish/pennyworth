@@ -7,7 +7,7 @@ import {
   type SignedEnvelope,
 } from "@leanish/agent-runtime";
 
-import type { AtcRequest, AtcRequestAttachment } from "./request-schema.js";
+import type { AtcRequest } from "./request-schema.js";
 
 /**
  * `atc-dev-publish` — generate an ATC envelope ready for piping into
@@ -83,7 +83,6 @@ interface DevPublishArgs {
   readonly audience?: "general" | "codebase";
   readonly noSync?: boolean;
   readonly scopeOnly?: boolean;
-  readonly attachments?: ReadonlyArray<AtcRequestAttachment>;
   readonly signingSecret: string;
   readonly sqsMessageId?: string;
   readonly envelopeOnly: boolean;
@@ -252,7 +251,7 @@ const USAGE = `Usage:
                   [--sqs-message-id <id>]      default: local-<uuid>
                   [--envelope-only]            print the wire envelope instead of RuntimeMessage
 
-Pipe the output into 'agent-runtime run-local --message -' for a local-mode smoke test:
+Pipe the output into 'agent-runtime run-local' (it reads the message from stdin) for a local-mode smoke test:
 
   atc-dev-publish --question "what does auth do?" \\
     | agent-runtime run-local --agent-config ./agent.yaml --fake-runner

@@ -17,7 +17,7 @@ import type { ConsumerRecord } from "@leanish/agent-runtime/lambda";
  *   - `signingKey.kind === "ssm-parameter"` → fetch the `SecureString`
  *     value from AWS SSM Parameter Store via `GetParameter({ Name,
  *     WithDecryption: true })`. Cached in-process by parameter name with a
- *     TTL window (default 5 minutes) so we don't burn a `GetParameter` call
+ *     TTL window (default 10 minutes) so we don't burn a `GetParameter` call
  *     on every inbound SQS message. Cache misses (after TTL) trigger a
  *     single re-fetch; repeated fetches inside the TTL coalesce on the
  *     in-flight Promise to avoid stampedes during cold-start surges.
@@ -40,7 +40,7 @@ export interface CreateSigningKeyResolverOptions {
    */
   readonly ssmClient: SSMClient;
   /**
-   * TTL for cached secret values, in ms. Default: 5 minutes. Set lower
+   * TTL for cached secret values, in ms. Default: 10 minutes. Set lower
    * (e.g. 30s) if your operational model expects rapid rotation; set
    * higher with care (rotation lag = TTL + Lambda container lifetime).
    */
@@ -51,7 +51,7 @@ export interface CreateSigningKeyResolverOptions {
   readonly clock?: () => number;
 }
 
-const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000;
+const DEFAULT_CACHE_TTL_MS = 10 * 60 * 1000;
 
 interface CacheEntry {
   readonly inFlight?: Promise<Buffer>;

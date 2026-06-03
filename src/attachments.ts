@@ -5,7 +5,7 @@ import { basename, join } from "node:path";
 
 import type { Runtime } from "@leanish/agent-runtime";
 
-import type { AtcRequest, AtcRequestAttachment, AtcRequestTurn } from "./request-schema.js";
+import type { AtcRequest, AtcAttachment, AtcTranscriptTurn } from "./request-schema.js";
 
 /**
  * Materialised attachment as the skill input expects it: same metadata as
@@ -19,7 +19,7 @@ export interface MaterializedAttachment {
 }
 
 export interface MaterializedTurn {
-  readonly role: AtcRequestTurn["role"];
+  readonly role: AtcTranscriptTurn["role"];
   readonly text: string;
   readonly attachments?: ReadonlyArray<MaterializedAttachment>;
 }
@@ -92,7 +92,7 @@ export async function materializeAttachments(
   return result;
 }
 
-function withPath(att: AtcRequestAttachment, path: string): MaterializedAttachment {
+function withPath(att: AtcAttachment, path: string): MaterializedAttachment {
   return {
     name: att.name,
     mediaType: att.mediaType,
@@ -101,8 +101,8 @@ function withPath(att: AtcRequestAttachment, path: string): MaterializedAttachme
   };
 }
 
-function collectRefs(request: AtcRequest): ReadonlyArray<AtcRequestAttachment> {
-  const out: AtcRequestAttachment[] = [];
+function collectRefs(request: AtcRequest): ReadonlyArray<AtcAttachment> {
+  const out: AtcAttachment[] = [];
   for (const att of request.attachments ?? []) out.push(att);
   for (const turn of request.transcript ?? []) {
     for (const att of turn.attachments ?? []) out.push(att);
@@ -110,8 +110,8 @@ function collectRefs(request: AtcRequest): ReadonlyArray<AtcRequestAttachment> {
   return out;
 }
 
-function dedupe(refs: ReadonlyArray<AtcRequestAttachment>): ReadonlyArray<AtcRequestAttachment> {
-  const seen = new Map<string, AtcRequestAttachment>();
+function dedupe(refs: ReadonlyArray<AtcAttachment>): ReadonlyArray<AtcAttachment> {
+  const seen = new Map<string, AtcAttachment>();
   for (const ref of refs) {
     if (!seen.has(ref.blobUri)) seen.set(ref.blobUri, ref);
   }

@@ -6,10 +6,10 @@ import {
 
 import { LifecycleProgrammingError } from "./lifecycle-events.js";
 import type {
-  Project,
   Runtime,
   RuntimeMessage,
   SyncReportEntry,
+  WorkingCopy,
 } from "@leanish/agent-runtime";
 
 import { materializeAttachments } from "./attachments.js";
@@ -44,7 +44,10 @@ interface AskSkillOutput {
  * to the `ask` skill's input + the surrounding lifecycle / delivery logic.
  * Matches `../../../specs/agentic-development/agent-atc/specs/queue-api.md` §Handler transformation.
  *
- * Ordering (all fail-paths emit `atc.ask.failed`, never partial protocol):
+ * Ordering (every *work* fail-path emits `atc.ask.failed`, never a partial
+ * protocol; the one exception is a terminal-reply *delivery* failure after
+ * `completed` has already fired — that propagates for SQS retry rather than
+ * emitting `failed`, since the work succeeded and the reply is at-least-once):
  *
  *   1. `started`
  *   2. Parse + validate consumer request                  (validation-error)
@@ -154,9 +157,13 @@ export async function handleAtcMessage(
     return failTerminal(runtime, envelope, lifecycle, "io-error", err);
   }
 
+  // 6 — sync (or skip), run the skill, build the terminal reply, emit
+  // `completed`. A failure in any of this is a genuine work failure →
+  // failTerminal. Delivery is moved OUTSIDE this try (below) so a delivery
+  // failure can't be converted into a `failed` reply after `completed`.
+  let reply: AtcTerminalReply;
   try {
-    // 6 — sync (or skip)
-    let workingCopies: ReadonlyArray<{ readonly projectId: string; readonly path: string }> = [];
+    let workingCopies: ReadonlyArray<WorkingCopy> = [];
     // Terminal-reply `syncReport` shape (`outcome` is a string superset of
     // the runtime's `SyncOutcome`, with `"skipped"` for noSync paths).
     let syncReportEntries: ReadonlyArray<{ readonly id: string; readonly outcome: string }> = [];
@@ -174,7 +181,7 @@ export async function handleAtcMessage(
       await lifecycle.stage("working-copy-sync", "skipped", "no-projects");
     } else {
       await lifecycle.stage("working-copy-sync", "entered");
-      const sync = await runtime.syncWorkingCopies(resolved.projects as Project[]);
+      const sync = await runtime.syncWorkingCopies(resolved.projects);
       workingCopies = sync.workingCopies;
       syncReportEntries = sync.report.map((s: SyncReportEntry) => ({
         id: s.projectId,
@@ -194,7 +201,7 @@ export async function handleAtcMessage(
     const skillResult = await runtime.runSkill<AskSkillInput, AskSkillOutput>({
       entrypoint: "ask",
       input: askInput,
-      workingCopies: workingCopies as never,
+      workingCopies,
       ...execution,
     });
 
@@ -206,7 +213,7 @@ export async function handleAtcMessage(
       agent: agentField,
       durationMs,
     };
-    const reply: AtcTerminalReply = {
+    reply = {
       requestId: envelope.requestId,
       status: "completed",
       result: replyResult,
@@ -217,8 +224,6 @@ export async function handleAtcMessage(
       agent: replyResult.agent,
       durationMs,
     });
-    await deliverTerminalReply(reply, envelope, runtime);
-    return reply;
   } catch (err) {
     return failTerminal(runtime, envelope, lifecycle, mapErrorKind(err), err);
   } finally {
@@ -226,6 +231,15 @@ export async function handleAtcMessage(
       runtime.logger.warn("attachment cleanup failed", { error: errorMessage(err) });
     });
   }
+
+  // Work succeeded and `completed` is emitted. Deliver the terminal reply here,
+  // OUTSIDE the work try: the SQS reply is the load-bearing channel, so a
+  // delivery failure must NOT be converted into a `failed` reply (it would
+  // contradict the already-emitted `completed`). Letting it propagate makes the
+  // shim report a batchItemFailure → SQS redelivers → at-least-once delivery
+  // (consumers dedupe on requestId per ADR-0006). See queue-api.md §Delivery.
+  await deliverTerminalReply(reply, envelope, runtime);
+  return reply;
 }
 
 async function failTerminal(

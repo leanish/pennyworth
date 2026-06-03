@@ -6,7 +6,7 @@
  *
  *   - Container boots (cold start init within the Lambda envelope)
  *   - Reads env vars correctly
- *   - Connects to LocalStack for DDB / S3 / Secrets Manager / EventBridge / SQS
+ *   - Connects to LocalStack for DDB / S3 / SSM Parameter Store / EventBridge / SQS
  *   - Verifies a real signed envelope
  *   - Claims idempotency
  *   - Resolves project scope

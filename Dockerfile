@@ -15,13 +15,13 @@
 #   production `node_modules`. ~17 MB on top of the shared base.
 #
 # See ATC ADR-0008 § Multi-agent Dockerfile shape for the owning
-# decision (base lives in `agent-infra/`, this file is the thin
+# decision (base lives in `agent-runtime/`, this file is the thin
 # per-agent layer).
 #
 # Build (from the agentic-development/ aggregation root):
 #
 #   # First build the shared base (idempotent — caches after first run).
-#   bash agent-infra/scripts/build-base.sh
+#   bash agent-runtime/scripts/build-base.sh
 #
 #   # Then build this agent on top.
 #   docker build -f agent-atc/Dockerfile -t atc-lambda:rehearsal .

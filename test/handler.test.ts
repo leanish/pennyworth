@@ -342,4 +342,23 @@ describe("ATC handleAtcMessage", () => {
     const reply = JSON.parse(sendMessage.mock.calls[0]![0].body);
     expect(reply.result.syncReport).toEqual([{ id: PROJECT.id, outcome: "skipped" }]);
   });
+
+  it("post-completion delivery failure propagates for SQS retry — emits completed, never failed", async () => {
+    const { runtime, putEvents, sendMessage } = buildRuntime({ skillResponse: { answer: "x" } });
+    // The work succeeds; the terminal-reply SQS send fails. This must NOT be
+    // converted into a `failed` reply (the run succeeded + `completed` fired) —
+    // it propagates so the shim reports a batchItemFailure and SQS retries
+    // (at-least-once; F-ATC-1).
+    sendMessage.mockRejectedValue(new Error("sqs sendMessage failed"));
+
+    await expect(
+      handleAtcMessage(makeMessage({ question: "X?", projectIds: [PROJECT.id] }), runtime),
+    ).rejects.toThrow(/sqs sendMessage failed/);
+
+    const detailTypes = putEvents.mock.calls.map(
+      (c) => (c[0] as PutEventsRequest).entries[0]!.detailType,
+    );
+    expect(detailTypes).toContain("atc.ask.completed"); // work succeeded → completed fired
+    expect(detailTypes).not.toContain("atc.ask.failed"); // delivery failure is NOT a work failure
+  });
 });

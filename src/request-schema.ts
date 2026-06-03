@@ -1,4 +1,4 @@
-import type { ExecutionOverride } from "@leanish/agent-runtime";
+import { EFFORTS, type ExecutionOverride } from "@leanish/agent-runtime";
 
 /**
  * ATC consumer-request shape — the inner `payload` of the signed envelope.
@@ -31,13 +31,6 @@ export interface AtcAttachment {
   readonly sizeBytes: number;
   readonly blobUri: string;
 }
-
-// Legacy type aliases — the internal call sites referenced these names
-// (`AtcRequestTurn`, `AtcRequestAttachment`). Kept as aliases so the
-// rename is a no-op for in-tree callers; remove in a follow-up if you
-// want only the canonical names exported.
-export type AtcRequestTurn = AtcTranscriptTurn;
-export type AtcRequestAttachment = AtcAttachment;
 
 /**
  * Constants pulled out of the spec so they live in one place.
@@ -105,7 +98,7 @@ export function parseAtcRequest(raw: unknown): AtcRequest {
   };
 }
 
-function parseTurn(raw: unknown, path: string): AtcRequestTurn {
+function parseTurn(raw: unknown, path: string): AtcTranscriptTurn {
   if (!isObject(raw)) throw new AtcValidationError(`${path} must be an object`);
   const r = raw as Record<string, unknown>;
   const role = r["role"];
@@ -124,7 +117,7 @@ function parseTurn(raw: unknown, path: string): AtcRequestTurn {
   };
 }
 
-function parseAttachment(raw: unknown, path: string): AtcRequestAttachment {
+function parseAttachment(raw: unknown, path: string): AtcAttachment {
   if (!isObject(raw)) throw new AtcValidationError(`${path} must be an object`);
   const r = raw as Record<string, unknown>;
   return {
@@ -136,15 +129,15 @@ function parseAttachment(raw: unknown, path: string): AtcRequestAttachment {
 }
 
 function validateAttachmentLimits(
-  current: ReadonlyArray<AtcRequestAttachment> | undefined,
-  transcript: ReadonlyArray<AtcRequestTurn> | undefined,
+  current: ReadonlyArray<AtcAttachment> | undefined,
+  transcript: ReadonlyArray<AtcTranscriptTurn> | undefined,
 ): void {
-  const all: AtcRequestAttachment[] = [];
+  const all: AtcAttachment[] = [];
   for (const att of current ?? []) all.push(att);
   for (const turn of transcript ?? []) {
     for (const att of turn.attachments ?? []) all.push(att);
   }
-  const unique = new Map<string, AtcRequestAttachment>();
+  const unique = new Map<string, AtcAttachment>();
   for (const att of all) {
     if (!unique.has(att.blobUri)) unique.set(att.blobUri, att);
   }
@@ -253,9 +246,9 @@ function optionalExecution(raw: unknown): ExecutionOverride | undefined {
       throw new AtcValidationError("execution.effort must be a string");
     }
     const e = r["effort"];
-    if (!["minimal", "low", "medium", "high", "xhigh"].includes(e)) {
+    if (!(EFFORTS as readonly string[]).includes(e)) {
       throw new AtcValidationError(
-        `execution.effort must be one of [minimal, low, medium, high, xhigh]`,
+        `execution.effort must be one of [${EFFORTS.join(", ")}]`,
       );
     }
     effort = e as NonNullable<ExecutionOverride["effort"]>;
