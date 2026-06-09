@@ -1,0 +1,46 @@
+{
+  "name": "@leanish/claude-parley",
+  "version": "0.0.0",
+  "private": true,
+  "description": "parley — local relay harness for bounded deliberation between Codex and Claude Code.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "parley": "./dist/bin/parley.js"
+  },
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo",
+    "src"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('.tsbuildinfo',{force:true});\"",
+    "build": "npm run clean && tsc -b && chmod +x dist/bin/parley.js",
+    "typecheck": "tsc -b --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run build && npm test",
+    "parley": "tsx src/bin/parley.ts"
+  },
+  "dependencies": {
+    "commander": "^14.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "@vitest/coverage-v8": "^4.1.7",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "app": "npx tsx bin/agent-infra.ts",
+  "watch": {
+    "include": ["bin/**", "src/**"],
+    "exclude": ["dist/**", "cdk.out/**", "node_modules/**"]
+  },
+  "context": {
+    "@aws-cdk/aws-iam:minimizePolicies": true
+  }
+}
