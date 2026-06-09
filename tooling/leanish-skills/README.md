@@ -18,9 +18,12 @@ Skills live under `skills/<category>/<name>/SKILL.md`. Two categories:
 
 ### `wip/` — leanish's own, work-in-progress
 
-Our first-party skills, still being shaped. New leanish skills (e.g. `consult-codex`, coming) land
-here too.
+Our first-party skills, still being shaped. New leanish skills land here too.
 
+- [codex-consensus](./skills/wip/codex-consensus/SKILL.md) — debate findings and changes with Codex
+  until both agents settle. Claude Code only; invokes Codex through the wrapper.
+- [consult-codex](./skills/wip/consult-codex/SKILL.md) — consult Codex as a read-only second coding
+  agent.
 - [leanish-cleanup](./skills/wip/leanish-cleanup/SKILL.md) — simplify recently touched code,
   behavior-preserving.
 - [leanish-dependency-upgrade](./skills/wip/leanish-dependency-upgrade/SKILL.md) — dependency

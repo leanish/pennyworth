@@ -1,0 +1,6 @@
+interface:
+  display_name: "Leanish Cleanup"
+  short_description: "Behavior-preserving cleanup and code refinement"
+  default_prompt: "Apply $leanish-cleanup to the current PR"
+policy:
+  allow_implicit_invocation: false

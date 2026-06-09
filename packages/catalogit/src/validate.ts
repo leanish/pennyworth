@@ -1,17 +1,16 @@
-import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
-
-import { parseProjectYaml } from "./filesystem-catalog.js";
+import { CatalogIoError } from "./errors.js";
+import { collectProjects } from "./filesystem-catalog.js";
 
 /**
- * Spine-check every project YAML under `<catalogRoot>/projects/`. Returns
- * one issue per file that fails parsing or spine validation; an empty
- * array means the catalog is publishable.
+ * Spine-check every project YAML under `<catalogRoot>/projects/`. Returns one
+ * issue per file that fails parsing, spine validation, or the filename⇄id
+ * invariant; an empty array means the catalog is publishable.
  *
- * Used by `catalogit validate` (CLI surface) and the `publish` workflow as
- * a pre-flight check. The implementation mirrors `parseProjectYaml`'s
- * behaviour exactly so "validate" never disagrees with "what `publish`
- * would accept".
+ * Used by `catalogit validate` (CLI surface) and the `publish` workflow as a
+ * pre-flight check. Delegates to the same `collectProjects` scan that
+ * `FilesystemCatalog.load` uses, so "validate" never disagrees with "what
+ * `publish` would accept". A directory-level I/O failure is reported as a
+ * single issue (collect-and-report — `validate` never throws for a bad root).
  */
 export interface CatalogValidationIssue {
   readonly file: string;
@@ -28,37 +27,16 @@ export interface ValidateCatalogResult {
 }
 
 export async function validateCatalog(args: ValidateCatalogArgs): Promise<ValidateCatalogResult> {
-  const projectsDir = join(args.catalogRoot, "projects");
-  let entries: string[];
   try {
-    entries = await readdir(projectsDir);
+    const { issues, scanned } = await collectProjects(args.catalogRoot);
+    return { projectsScanned: scanned, issues };
   } catch (err) {
-    return {
-      projectsScanned: 0,
-      issues: [
-        {
-          file: projectsDir,
-          message: `failed to read directory: ${err instanceof Error ? err.message : String(err)}`,
-        },
-      ],
-    };
-  }
-
-  const issues: CatalogValidationIssue[] = [];
-  let scanned = 0;
-  for (const entry of entries) {
-    if (!entry.endsWith(".yaml")) continue;
-    const filePath = join(projectsDir, entry);
-    scanned += 1;
-    try {
-      const raw = await readFile(filePath, "utf8");
-      parseProjectYaml(raw, filePath);
-    } catch (err) {
-      issues.push({
-        file: filePath,
-        message: err instanceof Error ? err.message : String(err),
-      });
+    if (err instanceof CatalogIoError) {
+      return {
+        projectsScanned: 0,
+        issues: [{ file: err.path ?? args.catalogRoot, message: err.message }],
+      };
     }
+    throw err;
   }
-  return { projectsScanned: scanned, issues };
 }

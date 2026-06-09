@@ -21,6 +21,9 @@ export async function writeProjectYaml(catalogRoot: string, project: Project): P
     id: project.id,
     source: { url: project.source.url, branch: project.source.branch },
   };
+  // Extensions are written in the curator's key order, as-is. Only the
+  // deployed `catalog.json` bundle is byte-canonical (key-sorted in
+  // `bundle.ts`); on-disk YAML preserves whatever order the curator authored.
   const extensionKeys = Object.keys(project.extensions);
   if (extensionKeys.length > 0) {
     out["extensions"] = project.extensions;

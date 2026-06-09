@@ -1,0 +1,6 @@
+interface:
+  display_name: "Leanish Dependency-upgrade"
+  short_description: "Upgrade deps via Gradle plugin, verify CVEs, publish the PR"
+  default_prompt: "apply $leanish-dependency-upgrade"
+policy:
+  allow_implicit_invocation: false

@@ -10,7 +10,7 @@ import { stat } from "node:fs/promises";
 
 import { type CodingAgent, type RunProcess, DraftError, draftDescription } from "./coding-agent.js";
 import { buildDraftingPrompt } from "./drafting-prompt.js";
-import { FilesystemCatalog } from "./filesystem-catalog.js";
+import { loadProjectFile } from "./filesystem-catalog.js";
 import { type RunGh, getRepoMeta } from "./github.js";
 import { type RunGit, withInspectionClone } from "./inspection-clone.js";
 import type { Project, ProjectSource } from "./project.js";
@@ -108,7 +108,7 @@ export async function runAdd(
   let source: ProjectSource = { url: sourceUrl, branch: "main" };
   let extensions: Readonly<Record<string, unknown>> = {};
   if (exists) {
-    const existing = (await FilesystemCatalog.load({ catalogRoot: o.catalogRoot })).get(id);
+    const existing = await loadProjectFile(o.catalogRoot, id);
     if (existing !== undefined) {
       source = existing.source;
       extensions = existing.extensions;

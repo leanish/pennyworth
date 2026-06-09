@@ -44,7 +44,7 @@ describe("S3Catalog.parseBundle", () => {
         }),
         "src",
       ),
-    ).toThrowError(/source\.url missing/);
+    ).toThrowError(/non-empty string 'source\.url'/);
   });
 
   it("rejects unknown source-nested keys (strict by default per ADR-0014)", () => {

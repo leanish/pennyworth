@@ -56,6 +56,15 @@ npm test                # vitest run
 npm run check           # typecheck + build + test — the phase-1 acceptance gate
 ```
 
+## CLI
+
+`catalogit` also ships a curation CLI (compiled to `dist/bin/catalogit.js`; run `catalogit --help` for the full reference). Subcommands:
+
+- `validate` — spine-check every `<root>/projects/*.yaml`; exit 1 on any issue.
+- `publish` — bundle the local catalog and upload to `s3://<bucket>/<key>`. `--dry-run` previews the bundle (stdout, or `--out <path>`) with no S3 call. The safe loop is `pull` → edit → `publish`: `publish` refuses without a `.catalogit-state.json` ETag baseline (exit 5) unless `--force`.
+- `pull` — download the deployed bundle, sync local project YAMLs, and write the `.catalogit-state.json` baseline.
+- `add` / `discover` — draft new project entries (a single `owner/repo`, or a GitHub owner's repos). **Both require the `gh` CLI and a coding agent (`codex` or `claude`) on `PATH`.**
+
 ## Test scaffolding
 
 catalogit is the lowest layer in the suite (no agent-runtime dependency).

@@ -6,11 +6,9 @@ import { parse as parseYaml } from "yaml";
 import type { CatalogReadOnly, ConsumerCatalogView } from "./catalog.js";
 import { isEnabledForConsumer } from "./consumer-filter.js";
 import type { Project } from "./project.js";
-import {
-  assertNoUnknownKeys,
-  PROJECT_SOURCE_KEYS,
-  PROJECT_SPINE_KEYS,
-} from "./spine-keys.js";
+import { CatalogIoError, CatalogLoadError, type CatalogLoadIssue, errorMessage } from "./errors.js";
+import { parseProjectRecord } from "./parse-project-record.js";
+import { idToFilename } from "./repo-id.js";
 
 /**
  * Local-mode catalog client. Reads catalogit's per-project YAML layout
@@ -35,15 +33,9 @@ export class FilesystemCatalog implements CatalogReadOnly {
   }
 
   static async load(options: FilesystemCatalogOptions): Promise<FilesystemCatalog> {
-    const projectsDir = join(options.catalogRoot, "projects");
-    const entries = await readdir(projectsDir);
-    const projects = new Map<string, Project>();
-    for (const entry of entries) {
-      if (!entry.endsWith(".yaml")) continue;
-      const filePath = join(projectsDir, entry);
-      const raw = await readFile(filePath, "utf8");
-      const project = parseProjectYaml(raw, filePath);
-      projects.set(project.id, project);
+    const { projects, issues } = await collectProjects(options.catalogRoot);
+    if (issues.length > 0) {
+      throw new CatalogLoadError(issues);
     }
     return new FilesystemCatalog(projects);
   }
@@ -80,50 +72,111 @@ export function parseProjectYaml(raw: string, source: string): Project {
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error(`project YAML at ${source} must be a mapping`);
   }
-  const value = parsed as Record<string, unknown>;
-  const locate = `project YAML at ${source}`;
-  assertNoUnknownKeys(value, PROJECT_SPINE_KEYS, { locate });
-  const id = expectStringRaw(value["id"], "id", source);
-  const sourceField = expectObjectRaw(value["source"], "source", source);
-  assertNoUnknownKeys(sourceField, PROJECT_SOURCE_KEYS, { locate, prefix: "source." });
-  const url = expectStringRaw(sourceField["url"], "source.url", source);
-  const branchRaw = sourceField["branch"];
-  const branch =
-    branchRaw === undefined
-      ? "main"
-      : expectStringRaw(branchRaw, "source.branch", source);
-  const descriptionRaw = value["description"];
-  const description =
-    descriptionRaw === undefined
-      ? undefined
-      : expectStringRaw(descriptionRaw, "description", source);
-  const extensionsRaw = value["extensions"];
-  const extensions =
-    extensionsRaw === undefined
-      ? {}
-      : expectObjectRaw(extensionsRaw, "extensions", source);
-  return {
-    id,
-    source: { url, branch },
-    ...(description !== undefined ? { description } : {}),
-    extensions,
-  };
+  return parseProjectRecord(parsed as Record<string, unknown>, `project YAML at ${source}`);
 }
 
-function expectStringRaw(raw: unknown, field: string, source: string): string {
-  if (typeof raw !== "string" || raw.length === 0) {
-    throw new Error(`project YAML at ${source} requires non-empty string '${field}'`);
+/**
+ * Scan `<catalogRoot>/projects/*.yaml`: parse each record, enforce the
+ * filename⇄id invariant (data-format.md §Validation — `id` must match the
+ * filename), and aggregate a `CatalogLoadIssue` per file that fails parsing,
+ * spine validation, or that check, so every bad record is reported at once.
+ * Throws `CatalogIoError` (not aggregated) on a directory/file read failure.
+ * Shared by `FilesystemCatalog.load` and `validateCatalog`.
+ */
+export async function collectProjects(
+  catalogRoot: string,
+): Promise<{ projects: Map<string, Project>; issues: CatalogLoadIssue[]; scanned: number }> {
+  const projectsDir = join(catalogRoot, "projects");
+  let entries: string[];
+  try {
+    entries = await readdir(projectsDir);
+  } catch (err) {
+    throw new CatalogIoError({
+      source: "local-fs",
+      operation: "list",
+      path: projectsDir,
+      message: `failed to read catalog directory '${projectsDir}': ${errorMessage(err)}`,
+      cause: err,
+    });
   }
-  return raw;
+
+  const projects = new Map<string, Project>();
+  const issues: CatalogLoadIssue[] = [];
+  let scanned = 0;
+  for (const entry of entries) {
+    if (!entry.endsWith(".yaml")) continue;
+    scanned += 1;
+    const filePath = join(projectsDir, entry);
+    let raw: string;
+    try {
+      raw = await readFile(filePath, "utf8");
+    } catch (err) {
+      throw new CatalogIoError({
+        source: "local-fs",
+        operation: "read",
+        path: filePath,
+        message: `failed to read project file '${filePath}': ${errorMessage(err)}`,
+        cause: err,
+      });
+    }
+    let project: Project;
+    try {
+      project = parseProjectYaml(raw, filePath);
+    } catch (err) {
+      issues.push({ file: entry, message: errorMessage(err) });
+      continue;
+    }
+    const expected = idToFilename(project.id);
+    if (entry !== expected) {
+      issues.push({
+        file: entry,
+        message: `record id '${project.id}' does not match its filename (expected '${expected}')`,
+      });
+      continue;
+    }
+    projects.set(project.id, project);
+  }
+  return { projects, issues, scanned };
 }
 
-function expectObjectRaw(
-  raw: unknown,
-  field: string,
-  source: string,
-): Record<string, unknown> {
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-    throw new Error(`project YAML at ${source} requires object '${field}'`);
+/**
+ * Load and parse a single project file by id, or `undefined` when it doesn't
+ * exist. Enforces the filename⇄id invariant: the record's embedded `id` must
+ * equal the requested `id` (throws `CatalogLoadError` otherwise). Cheaper than
+ * `FilesystemCatalog.load()` when only one record is needed — no full scan.
+ */
+export async function loadProjectFile(
+  catalogRoot: string,
+  id: string,
+): Promise<Project | undefined> {
+  const filename = idToFilename(id);
+  const filePath = join(catalogRoot, "projects", filename);
+  let raw: string;
+  try {
+    raw = await readFile(filePath, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw new CatalogIoError({
+      source: "local-fs",
+      operation: "read",
+      path: filePath,
+      message: `failed to read project file '${filePath}': ${errorMessage(err)}`,
+      cause: err,
+    });
   }
-  return raw as Record<string, unknown>;
+  let project: Project;
+  try {
+    project = parseProjectYaml(raw, filePath);
+  } catch (err) {
+    throw new CatalogLoadError([{ file: filename, message: errorMessage(err) }]);
+  }
+  if (project.id !== id) {
+    throw new CatalogLoadError([
+      {
+        file: filename,
+        message: `record id '${project.id}' does not match the requested id '${id}' (filename⇄id mismatch)`,
+      },
+    ]);
+  }
+  return project;
 }

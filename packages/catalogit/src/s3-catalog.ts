@@ -3,12 +3,9 @@ import { GetObjectCommand, type S3Client as AwsS3Client } from "@aws-sdk/client-
 import type { CatalogReadOnly, ConsumerCatalogView } from "./catalog.js";
 import { isEnabledForConsumer } from "./consumer-filter.js";
 import type { Project } from "./project.js";
-import {
-  assertNoUnknownKeys,
-  BUNDLE_TOP_LEVEL_KEYS,
-  PROJECT_SOURCE_KEYS,
-  PROJECT_SPINE_KEYS,
-} from "./spine-keys.js";
+import { CatalogIoError, CatalogLoadError, type CatalogLoadIssue, errorMessage } from "./errors.js";
+import { parseProjectRecord } from "./parse-project-record.js";
+import { assertNoUnknownKeys, BUNDLE_TOP_LEVEL_KEYS } from "./spine-keys.js";
 
 /**
  * AWS-mode catalog client. Reads the deployed `catalog.json` bundle from
@@ -105,14 +102,18 @@ export class S3Catalog implements CatalogReadOnly {
    */
   static async load(options: S3CatalogOptions): Promise<S3Catalog> {
     const key = options.key ?? DEFAULT_KEY;
-    const result = await options.client.send(
-      new GetObjectCommand({ Bucket: options.bucket, Key: key }),
-    );
+    const uri = `s3://${options.bucket}/${key}`;
+    const result = await getCatalogObject(options.client, options.bucket, key, uri);
     if (result.Body === undefined) {
-      throw new Error(`S3Catalog: s3://${options.bucket}/${key} returned no body`);
+      throw new CatalogIoError({
+        source: "s3",
+        operation: "get",
+        path: uri,
+        message: `${uri} returned no body`,
+      });
     }
     const raw = await result.Body.transformToString("utf-8");
-    const bundle = parseBundle(raw, `s3://${options.bucket}/${key}`);
+    const bundle = parseBundle(raw, uri);
     const snapshot: Snapshot = {
       byId: indexById(bundle.projects),
       list: bundle.projects,
@@ -272,7 +273,18 @@ export function parseBundle(raw: string, source: string): CatalogBundle {
   if (!Array.isArray(projectsRaw)) {
     throw new Error(`S3Catalog: ${source} missing or non-array 'projects'`);
   }
-  const projects = projectsRaw.map((p, i) => parseProjectEntry(p, source, i));
+  const projects: Project[] = [];
+  const issues: CatalogLoadIssue[] = [];
+  projectsRaw.forEach((p, i) => {
+    try {
+      projects.push(parseProjectEntry(p, source, i));
+    } catch (err) {
+      issues.push({ file: `${source}#/projects/${i}`, message: errorMessage(err) });
+    }
+  });
+  if (issues.length > 0) {
+    throw new CatalogLoadError(issues);
+  }
   return { version, projects };
 }
 
@@ -280,40 +292,37 @@ function parseProjectEntry(value: unknown, source: string, index: number): Proje
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`S3Catalog: ${source} projects[${index}] is not an object`);
   }
-  const v = value as Record<string, unknown>;
-  const locate = `S3Catalog: ${source} projects[${index}]`;
-  assertNoUnknownKeys(v, PROJECT_SPINE_KEYS, { locate });
-  const id = v["id"];
-  if (typeof id !== "string" || id.length === 0) {
-    throw new Error(`S3Catalog: ${source} projects[${index}] missing 'id'`);
+  return parseProjectRecord(
+    value as Record<string, unknown>,
+    `S3Catalog: ${source} projects[${index}]`,
+  );
+}
+
+/** GET the bundle object, mapping any S3 transport failure to `CatalogIoError`. */
+async function getCatalogObject(
+  client: AwsS3Client,
+  bucket: string,
+  key: string,
+  uri: string,
+) {
+  try {
+    return await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  } catch (err) {
+    const statusCode = s3StatusCode(err);
+    throw new CatalogIoError({
+      source: "s3",
+      operation: "get",
+      path: uri,
+      message: `failed to fetch ${uri}: ${errorMessage(err)}`,
+      cause: err,
+      ...(statusCode !== undefined ? { statusCode } : {}),
+    });
   }
-  const src = v["source"];
-  if (typeof src !== "object" || src === null || Array.isArray(src)) {
-    throw new Error(`S3Catalog: ${source} projects[${index}] missing 'source'`);
-  }
-  const srcMap = src as Record<string, unknown>;
-  assertNoUnknownKeys(srcMap, PROJECT_SOURCE_KEYS, { locate, prefix: "source." });
-  const url = srcMap["url"];
-  if (typeof url !== "string" || url.length === 0) {
-    throw new Error(`S3Catalog: ${source} projects[${index}].source.url missing`);
-  }
-  const branch =
-    typeof srcMap["branch"] === "string" && srcMap["branch"].length > 0
-      ? (srcMap["branch"] as string)
-      : "main";
-  const description =
-    typeof v["description"] === "string" ? (v["description"] as string) : undefined;
-  const extensionsRaw = v["extensions"];
-  const extensions =
-    typeof extensionsRaw === "object" && extensionsRaw !== null && !Array.isArray(extensionsRaw)
-      ? (extensionsRaw as Record<string, unknown>)
-      : {};
-  return {
-    id,
-    source: { url, branch },
-    ...(description !== undefined ? { description } : {}),
-    extensions,
-  };
+}
+
+function s3StatusCode(err: unknown): number | undefined {
+  const meta = (err as { $metadata?: { httpStatusCode?: number } }).$metadata;
+  return typeof meta?.httpStatusCode === "number" ? meta.httpStatusCode : undefined;
 }
 
 function indexById(projects: ReadonlyArray<Project>): ReadonlyMap<string, Project> {

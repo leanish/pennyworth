@@ -229,7 +229,7 @@ describe("pullCatalog", () => {
 
     await expect(
       pullCatalog({ bucket: "my-bucket", catalogRoot, pruneMode: "never" }, { client, confirm }),
-    ).rejects.toThrow(/source\.url missing/);
+    ).rejects.toThrow(/non-empty string 'source\.url'/);
 
     // No YAML written
     const entries = await readdir(join(catalogRoot, "projects"));

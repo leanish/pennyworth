@@ -1,5 +1,10 @@
 // Public API for `@leanish/catalogit`.
 
+export {
+  CatalogLoadError,
+  CatalogIoError,
+  type CatalogLoadIssue,
+} from "./errors.js";
 export type { Project, ProjectSource } from "./project.js";
 export type { CatalogReadOnly, ConsumerCatalogView } from "./catalog.js";
 export { isEnabledForConsumer } from "./consumer-filter.js";
