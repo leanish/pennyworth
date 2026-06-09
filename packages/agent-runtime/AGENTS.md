@@ -33,4 +33,4 @@ Working rules for any agent editing this repo. Inherits from `~/dev/repos/leanis
 
 ## Suite siblings
 
-`../agent-atc/` (ATC backend, package `@leanish/agent-atc`) and `../agent-secureit/` (phase-2 agent) depend on this package. Local dev uses `npm link @leanish/agent-runtime` or `file:../agent-runtime` in their `package.json`.
+`../../agents/ask-the-code/` (ATC backend, package `@leanish/agent-atc`) and `../../agents/secure-it/` (phase-2 agent) depend on this package via `file:../../packages/agent-runtime`, resolved by the root npm workspace.

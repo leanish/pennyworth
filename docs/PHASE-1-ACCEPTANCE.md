@@ -1,6 +1,6 @@
 # Phase-1 acceptance
 
-The architectural invariants this implementation must honour live in the standalone specs tree at `../specs/` (canonical, suite-wide). This file lists the **implementation-side** acceptance checks for the phase-1 release candidate that lives under `agentic-development/`.
+The architectural invariants this implementation must honour live in the **private specs repo** (canonical, suite-wide). This file lists the **implementation-side** acceptance checks for the phase-1 release candidate in this monorepo.
 
 Phase-1 ships three implementation packages plus a phase-2 placeholder:
 
@@ -35,7 +35,7 @@ Boot LocalStack from this directory: `docker compose up -d localstack`.
 
 ## Lambda-container rehearsal
 
-`agent-atc/scripts/lambda-rehearsal.ts` exercises the full Node-on-Lambda path locally: builds the per-agent image atop the shared `leanish/agent-runtime-base`, wires it to LocalStack via the AWS Runtime Interface Emulator, fires one signed envelope, asserts handler + reply + idempotency wiring. Prerequisites:
+`agents/ask-the-code/scripts/lambda-rehearsal.ts` exercises the full Node-on-Lambda path locally: builds the per-agent image atop the shared `leanish/agent-runtime-base`, wires it to LocalStack via the AWS Runtime Interface Emulator, fires one signed envelope, asserts handler + reply + idempotency wiring. Prerequisites:
 
 - `docker compose up -d localstack` (LocalStack running)
 - RIE binary at `~/.aws-lambda-rie/aws-lambda-rie` (one-time download from the `aws/aws-lambda-runtime-interface-emulator` GitHub releases)

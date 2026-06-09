@@ -9,26 +9,26 @@
 #     `@openai/codex`) installed globally so they're on `$PATH` for the
 #     `spawn(...)` calls in `ClaudeCodeRunner` / `CodexRunner` (~410 MB).
 #
-# Per-agent Dockerfiles (`agent-atc/Dockerfile`, `agent-secureit/Dockerfile`,
+# Per-agent Dockerfiles (`agents/ask-the-code/Dockerfile`, `agents/secure-it/Dockerfile`,
 # …) `FROM` this image and add only their own `dist/`, `agent.yaml`, and
 # production `node_modules` on top — ~20 LoC each, ~17 MB on top of the
 # shared base.
 #
-# Lives in `agent-runtime/` (it bundles the runtime's coding-agent runner
+# Lives in `packages/agent-runtime/` (it bundles the runtime's coding-agent runner
 # CLIs); `agent-infra` is the deploy owner that builds and pushes it (ATC
 # ADR-0008 § Multi-agent Dockerfile shape). Phase-1 build is local-only;
 # phase-1+ pushes to a shared ECR repo with the tag scheme
 # `leanish/agent-runtime-base:<node-major>-cc<claude>-codex<codex>`.
 #
-# Build (from the agentic-development/ aggregation root):
+# Build (from the monorepo root):
 #
-#   docker build -f agent-runtime/Dockerfile.base \
-#     -t leanish/agent-runtime-base:latest agent-runtime/
+#   docker build -f packages/agent-runtime/Dockerfile.base \
+#     -t leanish/agent-runtime-base:latest packages/agent-runtime/
 #
 # Or, with the helper script (also rebuilds when CLI versions are bumped
 # via --build-arg):
 #
-#   bash agent-runtime/scripts/build-base.sh
+#   bash packages/agent-runtime/scripts/build-base.sh
 
 FROM public.ecr.aws/lambda/nodejs:24
 

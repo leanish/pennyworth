@@ -21,8 +21,8 @@
  * Run:
  *
  *   docker compose up -d localstack    # if not already running
- *   docker build -f agent-atc/Dockerfile -t atc-lambda:rehearsal .   # if not already built
- *   tsx agent-atc/scripts/lambda-rehearsal.ts
+ *   docker build -f agents/ask-the-code/Dockerfile -t atc-lambda:rehearsal .   # if not already built
+ *   tsx agents/ask-the-code/scripts/lambda-rehearsal.ts
  *
  * Exits 0 on success with timing breakdown on stdout; non-zero with a
  * diagnostic on stderr otherwise.
