@@ -1,0 +1,31 @@
+# Keep the ATC Docker build context (the monorepo root) small + deterministic.
+# The Dockerfile explicitly COPYs only what it needs from catalogit,
+# agent-runtime, and ask-the-code; this file blocks accidental inclusion of
+# already-built / per-developer artifacts and packages the image doesn't need.
+
+**/node_modules
+**/dist
+**/.git
+**/.idea
+**/.vscode
+**/coverage
+**/.DS_Store
+
+# Test-only artifacts.
+**/test-integration
+
+# Per-package artifacts that shouldn't ride into the image.
+**/.session-handoff*.md
+**/.npmrc
+**/.env*
+
+# The Dockerfile itself doesn't need to be COPYd inside the image.
+agents/ask-the-code/Dockerfile
+
+# Local-dev / packages unrelated to the ATC image.
+docker-compose.yml
+README.md
+docs/
+agents/secure-it/
+packages/agent-infra/
+tooling/

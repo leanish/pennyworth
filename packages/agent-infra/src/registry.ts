@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const suiteRoot = join(here, "..", ".."); // .../agentic-development
+const repoRoot = join(here, "..", "..", ".."); // monorepo root (.../pennyworth)
 
 /**
  * Per-agent deploy registration. Adding an agent is: write its descriptor in
@@ -24,7 +24,7 @@ export interface AgentRegistration {
 export const AGENTS: ReadonlyArray<AgentRegistration> = [
   {
     id: "atc",
-    descriptorPath: join(suiteRoot, "agent-atc", "agent.yaml"),
+    descriptorPath: join(repoRoot, "agents", "ask-the-code", "agent.yaml"),
     ecrRepositoryName: "leanish/agent-atc",
     imageTag: process.env["ATC_IMAGE_TAG"] ?? "latest",
   },

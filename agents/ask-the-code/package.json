@@ -39,22 +39,22 @@
     "typecheck": "tsc -b --noEmit && tsc -p tsconfig.test.json --noEmit",
     "check": "npm run typecheck && npm run build && npm test",
     "check:full": "npm run check && npm run test:integration",
-    "smoke:local": "ATC_DEV_CONSUMER_SECRET=${ATC_DEV_CONSUMER_SECRET:-local-dev} node dist/bin/atc-dev-publish.js --question 'smoke test' --include-all | node ../agent-runtime/dist/bin/agent-runtime.js run-local --agent-config ./agent.yaml --fake-runner --log-level error",
-    "lambda:build:base": "bash ../agent-runtime/scripts/build-base.sh",
-    "lambda:build": "npm run lambda:build:base && docker build -f Dockerfile -t atc-lambda:rehearsal ..",
+    "smoke:local": "ATC_DEV_CONSUMER_SECRET=${ATC_DEV_CONSUMER_SECRET:-local-dev} node dist/bin/atc-dev-publish.js --question 'smoke test' --include-all | node ../../packages/agent-runtime/dist/bin/agent-runtime.js run-local --agent-config ./agent.yaml --fake-runner --log-level error",
+    "lambda:build:base": "bash ../../packages/agent-runtime/scripts/build-base.sh",
+    "lambda:build": "npm run lambda:build:base && docker build -f Dockerfile -t atc-lambda:rehearsal ../..",
     "lambda:rehearsal": "tsx scripts/lambda-rehearsal.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1053.0",
     "@aws-sdk/client-s3": "^3.1053.0",
     "@aws-sdk/client-ssm": "^3.1053.0",
-    "@leanish/agent-runtime": "file:../agent-runtime"
+    "@leanish/agent-runtime": "file:../../packages/agent-runtime"
   },
   "devDependencies-comment": "EventBridge + SQS + catalogit pulled in via @leanish/agent-runtime at runtime; declared explicitly only for integration-test code that constructs SDK clients directly.",
   "devDependencies": {
     "@aws-sdk/client-eventbridge": "^3.1053.0",
     "@aws-sdk/client-sqs": "^3.1053.0",
-    "@leanish/catalogit": "file:../catalogit",
+    "@leanish/catalogit": "file:../../packages/catalogit",
     "@types/node": "^24.12.4",
     "@vitest/coverage-v8": "^4.1.7",
     "tsx": "^4.22.3",

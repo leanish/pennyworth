@@ -1,0 +1,32 @@
+services:
+  localstack:
+    # Pinned to 4.14.0 — the last stable on the 4.x line before the LocalStack
+    # GitHub repo was archived (Mar 2026). The community image keeps shipping
+    # with the same version semantics on Docker Hub. Re-evaluate the pin every
+    # ~6 months or when a phase-2 service surface (e.g. EventBridge Scheduler)
+    # needs newer behaviour than 4.14.0 ships.
+    image: localstack/localstack:4.14.0
+    container_name: leanish-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      # Restrict to the services integration tests actually exercise — keeps
+      # cold-start time down and surfaces missing-service errors loudly
+      # instead of silently lazy-loading.
+      - SERVICES=dynamodb,sqs,events,s3,ssm
+      # EAGER_SERVICE_LOADING=1 boots every declared service at container
+      # start instead of lazy-init on first request — predictable cold time.
+      - EAGER_SERVICE_LOADING=1
+      - DEBUG=0
+      - LS_LOG=warn
+      # Force a deterministic region so tests don't rely on developer-side
+      # AWS profile env.
+      - DEFAULT_REGION=us-east-1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:4566/_localstack/health | grep -q '\"dynamodb\": \"available\"' && curl -sf http://localhost:4566/_localstack/health | grep -q '\"ssm\": \"available\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+    # No persistent volume — every `docker compose up` starts clean. Tests
+    # rely on unique per-suite resource names rather than persistence-clear.

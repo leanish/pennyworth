@@ -26,7 +26,7 @@
     "check": "npm run typecheck && npm run build && npm test"
   },
   "dependencies": {
-    "@leanish/agent-runtime": "file:../agent-runtime"
+    "@leanish/agent-runtime": "file:../../packages/agent-runtime"
   },
   "devDependencies": {
     "@types/node": "^24.12.4",

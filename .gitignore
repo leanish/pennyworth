@@ -1,12 +1,31 @@
+# Dependencies
 node_modules/
+
+# Build & test output
 dist/
 build/
 coverage/
 *.tsbuildinfo
-*.log
-.DS_Store
+cdk.out/
+
+# Package artifacts
+*.tgz
+
+# Local environment + config
 .env
 .env.*
+!.env.example
+*.local.json
+
+# Logs
+*.log
+
+# Local scratch / tmp
+.scratch/
+.tmp/
+tmp/
+
+# OS + editor
+.DS_Store
 .idea/
 .vscode/
-cdk.out/
