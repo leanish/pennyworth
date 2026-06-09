@@ -5,7 +5,7 @@ Working rules for any agent editing this repo. Inherits from `../../specs/agenti
 ## Posture
 - **Phase-1 release candidate**, still pre-v1.
 - **Specs are the contract** — `../../specs/agentic-development/agent-atc/`.
-- **Built on `@leanish/agent-runtime`** (sibling `../agent-runtime/`). Local-dev linked via `file:../agent-runtime`; production install resolves the published version.
+- **Built on `@leanish/agent-runtime`** (sibling `../../packages/agent-runtime/`). Local-dev linked via `file:../../packages/agent-runtime`; production install resolves the published version.
 
 ## Vocabulary
 - **American English everywhere.** Anchored on `catalog`.

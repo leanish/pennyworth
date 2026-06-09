@@ -12,9 +12,9 @@ Phase-2 Layer-3 agent. Scheduled cron scan → per-project fan-out → opens dra
 
 **Sibling packages** (under `agentic-development/`):
 
-- `../agent-runtime/` — the substrate this depends on.
+- `../../packages/agent-runtime/` — the substrate this depends on.
 - `../agent-atc/` — the phase-1 Layer-3 agent (ATC Q&A backend).
-- `../catalogit/` — read-side catalog library.
+- `../../packages/catalogit/` — read-side catalog library.
 
 ## Status
 
@@ -28,7 +28,7 @@ if (stage === "breakdown") → syncWorkingCopies + runSkill("secureit") + runtim
 if (stage === "revisit")   → syncWorkingCopies + runSkill("secureit-revisit") + optional reschedule
 ```
 
-The two skills (`secureit`, `secureit-revisit`) live bundled inside `../agent-runtime/skills/` per ADR-0001.
+The two skills (`secureit`, `secureit-revisit`) live bundled inside `../../packages/agent-runtime/skills/` per ADR-0001.
 
 ## Scripts
 

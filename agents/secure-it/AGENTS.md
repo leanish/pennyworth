@@ -5,7 +5,7 @@ Working rules for any agent editing this repo. Inherits from `../../specs/agenti
 ## Posture
 - **Phase-2 placeholder**, still pre-v1.
 - **Specs are the contract** — `../../specs/agentic-development/agent-runtime/specs/skills/secureit*.md`, `../../specs/agentic-development/docs/adr/suite-0011-*`.
-- **Built on `@leanish/agent-runtime`** (sibling `../agent-runtime/`). Phase-2 helpers are required (`runtime.publish` + `runtime.publishDelayed`); until those land in agent-runtime, this agent's `handle` stays a placeholder.
+- **Built on `@leanish/agent-runtime`** (sibling `../../packages/agent-runtime/`). Phase-2 helpers are required (`runtime.publish` + `runtime.publishDelayed`); until those land in agent-runtime, this agent's `handle` stays a placeholder.
 
 ## Vocabulary
 - **American English everywhere.** Anchored on `catalog`.

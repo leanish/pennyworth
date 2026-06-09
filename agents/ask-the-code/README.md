@@ -6,7 +6,7 @@ ATC backend — Layer-3 agent for codebase Q&A. Built on `@leanish/agent-runtime
 
 **Sibling repos** (suite-0004 — one agent / library / one repo / one deployable):
 
-- `../agent-runtime/` — the substrate this depends on.
+- `../../packages/agent-runtime/` — the substrate this depends on.
 - `../agent-secureit/` — a fellow Layer-3 agent (phase-2).
 
 ## Status
@@ -26,7 +26,7 @@ Plus the surrounding ATC-owned protocol:
 - Terminal reply delivered to `envelope.replyTo` via SQS (`AtcTerminalSuccess` / `AtcTerminalFailure` shapes).
 - Error-kind mapping (validation-error / config-error / agent-error / io-error) per queue-api.md.
 
-The `ask` skill itself ships at `../agent-runtime/skills/ask/SKILL.md` (per ADR-0001 + suite-0010).
+The `ask` skill itself ships at `../../packages/agent-runtime/skills/ask/SKILL.md` (per ADR-0001 + suite-0010).
 
 ## What's here vs. what's not here
 
