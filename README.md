@@ -14,9 +14,8 @@ back **for your review**. Focus on the product, not the plumbing.
   - `ask-the-code` — read-only Q&A over the code
   - `secure-it` — keeps dependencies current (proposes PRs)
   - *(document-it · triage-it · ship-it · monitor-it — designed, not yet built)*
-- **`tooling/`** — supporting packages (the bundled-skills source)
-- **`docs/`** — suite overview, phase-1 acceptance, and the consolidation audit (the public
-  presentation / GitHub Pages lands here next)
+- **`docs/`** — the **presentation** (`docs/presentation/`, ready for GitHub Pages), phase-1
+  acceptance, and the consolidation audit
 
 > The engineering **design docs** (CONTEXT / overview / ADRs) live in a separate **private specs repo**,
 > by design. This repo carries code, intros, and the public front door.

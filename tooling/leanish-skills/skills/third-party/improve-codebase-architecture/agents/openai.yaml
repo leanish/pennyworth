@@ -1,4 +1,0 @@
-interface:
-  display_name: "Improve Codebase Architecture"
-  short_description: "Find architecture deepening opportunities"
-  default_prompt: "Use $improve-codebase-architecture to find architecture deepening opportunities in this repo."

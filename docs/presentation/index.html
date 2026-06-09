@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>leanish — an AI agent suite for your codebase</title>
+<style>
+  :root{
+    --bg:#0a0d14; --bg2:#111726; --panel:#151c2c; --line:#243049;
+    --fg:#eaf1f8; --muted:#93a1b5; --dim:#6b7a90;
+    --cyan:#38bdf8; --violet:#a78bfa; --green:#34d399; --amber:#fbbf24; --pink:#f472b6;
+    --grad:linear-gradient(120deg,#38bdf8 0%,#a78bfa 55%,#f472b6 100%);
+    --radius:16px; --maxw:1080px;
+    --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:radial-gradient(1200px 700px at 75% -10%,rgba(167,139,250,.15),transparent 60%),
+               radial-gradient(900px 600px at 10% 110%,rgba(56,189,248,.13),transparent 55%),
+               var(--bg);
+    color:var(--fg); font-family:var(--sans); -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  .deck{position:fixed;inset:0}
+  .slide{
+    position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+    padding:clamp(28px,5vw,80px);opacity:0;transform:translateY(18px) scale(.99);
+    transition:opacity .5s ease,transform .5s ease;pointer-events:none;overflow:auto;
+  }
+  .slide.active{opacity:1;transform:none;pointer-events:auto;z-index:2}
+  .wrap{width:100%;max-width:var(--maxw);margin:0 auto}
+  .eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin:0 0 16px}
+  h1{font-size:clamp(34px,6.4vw,76px);line-height:1.02;margin:0 0 20px;font-weight:800;letter-spacing:-.02em}
+  h2{font-size:clamp(26px,4.4vw,50px);line-height:1.05;margin:0 0 22px;font-weight:780;letter-spacing:-.02em}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{font-size:clamp(17px,2.2vw,25px);color:var(--muted);line-height:1.5;max-width:48ch;margin:0}
+  p.big{font-size:clamp(18px,2.4vw,28px);line-height:1.45;margin:0 0 14px}
+  .muted{color:var(--muted)} .dim{color:var(--dim)}
+  ul.clean{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:14px}
+  ul.clean li{font-size:clamp(16px,2vw,22px);line-height:1.4;padding-left:30px;position:relative}
+  ul.clean li::before{content:"▸";position:absolute;left:0;top:0;color:var(--cyan);font-size:.9em}
+  .kicker{font-size:clamp(18px,2.6vw,30px);font-weight:700;margin:26px 0 0;line-height:1.3}
+
+  /* cards */
+  .grid{display:grid;gap:16px;margin-top:26px}
+  .g3{grid-template-columns:repeat(3,1fr)} .g2{grid-template-columns:repeat(2,1fr)}
+  .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);
+        border-radius:var(--radius);padding:20px 20px 18px;position:relative;overflow:hidden}
+  .card h3{margin:0 0 6px;font-size:clamp(17px,1.9vw,21px);letter-spacing:-.01em}
+  .card p{margin:8px 0 0;color:var(--muted);font-size:15px;line-height:1.45}
+  .card .slo{color:var(--fg);font-style:italic;opacity:.92}
+  .tag{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+       padding:3px 9px;border-radius:999px;border:1px solid currentColor}
+  .t-read{color:var(--cyan)} .t-adv{color:var(--violet)} .t-prop{color:var(--amber)} .t-core{color:var(--green)}
+  .accentbar{position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad)}
+
+  /* diagrams (HTML/flex nodes) */
+  .diagram{margin-top:24px;display:flex;flex-direction:column;gap:14px;font-size:clamp(12px,1.4vw,15px)}
+  .row{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;justify-content:center}
+  .node{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+        min-width:120px;text-align:center;line-height:1.25}
+  .node .nt{font-weight:700} .node .ns{color:var(--muted);font-size:.85em;margin-top:3px;display:block}
+  .node.accent{border-color:var(--cyan);box-shadow:0 0 0 1px rgba(56,189,248,.25) inset}
+  .node.core{border-color:var(--violet)} .node.gate{border-color:var(--amber)}
+  .node.human{border-style:dashed;border-color:var(--green);color:var(--green)}
+  .arrow{align-self:center;color:var(--dim);font-size:1.6em;line-height:1}
+  .lbl{align-self:center;color:var(--dim);font-family:var(--mono);font-size:.8em;letter-spacing:.06em}
+  .fleetbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .chip{background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:.95em}
+
+  /* status + roadmap rows */
+  .status{display:grid;gap:10px;margin-top:24px}
+  .strow{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center}
+  .pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;border-radius:8px;text-align:center}
+  .poc{background:rgba(52,211,153,.16);color:var(--green)} .scaff{background:rgba(251,191,36,.16);color:var(--amber)} .design{background:rgba(167,139,250,.16);color:var(--violet)}
+  .est{background:rgba(56,189,248,.14);color:var(--cyan);font-weight:600}
+  .strow .what{color:var(--muted);font-size:clamp(15px,1.7vw,18px)}
+  .strow .what b{color:var(--fg)}
+
+  /* footer / nav */
+  .bar{position:fixed;left:0;bottom:0;width:100%;height:3px;background:rgba(255,255,255,.06);z-index:50}
+  .bar > i{display:block;height:100%;background:var(--grad);width:0;transition:width .4s ease}
+  .hud{position:fixed;bottom:14px;right:18px;z-index:50;display:flex;align-items:center;gap:12px;
+       font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .nav{display:flex;gap:6px}
+  .nav button{background:var(--panel);border:1px solid var(--line);color:var(--fg);border-radius:8px;
+       width:30px;height:30px;cursor:pointer;font-size:15px;line-height:1}
+  .nav button:hover{border-color:var(--cyan)}
+  .brand{position:fixed;top:16px;left:20px;z-index:50;font-family:var(--mono);font-size:13px;letter-spacing:.1em;color:var(--muted)}
+  .brand b{color:var(--fg)}
+  .dots{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:50;display:flex;gap:7px}
+  .dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.18);cursor:pointer;transition:.2s}
+  .dots i.on{background:var(--grad);transform:scale(1.3)}
+  .hint{position:fixed;bottom:14px;left:20px;z-index:50;font-family:var(--mono);font-size:11px;color:var(--dim)}
+  @media (max-width:760px){ .g3,.g2{grid-template-columns:1fr} .strow{grid-template-columns:120px 1fr} .hint{display:none} }
+</style>
+</head>
+<body>
+<div class="brand"><b>leanish</b> · agent suite</div>
+<div class="deck" id="deck">
+
+  <!-- 1 — HOOK (attainable / obvious / augments, not replaces) -->
+  <section class="slide">
+    <div class="wrap">
+      <p class="eyebrow">an attainable — almost obvious — idea</p>
+      <h1>Focus on the <span class="grad">product</span>,<br>not the plumbing.</h1>
+      <p class="lede">A small crew of focused AI specialists handles the toil around your code — questions, dependencies, docs, triage — and tees the rest up for your review. <b style="color:var(--fg)">You keep the judgment calls; they take the legwork.</b> And it's built from pieces you already know — which is what makes it so doable.</p>
+      <p class="dim" style="margin-top:34px;font-size:16px;font-family:var(--mono)">↓ / → / space to advance</p>
+    </div>
+  </section>
+
+  <!-- 2 — PROBLEM (code-it kept low profile) -->
+  <section class="slide">
+    <div class="wrap">
+      <p class="eyebrow">the problem</p>
+      <h2>Engineering runs on <span class="grad">toil</span>.</h2>
+      <ul class="clean">
+        <li>Answering “how does this part work?” for the hundredth time.</li>
+        <li>Chasing dependency updates until something falls behind and bites.</li>
+        <li>Docs that quietly drift away from what the code actually does.</li>
+        <li>Re-triaging the same kinds of problems across systems.</li>
+      </ul>
+      <p class="kicker">What if a small fleet of AI specialists handled the toil — and <span class="grad">you stayed in control?</span></p>
+    </div>
+  </section>
+
+  <!-- 3 — BIG IDEA -->
+  <section class="slide">
+    <div class="wrap">
+      <p class="eyebrow">the idea</p>
+      <h2>One shared runtime.<br>Many focused agents.<br><span class="grad">Each does one job.</span></h2>
+      <div class="grid g3" style="margin-top:30px">
+        <div class="card"><span class="accentbar"></span><h3>Not autonomous</h3><p>Every agent only <b style="color:var(--cyan)">reads</b>, <b style="color:var(--violet)">advises</b>, or <b style="color:var(--amber)">proposes</b>. A person approves anything that goes live.</p></div>
+        <div class="card"><span class="accentbar"></span><h3>One foundation</h3><p>The shared runtime does the mechanical work in plain, <b style="color:var(--green)">deterministic</b> code — no AI for the plumbing. Predictable, repeatable, and <b style="color:var(--fg)">cheaper</b>: the coding agent runs only where judgment is needed.</p></div>
+        <div class="card"><span class="accentbar"></span><h3>Cloud-native</h3><p>Hosted as managed cloud services (AWS) on a shared catalog of your projects — the same access controls, monitoring, and reliability as the rest of your stack.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 — THE FLEET -->
+  <section class="slide">
+    <div class="wrap">
+      <p class="eyebrow">meet the fleet</p>
+      <h2>A handful of specialists, one suite.</h2>
+      <div class="grid g3">
+        <div class="card"><span class="accentbar"></span><span class="tag t-read">reads</span><h3 style="margin-top:10px">Ask-the-code</h3><p class="slo">“What the code does, not what the docs claim.”</p><p>Plain-language answers grounded in the actual source.</p></div>
+        <div class="card"><span class="accentbar"></span><span class="tag t-adv">advises</span><h3 style="margin-top:10px">Triage-it</h3><p class="slo">“From a problem to a diagnosis.”</p><p>Correlates code + config + stats + past tickets → next steps.</p></div>
+        <div class="card"><span class="accentbar"></span><span class="tag t-prop">proposes</span><h3 style="margin-top:10px">Secure-it</h3><p class="slo">“Staying current is staying secure.”</p><p>Keeps dependencies fresh via tested, ready-to-review PRs.</p></div>
+        <div class="card"><span class="accentbar"></span><span class="tag t-prop">proposes</span><h3 style="margin-top:10px">Document-it</h3><p class="slo">“Keeps the docs honest.”</p><p>Checks docs against the code and proposes the fixes.</p></div>
+        <div class="card"><span class="accentbar"></span><span class="tag t-prop">proposes</span><h3 style="margin-top:10px">Ship-it</h3><p class="slo">“A person at every gate.”</p><p>Shepherds a ticket through its lifecycle — always handing back to a human.</p></div>
+        <div class="card"><span class="accentbar"></span><span class="tag t-adv">advises</span><h3 style="margin-top:10px">Monitor-it</h3><p class="slo">“Alerts → next step.”</p><p>Turns an incoming alert into a triaged recommendation. <span class="dim">(future)</span></p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 — ARCHITECTURE -->
+  <section class="slide">
+    <div class="wrap">
+      <p class="eyebrow">the architecture</p>
+      <h2>Four clean layers.</h2>
+      <div class="diagram">
+        <div class="row"><div class="node accent"><span class="nt">Catalog</span><span class="ns">your projects + per-agent settings</span></div></div>
+        <div class="lbl">↓ read by</div>
+        <div class="row"><div class="node core" style="min-width:300px"><span class="nt">Runtime</span><span class="ns">shared, deterministic plumbing · queues · safety · coding-agent execution</span></div></div>
+        <div class="lbl">↓ powers the fleet</div>
+        <div class="row fleetbar">
+          <span class="chip">Ask-the-code</span><span class="chip">Secure-it</span><span class="chip">Document-it</span>
+          <span class="chip">Triage-it</span><span class="chip">Ship-it</span><span class="chip">Monitor-it</span>
+        </div>
+        <div class="lbl">↓ deployed by</div>
+        <div class="row"><div class="node"><span class="nt">Infra (IaC)</span><span class="ns">provisions each agent: compute, permissions, triggers, monitoring</span></div></div>
+      </div>
+      <p class="muted" style="margin-top:20px;font-size:15px">Each agent is its own small deployable. Shared concerns live in the runtime — no agent reaches into another.</p>
+    </div>
+  </section>
+
+  <!-- 6 — EVENT FLOW -->
+  <section class="slide">
+    <div class="wrap">
+      <p class="eyebrow">how it works</p>
+      <h2>From a trigger to a <span class="grad">recommendation</span>.</h2>
+      <div class="diagram">
+        <div class="row">
+          <div class="node"><span class="nt">Trigger</span><span class="ns">webhook · schedule · a question</span></div>
+          <span class="arrow">→</span>
+          <div class="node gate"><span class="nt">Gate (the filter)</span><span class="ns">no match → nothing runs</span></div>
+          <span class="arrow">→</span>
+          <div class="node"><span class="nt">Queue</span><span class="ns">one job, once</span></div>
+        </div>
+        <div class="lbl">↓</div>
+        <div class="row">
+          <div class="node"><span class="nt">Agent</span><span class="ns">picks the right skill</span></div>
+          <span class="arrow">→</span>
+          <div class="node core"><span class="nt">Coding agent</span><span class="ns">Claude / Codex does the work</span></div>
+          <span class="arrow">→</span>
+          <div class="node accent"><span class="nt">Delivery</span><span class="ns">a PR, a comment, or an answer</span></div>
+          <span class="arrow">→</span>
+          <div class="node human"><span class="nt">A human</span><span class="ns">makes the call</span></div>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:20px;font-size:15px">The gate is the cost trick: irrelevant events never start an agent. Everything consequential lands on a person.</p>
+    </div>
+  </section>
+
+  <!-- 7 — SHIP-IT SPOTLIGHT (recommendations, not actions) -->
+  <section class="slide">
+    <div class="wrap">
+      <p class="eyebrow">spotlight · ship-it</p>
+      <h2>A ticket’s journey — <span class="grad">always handed back</span>.</h2>
+      <div class="diagram">
+        <div class="row">
+          <div class="node"><span class="nt">Ticket</span></div><span class="arrow">→</span>
+          <div class="node core"><span class="nt">groom-it</span><span class="ns">shape it</span></div><span class="arrow">→</span>
+          <div class="node core"><span class="nt">spec-it</span><span class="ns">refine the spec</span></div><span class="arrow">→</span>
+          <div class="node human"><span class="nt">human</span><span class="ns">moves it forward</span></div>
+        </div>
+        <div class="lbl">↓</div>
+        <div class="row">
+          <div class="node core"><span class="nt">code-it</span><span class="ns">drafts a PR, tests green</span></div><span class="arrow">→</span>
+          <div class="node core"><span class="nt">review-it</span><span class="ns">a second AI reviews</span></div><span class="arrow">→</span>
+          <div class="node human"><span class="nt">human</span><span class="ns">merges</span></div>
+        </div>
+        <div class="lbl">↓</div>
+        <div class="row">
+          <div class="node core"><span class="nt">validate-it</span><span class="ns">comments: did it work?</span></div><span class="arrow">→</span>
+          <div class="node human"><span class="nt">human</span><span class="ns">marks it done</span></div>
+        </div>
+      </div>
+      <p class="kicker" style="font-size:clamp(15px,2vw,22px)">Every step ends with a <span class="grad">recommendation, not an action</span> — each agent hands back to a person, and <b>validate-it just comments whether it worked</b>. Humans move the ticket. Always.</p>
+    </div>
+  </section>
+
+  <!-- 8 — TRUST -->
+  <section class="slide">
+    <div class="wrap">
+      <p class="eyebrow">trust by design</p>
+      <h2>Built to be <span class="grad">safe to say yes to</span>.</h2>
+      <div class="grid g2" style="margin-top:22px">
+        <ul class="clean" style="margin:0">
+          <li><b>Human in the loop</b> — nothing consequential without a person.</li>
+          <li><b>Proposes, never merges</b> — write-capable agents only open changes.</li>
+          <li><b>Opt-in</b> — an agent touches a project only when enabled for it.</li>
+          <li><b>Least privilege</b> — each agent can reach only what its job needs.</li>
+        </ul>
+        <ul class="clean" style="margin:0">
+          <li><b>Data stays isolated</b> — the AI never holds database credentials.</li>
+          <li><b>Cross-model review</b> — a different AI critiques the code’s author.</li>
+          <li><b>Auditable</b> — actions logged; ticket/doc access is scoped.</li>
+          <li><b>Cost-tracked</b> — know what each ticket cost in time &amp; tokens.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 — THE CLEVER BITS (moved before status) -->
+  <section class="slide">
+    <div class="wrap">
+      <p class="eyebrow">why it’s fun</p>
+      <h2>The clever bits.</h2>
+      <div class="grid g2">
+        <div class="card"><span class="accentbar"></span><h3>No central brain</h3><p>Agents never call each other — they meet at the ticket and the PR. Your existing workflow is the orchestrator.</p></div>
+        <div class="card"><span class="accentbar"></span><h3>Two models argue</h3><p>Review runs as a Claude-vs-Codex debate to agreement — a genuinely independent second opinion on the code.</p></div>
+        <div class="card"><span class="accentbar"></span><h3>Compose, don’t bloat</h3><p>One runtime; agents are thin. New behavior is usually just a new <i>skill</i> — small, focused, shared.</p></div>
+        <div class="card"><span class="accentbar"></span><h3>Pay only for judgment</h3><p>Deterministic plumbing plus the gate mean the coding agent runs only when real judgment is needed — not on the mechanical or irrelevant parts.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 — STATUS (PoC) -->
+  <section class="slide">
+    <div class="wrap">
+      <p class="eyebrow">where it stands</p>
+      <h2>Real progress — and honest about the rest.</h2>
+      <div class="status">
+        <div class="strow"><span class="pill poc">PoC ready</span><span class="what">The catalog, the runtime, and <b>Ask-the-code</b> — working and green in dev (not yet battle-tested).</span></div>
+        <div class="strow"><span class="pill scaff">Scaffolded</span><span class="what">Infrastructure (deploys, permissions, triggers) — wired, validating.</span></div>
+        <div class="strow"><span class="pill design">Designed</span><span class="what"><b>Secure-it · Document-it · Triage-it · Ship-it</b> — specced and consensus-reviewed.</span></div>
+      </div>
+      <p class="muted" style="margin-top:22px;font-size:16px">Nothing here is autonomous magic — it’s familiar cloud pieces wired together with care.</p>
+    </div>
+  </section>
+
+  <!-- 11 — ROADMAP & ROUGH EFFORT -->
+  <section class="slide">
+    <div class="wrap">
+      <p class="eyebrow">roadmap</p>
+      <h2>A sequence, roughly costed.</h2>
+      <div class="status">
+        <div class="strow"><span class="pill est">~3 wks</span><span class="what"><b>Ask-the-code</b> — first up: it brings up the whole shared foundation (infra), and its Slack bot isn’t specced yet.</span></div>
+        <div class="strow"><span class="pill est">~2 wks</span><span class="what"><b>Secure-it</b> — fast follow: mainly GitHub access on the foundation Ask-the-code stood up.</span></div>
+        <div class="strow"><span class="pill est">~2–4 wks</span><span class="what"><b>Document-it</b> — reuses Secure-it’s PR path; the doc-platform integration (which tools, how they work) is the unknown.</span></div>
+        <div class="strow"><span class="pill est">~5–7 wks</span><span class="what"><b>Triage-it</b> — the careful one: isolated data + a privacy review.</span></div>
+        <div class="strow"><span class="pill est">~2–10 wks</span><span class="what"><b>Ship-it</b> — delivered in parts, skill by skill (code-it → review-it → spec-it).</span></div>
+      </div>
+      <p class="muted" style="margin-top:20px;font-size:15px">Rough <b style="color:var(--fg)">engineering effort, not calendar</b> — Ask-the-code stands up the shared foundation, so the rest are largely incremental. Add buffer for review + real-world hardening.</p>
+    </div>
+  </section>
+
+  <!-- 12 — CLOSE -->
+  <section class="slide">
+    <div class="wrap" style="text-align:center">
+      <p class="eyebrow" style="color:var(--violet)">come build it</p>
+      <h1 style="max-width:18ch;margin:0 auto 22px">A calmer, faster way to <span class="grad">build</span>.</h1>
+      <p class="lede" style="margin:0 auto 32px">AI does the toil. Humans make the calls. The whole suite rides one foundation you can extend in an afternoon.</p>
+      <p class="big grad" style="font-weight:800;font-size:clamp(28px,5vw,52px);margin:0">Contribute!</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="bar"><i id="bar"></i></div>
+<div class="dots" id="dots"></div>
+<div class="hint">← → · space · home/end</div>
+<div class="hud"><span id="count">1 / 12</span><span class="nav"><button id="prev" aria-label="previous">‹</button><button id="next" aria-label="next">›</button></span></div>
+
+<script>
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var i = 0, bar = document.getElementById('bar'), count = document.getElementById('count'), dotsEl = document.getElementById('dots');
+  slides.forEach(function(_, k){ var d = document.createElement('i'); d.addEventListener('click', function(){ show(k); }); dotsEl.appendChild(d); });
+  var dots = Array.prototype.slice.call(dotsEl.children);
+  function show(n){
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function(s, k){ s.classList.toggle('active', k === i); });
+    dots.forEach(function(d, k){ d.classList.toggle('on', k === i); });
+    bar.style.width = ((i) / (slides.length - 1) * 100) + '%';
+    count.textContent = (i + 1) + ' / ' + slides.length;
+    location.hash = i + 1;
+  }
+  document.addEventListener('keydown', function(e){
+    if (['ArrowRight',' ','PageDown'].indexOf(e.key) > -1){ show(i + 1); e.preventDefault(); }
+    else if (['ArrowLeft','PageUp'].indexOf(e.key) > -1){ show(i - 1); e.preventDefault(); }
+    else if (e.key === 'Home'){ show(0); }
+    else if (e.key === 'End'){ show(slides.length - 1); }
+  });
+  document.getElementById('next').addEventListener('click', function(){ show(i + 1); });
+  document.getElementById('prev').addEventListener('click', function(){ show(i - 1); });
+  var start = parseInt((location.hash || '').replace('#',''), 10);
+  show(isNaN(start) ? 0 : start - 1);
+</script>
+</body>
+</html>

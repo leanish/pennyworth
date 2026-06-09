@@ -1,6 +1,0 @@
-interface:
-  display_name: "Leanish Review"
-  short_description: "Pull request review"
-  default_prompt: "apply $leanish-review"
-policy:
-  allow_implicit_invocation: false
