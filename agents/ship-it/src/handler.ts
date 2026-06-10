@@ -204,11 +204,17 @@ async function handleInit(payload: ShipItInitPayload, runtime: Runtime): Promise
     return;
   }
 
-  // Gate 2 — per-ticket opt-in label, re-asserted even though the webhook
-  // normalizer should have filtered already (defense in depth).
-  if (!request.labels.includes(SHIP_IT_TICKET_LABEL)) {
-    log.info("ship-it: skipping — ticket does not carry the 'ship-it' label", {
+  // Gate 2 — per-ticket opt-in, re-asserted even though the webhook
+  // normalizer should have filtered already (defense in depth). Three
+  // owner-approved admission modes: the `ship-it` label, an explicit
+  // @ship-it comment mention, or a PR-shaped event (PRs carry no ticket
+  // labels — repo opt-in via Gate 1 is the control there).
+  const mentionTriggered = request.trigger?.mode === "mention";
+  const prTriggered = request.trigger?.mode === "pull-request";
+  if (!request.labels.includes(SHIP_IT_TICKET_LABEL) && !mentionTriggered && !prTriggered) {
+    log.info("ship-it: skipping — no 'ship-it' label and no mention/PR trigger", {
       labels: request.labels,
+      trigger: request.trigger ?? null,
     });
     return;
   }

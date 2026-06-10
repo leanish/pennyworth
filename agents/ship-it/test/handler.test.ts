@@ -217,6 +217,30 @@ describe("ship-it init — gates", () => {
     expect(published).toHaveLength(0);
   });
 
+  it("admits an unlabelled ticket when the normalizer marks a mention trigger", async () => {
+    const { runtime, runner } = await buildHarness({ codeItOutput: PR_OPENED_OUTPUT });
+    await handleShipItMessage(
+      initMessage(
+        validRequest({
+          labels: ["backend"],
+          trigger: { source: "jira", mode: "mention" },
+        }),
+      ),
+      runtime,
+    );
+    expect(runner.invocations).toHaveLength(1);
+  });
+
+  it("rejects a malformed trigger shape loudly", async () => {
+    const { runtime } = await buildHarness({});
+    await expect(
+      handleShipItMessage(
+        initMessage(validRequest({ trigger: { source: "jira", mode: "bogus" } })),
+        runtime,
+      ),
+    ).rejects.toBeInstanceOf(ShipItValidationError);
+  });
+
   it("skips an unmapped ticket status (advisory skip, not an error)", async () => {
     const { runtime, runner, published } = await buildHarness({});
     await handleShipItMessage(

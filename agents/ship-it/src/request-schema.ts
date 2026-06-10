@@ -24,6 +24,18 @@ export interface ShipItRequest {
    * (the review-it path). Jira-driven events omit it.
    */
   readonly prNumber?: number;
+  /**
+   * How the normalizer admitted the event (owner-approved alternative
+   * triggers). Absent = legacy label-mode message. `mention` = a ticket
+   * comment mentioned @ship-it (the label may be absent); `pull-request` =
+   * a GitHub PR event (PRs carry no ticket labels; repo opt-in is the gate).
+   */
+  readonly trigger?: ShipItTrigger;
+}
+
+export interface ShipItTrigger {
+  readonly source: "jira" | "github";
+  readonly mode: "label" | "mention" | "pull-request";
 }
 
 export class ShipItValidationError extends Error {
@@ -55,6 +67,7 @@ export function parseShipItRequest(raw: unknown): ShipItRequest {
       ? undefined
       : requireStringArray(raw, "acceptanceCriteria");
   const prNumber = optionalPositiveInteger(raw, "prNumber");
+  const trigger = optionalTrigger(raw);
 
   return {
     ticketKey,
@@ -65,7 +78,27 @@ export function parseShipItRequest(raw: unknown): ShipItRequest {
     ...(ticketDescription !== undefined ? { ticketDescription } : {}),
     ...(acceptanceCriteria !== undefined ? { acceptanceCriteria } : {}),
     ...(prNumber !== undefined ? { prNumber } : {}),
+    ...(trigger !== undefined ? { trigger } : {}),
   };
+}
+
+const TRIGGER_SOURCES = ["jira", "github"] as const;
+const TRIGGER_MODES = ["label", "mention", "pull-request"] as const;
+
+function optionalTrigger(obj: Record<string, unknown>): ShipItTrigger | undefined {
+  const v = obj["trigger"];
+  if (v === undefined) return undefined;
+  if (!isObject(v)) {
+    throw new ShipItValidationError("request.trigger must be an object when present");
+  }
+  const source = v["source"];
+  const mode = v["mode"];
+  if (!TRIGGER_SOURCES.includes(source as never) || !TRIGGER_MODES.includes(mode as never)) {
+    throw new ShipItValidationError(
+      "request.trigger must be {source: jira|github, mode: label|mention|pull-request}",
+    );
+  }
+  return { source, mode } as ShipItTrigger;
 }
 
 function optionalPositiveInteger(obj: Record<string, unknown>, field: string): number | undefined {
