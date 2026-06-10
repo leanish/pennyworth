@@ -1,33 +1,33 @@
 import type { AgentPayloadBase } from "@leanish/runtime";
 
 /**
- * Per-stage payload shapes for secureit. The discriminator is the runtime's
- * `stage` (init / breakdown / revisit), not a field inside the payload.
+ * Per-stage payload shapes for secure-it. The discriminator is the
+ * runtime's `stage` (init / breakdown / revisit), not a field inside the
+ * payload — the handler narrows by `message.stage` and validates the
+ * payload at that boundary (see `handler.ts`).
  *
- * See `overview.md` §Per-project fan-out pattern
- * and `secureit-revisit.md`.
+ * Every payload extends `AgentPayloadBase`, so the optional shared
+ * `execution` override can ride along on any stage.
  */
-export interface SecureitInitPayload extends AgentPayloadBase {
-  // Scheduler tick — no payload data needed. Empty so the field exists.
+export interface InitPayload extends AgentPayloadBase {
+  // Scheduler tick — no payload data beyond the optional `execution`
+  // override inherited from AgentPayloadBase.
 }
 
-export interface SecureitBreakdownPayload extends AgentPayloadBase {
-  /** catalogit project id, e.g. "leanish/foo". */
+export interface BreakdownPayload extends AgentPayloadBase {
+  /** catalog project id, e.g. "leanish/widget". */
   readonly projectId: string;
 }
 
-export interface SecureitRevisitPayload extends AgentPayloadBase {
-  /** catalogit project id. */
+export interface RevisitPayload extends AgentPayloadBase {
+  /** Repo full name; matches the catalog project id. */
   readonly repo: string;
-  /** PR branch name, e.g. "secureit/GHSA-xxxx-package". */
+  /** PR branch name, e.g. "secure-it/GHSA-xxxx-package". */
   readonly branch: string;
-  /** Reference back to the alert this PR addresses. */
+  /** Stable per-alert identifier the PR addresses (e.g. a GHSA id). */
   readonly alertRef: string;
-  /** Bounded by the revisit cap (default 2 — skill-internal constant for now). */
+  /** How many revisits this PR already received. Capped at 2 by the handler. */
   readonly revisitCount: number;
 }
 
-export type SecureitPayload =
-  | SecureitInitPayload
-  | SecureitBreakdownPayload
-  | SecureitRevisitPayload;
+export type SecureItPayload = InitPayload | BreakdownPayload | RevisitPayload;

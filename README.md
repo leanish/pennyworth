@@ -12,7 +12,7 @@ back **for your review**. Focus on the product, not the plumbing.
 - **`infra/`** — infrastructure-as-code (provisions each agent)
 - **`agents/`** — the fleet (each independently deployable)
   - `ask-the-code` — read-only Q&A over the code
-  - `secure-it` — keeps dependencies current (proposes PRs)
+  - `secure-it` — fixes security/dependency alerts (proposes draft PRs)
   - *(document-it · triage-it · ship-it · monitor-it — designed, not yet built)*
 - **`docs/`** — the **presentation** (`docs/presentation/`, ready for GitHub Pages)
 

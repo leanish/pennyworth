@@ -1,24 +1,38 @@
 /**
- * `@leanish/secure-it` — phase-2 placeholder.
+ * `@leanish/secure-it` — scheduler-driven Layer-3 agent that fixes open
+ * GitHub security/dependency alerts via draft PRs and shepherds them
+ * through CI (flip / adapt / rollback / defer).
  *
- * Phase 1 ships **types only**. There is no `defineAgent({...})` here yet:
- * the handler depends on `runtime.publish` / `runtime.publishDelayed`,
- * which are deliberately absent from the phase-1 `Runtime` interface (see
- * ADR-0011). Phase 2 adds the handler in `src/agent.ts` and re-exports
- * its default export from this file.
+ * Public surface:
+ *   - default export — the `defineAgent({...})` definition (entry shims
+ *     pass it to `createSqsLambdaShim` / `run-local`).
+ *   - per-stage payload types (`InitPayload`, `BreakdownPayload`,
+ *     `RevisitPayload`).
+ *   - the skill I/O contracts the handler exchanges with the two
+ *     entry-point skills.
  *
- * What this package provides today:
- *   - The locked per-stage payload contracts (`SecureitInitPayload`,
- *     `SecureitBreakdownPayload`, `SecureitRevisitPayload`).
- *   - The `agent.yaml` descriptor in the phase-2 shape (scheduler trigger,
- *     three stages, two skill entrypoints, `github` need).
- *
- * Importing anything other than the types below is a phase-2 capability;
- * downstream tooling that needs a typed handler reference should wait.
+ * The AWS Lambda entry lives in `./lambda` (see `package.json#exports`).
  */
+export { default } from "./agent.js";
 export type {
-  SecureitBreakdownPayload,
-  SecureitInitPayload,
-  SecureitPayload,
-  SecureitRevisitPayload,
+  BreakdownPayload,
+  InitPayload,
+  RevisitPayload,
+  SecureItPayload,
 } from "./payload.js";
+export {
+  CONSUMER_ID,
+  handleSecureItMessage,
+  isExplicitlyOptedIn,
+} from "./handler.js";
+export type {
+  SecureItAlert,
+  SecureItAlertOutcome,
+  SecureItCiConclusion,
+  SecureItInput,
+  SecureItOutput,
+  SecureItPullRequest,
+  SecureItRevisitInput,
+  SecureItRevisitOutcome,
+  SecureItRevisitOutput,
+} from "./handler.js";

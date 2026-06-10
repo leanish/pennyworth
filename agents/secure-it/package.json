@@ -2,7 +2,7 @@
   "name": "@leanish/secure-it",
   "version": "0.0.0",
   "private": true,
-  "description": "agent-secureit — phase-2 Layer-3 agent that opens draft PRs for security alerts. Built on @leanish/runtime.",
+  "description": "agent-secure-it — scheduler-driven Layer-3 agent that fixes GitHub security alerts via draft PRs and shepherds them through CI. Built on @leanish/runtime.",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {
@@ -10,10 +10,21 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./lambda": {
+      "types": "./dist/lambda.d.ts",
+      "import": "./dist/lambda.js"
+    }
+  },
   "files": [
     "dist",
     "!dist/.tsbuildinfo",
     "src",
+    "skills",
     "agent.yaml",
     "SCOPE.md"
   ],
@@ -26,6 +37,8 @@
     "check": "npm run typecheck && npm run build && npm test"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1053.0",
+    "@aws-sdk/client-s3": "^3.1053.0",
     "@leanish/runtime": "file:../../core/runtime"
   },
   "devDependencies": {
