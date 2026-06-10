@@ -1,4 +1,4 @@
-# AGENTS.md — agent-atc
+# AGENTS.md — ask-the-code (ATC)
 
 Working rules for any agent editing this repo. Key carry-overs from the shared agent guidelines:
 

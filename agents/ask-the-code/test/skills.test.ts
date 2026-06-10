@@ -14,9 +14,9 @@ import { SkillLoader } from "@leanish/runtime/testing";
  * runtime's bundled `skills/` and are inherited via the multi-dir
  * search.
  */
-describe("agent-atc skills", () => {
+describe("ask-the-code skills", () => {
   // tsconfig.test.json maps __dirname-equivalent for ESM-style tests via
-  // `import.meta.url`. The agent-atc package root is two levels up from
+  // `import.meta.url`. The ask-the-code package root is two levels up from
   // test/skills.test.ts.
   const agentSkillsDir = join(dirname(fileURLToPath(import.meta.url)), "..", "skills");
 
@@ -27,7 +27,7 @@ describe("agent-atc skills", () => {
   // hand-built node_modules path, which broke under workspace hoisting.
   const runtimeSkillsDir = defaultRuntimeSkillsDir();
 
-  it("ask loads as a valid entry-point skill from agent-atc/skills/", async () => {
+  it("ask loads as a valid entry-point skill from ask-the-code/skills/", async () => {
     const loader = new SkillLoader({ skillsDirs: [agentSkillsDir] });
     const ask = await loader.loadEntrypoint("ask");
     expect(ask.name).toBe("ask");
@@ -55,9 +55,9 @@ describe("agent-atc skills", () => {
     expect(d.body.length).toBeGreaterThan(0);
   });
 
-  it("agent-atc/skills/ does NOT carry universal support skills (they live in the runtime)", async () => {
+  it("ask-the-code/skills/ does NOT carry universal support skills (they live in the runtime)", async () => {
     // Sanity: without the runtime fallback, diagnose / karpathy-guidelines
-    // are not findable from agent-atc/skills/ alone. They're universal,
+    // are not findable from ask-the-code/skills/ alone. They're universal,
     // so they live in agent-runtime/skills/, not here.
     const loader = new SkillLoader({ skillsDirs: [agentSkillsDir] });
     await expect(loader.load("diagnose")).rejects.toThrow(/skill 'diagnose' not found/);

@@ -49,7 +49,7 @@ export async function materializeAttachments(
     return { cleanup: noopCleanup };
   }
 
-  const baseDir = join(workspaceTmpDir(), `atc-${envelopeRequestId}-${Date.now()}`);
+  const baseDir = join(workspaceTmpDir(), `ask-the-code-${envelopeRequestId}-${Date.now()}`);
   await mkdir(baseDir, { recursive: true });
 
   const pathByUri = new Map<string, string>();
@@ -144,7 +144,7 @@ function workspaceTmpDir(): string {
   // `%TEMP%` on Windows), so the default works in every environment. The
   // env override exists for ops scenarios (mounted EFS, scratch directory
   // on a different volume, etc.) where the operator wants explicit control.
-  return process.env["ATC_TMP_DIR"] ?? tmpdir();
+  return process.env["ASK_THE_CODE_TMP_DIR"] ?? tmpdir();
 }
 
 async function cleanupDir(dir: string): Promise<void> {

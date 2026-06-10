@@ -27,14 +27,14 @@ export interface ResolvedScope {
  * Resolve the request into a `ProjectScope` + the concrete `Project[]`.
  * Per queue-api.md §kind: "ask" field rules:
  *
- *   - `projectIds` non-empty → `catalog.forConsumer("atc").get()` per id;
+ *   - `projectIds` non-empty → `catalog.forConsumer("ask-the-code").get()` per id;
  *     **any id that is not in the catalog throws** `AtcValidationError`.
  *     Silently skipping unknown ids would degrade an explicit consumer
  *     intent into a narrower query without surfacing the typo / opt-out.
  *     → source: "payload-project-ids".
  *   - `includeAll: true` (with no `projectIds`) → `catalog.forConsumer.list()`
  *     → source: "payload-include-all".
- *   - else → `routeProjects({ task: question, forConsumer: "atc" })`. The
+ *   - else → `routeProjects({ task: question, forConsumer: "ask-the-code" })`. The
  *     handler does not catch the router throw — a missing router is a
  *     deploy-time configuration error that the runtime surfaces as
  *     `RouterNotConfiguredError`, and the caller's `mapErrorKind` maps
@@ -47,7 +47,7 @@ export async function resolveProjectScope(
   request: AtcRequest,
   runtime: Runtime,
 ): Promise<ResolvedScope> {
-  const consumer = runtime.catalog.forConsumer("atc");
+  const consumer = runtime.catalog.forConsumer("ask-the-code");
 
   if (request.projectIds !== undefined && request.projectIds.length > 0) {
     const projects: Project[] = [];
@@ -81,8 +81,8 @@ export async function resolveProjectScope(
   // Routers are shared across consumers (per ADR-0005), so the framing
   // keeps the router prompt-neutral while disambiguating the request.
   const routed = await runtime.routeProjects({
-    task: `Answer this ATC question: ${request.question}`,
-    forConsumer: "atc",
+    task: `Answer this ask-the-code question: ${request.question}`,
+    forConsumer: "ask-the-code",
   });
   if (routed.length > 0) {
     return scopeFor("router-selection", routed);

@@ -44,7 +44,7 @@ interface AskSkillOutput {
  * to the `ask` skill's input + the surrounding lifecycle / delivery logic.
  * Matches `queue-api.md` §Handler transformation.
  *
- * Ordering (every *work* fail-path emits `atc.ask.failed`, never a partial
+ * Ordering (every *work* fail-path emits `ask-the-code.ask.failed`, never a partial
  * protocol; the one exception is a terminal-reply *delivery* failure after
  * `completed` has already fired — that propagates for SQS retry rather than
  * emitting `failed`, since the work succeeded and the reply is at-least-once):
