@@ -18,8 +18,13 @@ const shared = new SharedStack(app, "leanish-shared", { env });
 
 for (const registration of AGENTS) {
   // Read + validate the agent's descriptor via the canonical runtime parser
-  // (suite-0006 / contract D2 — no descriptor copy, no codegen).
-  const descriptor = await loadDescriptorFromFile(registration.descriptorPath);
+  // (suite-0006 / contract D2 — no descriptor copy, no codegen). Synth parses
+  // with the widest phase: infra needs the IAM/env shape of every registered
+  // agent regardless of rollout phase — phase admissibility is enforced by
+  // the runtime at agent startup, not at synth.
+  const descriptor = await loadDescriptorFromFile(registration.descriptorPath, {
+    phase: "phase-3",
+  });
   new AgentStack(app, `leanish-agent-${registration.id}`, {
     env,
     registration,

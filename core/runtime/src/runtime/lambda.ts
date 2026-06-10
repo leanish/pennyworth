@@ -92,6 +92,15 @@ export {
 // Structured logger constructor.
 export { ConsoleLogger, type ConsoleLoggerOptions } from "../logger/console-logger.js";
 
+// Self-publish adapter (phase-2, ADR-0011) — backs `runtime.publish` /
+// `runtime.publishDelayed`; the Lambda entry wires this when the agent
+// declares fan-out / revisit stages.
+export type { SelfPublisher } from "../self-publish/self-publisher.js";
+export {
+  createAwsSelfPublisher,
+  type AwsSelfPublisherOptions,
+} from "../self-publish/aws-self-publisher.js";
+
 // Envelope normaliser (lambda shim consumes this; sub-export here for the
 // rare ATC-side custom shim that wants to drive normalisation itself).
 export {

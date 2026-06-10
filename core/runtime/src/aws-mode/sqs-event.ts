@@ -37,6 +37,9 @@ export interface SqsRecord {
  *   - `duplicate-in-flight`  — idempotency hit, prior still in-flight; SQS keeps the message.
  *   - `envelope-parse-failed`— body wasn't JSON; treated as malformed, kept for DLQ via max-receive.
  *   - `envelope-rejected`    — HMAC / clock-skew / unknown consumer / allowedKinds.
+ *   - `runtime-message-rejected` — a self/scheduler-shaped body (ADR-0011) failed admissibility:
+ *                              undeclared stage, scheduler-sourced without a scheduler trigger,
+ *                              or self-sourced where the shim's trust gate forbids it.
  *   - `handler-failed`       — dispatch threw; claim moved to immediately-expired so the next
  *                              redelivery reclaims on the first try.
  */
@@ -48,6 +51,7 @@ export type SqsRecordStatus =
   | "duplicate-in-flight"
   | "envelope-parse-failed"
   | "envelope-rejected"
+  | "runtime-message-rejected"
   | "handler-failed";
 
 export interface SqsRecordOutcome {

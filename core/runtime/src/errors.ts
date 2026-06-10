@@ -29,6 +29,23 @@ export class UnhandledStageError extends RuntimeError {
 }
 
 /**
+ * `runtime.publish` / `runtime.publishDelayed` was called on a runtime
+ * built without a `SelfPublisher` (ADR-0011). Either the agent is running
+ * in a phase-1 entry shim that doesn't wire one, or the deployment is
+ * missing its self-queue configuration. Fail loudly — silently dropping a
+ * fan-out or revisit message would strand the workflow.
+ */
+export class SelfPublishNotConfiguredError extends RuntimeError {
+  constructor(readonly agent: string) {
+    super(
+      `Agent '${agent}' called runtime.publish/publishDelayed but no SelfPublisher is configured ` +
+        `(BuildRuntimeOptions.selfPublisher). Wire createAwsSelfPublisher (AWS) or ` +
+        `createLocalSelfPublisher (local/tests).`,
+    );
+  }
+}
+
+/**
  * A parsed `agent.yaml` failed validation at startup. Fatal — the agent
  * fails to register and no message is consumed.
  */
