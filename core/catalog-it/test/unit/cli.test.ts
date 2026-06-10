@@ -10,6 +10,7 @@ import { catalogitCli } from "../../src/index.js";
 import {
   buildAddOptionsFromFlags,
   buildDiscoverOptionsFromFlags,
+  runProcess,
   type MixedFlags,
 } from "../../src/cli.js";
 
@@ -100,19 +101,31 @@ describe("catalogitCli", () => {
   });
 
   it("defaults --catalog-root to the XDG path when no flag and no env override", async () => {
-    // Run `validate` with no --catalog-root; should resolve to the default
-    // path. The default path likely doesn't exist on this machine, so the
-    // FilesystemCatalog.load(...) will fail with ENOENT — but the message
-    // confirms the path resolution went through the documented chain.
-    const stderr = new PassThrough();
-    const read = capture(stderr);
-    const code = await catalogitCli(["validate"], {
-      stdout: new PassThrough(),
-      stderr,
-    });
-    expect(code).toBe(1);
-    // The default path (under XDG_DATA_HOME or $HOME/.local/share) is in the message:
-    expect(read()).toMatch(/catalogit\/projects/);
+    // Run `validate` with no --catalog-root; should resolve through the
+    // documented chain to `$XDG_DATA_HOME/catalogit/`. Point XDG_DATA_HOME at
+    // a fresh temp dir (no catalogit/ inside) so the FilesystemCatalog.load
+    // ENOENT is guaranteed regardless of the developer's real ~/.local/share
+    // or CATALOGIT_ROOT env.
+    const savedRoot = process.env["CATALOGIT_ROOT"];
+    const savedXdg = process.env["XDG_DATA_HOME"];
+    delete process.env["CATALOGIT_ROOT"];
+    process.env["XDG_DATA_HOME"] = await mkdtemp(join(tmpdir(), "catit-xdg-"));
+    try {
+      const stderr = new PassThrough();
+      const read = capture(stderr);
+      const code = await catalogitCli(["validate"], {
+        stdout: new PassThrough(),
+        stderr,
+      });
+      expect(code).toBe(1);
+      // The default path (under XDG_DATA_HOME) is in the message:
+      expect(read()).toMatch(/catalogit\/projects/);
+    } finally {
+      if (savedRoot === undefined) delete process.env["CATALOGIT_ROOT"];
+      else process.env["CATALOGIT_ROOT"] = savedRoot;
+      if (savedXdg === undefined) delete process.env["XDG_DATA_HOME"];
+      else process.env["XDG_DATA_HOME"] = savedXdg;
+    }
   });
 
   it("prints usage containing add and discover when invoked with --help", async () => {
@@ -483,5 +496,38 @@ describe("buildDiscoverOptionsFromFlags", () => {
       booleans: { "include-archived": true },
     });
     expect(opts.includeArchived).toBe(true);
+  });
+});
+
+// Live-seam regression test: deliberately spawns a tiny `node -e` child.
+// `runProcess` must close the child's stdin even without `input` — `codex exec`
+// reads piped stdin to EOF before starting, so an open pipe hangs it forever.
+describe("runProcess", () => {
+  it("closes the child's stdin when no input is given (EOF reaches the child)", async () => {
+    const result = await runProcess(
+      "node",
+      ["-e", "process.stdin.on('data', () => {}); process.stdin.on('end', () => process.exit(7));"],
+      {},
+    );
+    expect(result.code).toBe(7);
+  });
+
+  it("delivers input then EOF when input is given", async () => {
+    const result = await runProcess(
+      "node",
+      ["-e", "let b = ''; process.stdin.on('data', (d) => (b += d)); process.stdin.on('end', () => { process.stdout.write(b); process.exit(0); });"],
+      { input: "hi" },
+    );
+    expect(result).toEqual({ code: 0, stdout: "hi", stderr: "" });
+  });
+
+  it("kills the child and reports code 124 when timeoutMs elapses", async () => {
+    const result = await runProcess(
+      "node",
+      ["-e", "setTimeout(() => {}, 60_000);"],
+      { timeoutMs: 200 },
+    );
+    expect(result.code).toBe(124);
+    expect(result.stderr).toContain("timed out after 200ms");
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractFencedMarkdown, resolveCodingAgent, draftDescription, DraftError } from "../../src/coding-agent.js";
+import { extractFencedMarkdown, resolveCodingAgent, draftDescription, DraftError, DRAFT_TIMEOUT_MS } from "../../src/coding-agent.js";
 
 describe("extractFencedMarkdown", () => {
   it("extracts the last ```markdown fenced block", () => {
@@ -48,5 +48,14 @@ describe("draftDescription", () => {
   it("throws DraftError when no fenced block in output", async () => {
     const runProcess = async () => ({ code: 0, stdout: "chatter only", stderr: "" });
     await expect(draftDescription({ agent: "codex", cwd: "/c", prompt: "P", runProcess })).rejects.toBeInstanceOf(DraftError);
+  });
+  it("caps every attempt with DRAFT_TIMEOUT_MS", async () => {
+    let seenTimeout: number | undefined;
+    const runProcess = async (_c: string, _a: readonly string[], opts: { timeoutMs?: number }) => {
+      seenTimeout = opts.timeoutMs;
+      return { code: 0, stdout: "```markdown\nhi\n```", stderr: "" };
+    };
+    await draftDescription({ agent: "codex", cwd: "/c", prompt: "P", runProcess });
+    expect(seenTimeout).toBe(DRAFT_TIMEOUT_MS);
   });
 });

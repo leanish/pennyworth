@@ -393,34 +393,61 @@ export function buildDiscoverOptionsFromFlags(args: MixedFlags): DiscoverOptions
 }
 
 // ---------------------------------------------------------------------------
-// Live seams (production-only — not unit-tested)
+// Live seams (production-only; `runProcess` is exported for the stdin-close
+// regression test)
 // ---------------------------------------------------------------------------
 
-function runProcess(
+export function runProcess(
   cmd: string,
   args: readonly string[],
-  opts: { cwd?: string; input?: string },
+  opts: { cwd?: string; input?: string; timeoutMs?: number },
 ): Promise<RunResult> {
   return new Promise((resolve) => {
     const child = spawn(cmd, [...args], { cwd: opts.cwd });
     let stdout = "";
     let stderr = "";
+    let timedOut = false;
+    const timer =
+      opts.timeoutMs !== undefined
+        ? setTimeout(() => {
+            timedOut = true;
+            child.kill("SIGKILL");
+          }, opts.timeoutMs)
+        : undefined;
+    const done = (result: RunResult): void => {
+      if (timer !== undefined) clearTimeout(timer);
+      resolve(result);
+    };
     child.stdout.on("data", (b: Buffer) => (stdout += b));
     child.stderr.on("data", (b: Buffer) => (stderr += b));
     child.on("error", () =>
-      resolve({ code: 127, stdout, stderr: stderr || `failed to spawn ${cmd}` }),
+      done({ code: 127, stdout, stderr: stderr || `failed to spawn ${cmd}` }),
     );
     child.on("close", (code: number | null) =>
-      resolve({ code: code ?? 1, stdout, stderr }),
+      done(
+        timedOut
+          ? {
+              code: 124,
+              stdout,
+              stderr: `${stderr}\n${cmd} timed out after ${opts.timeoutMs}ms and was killed`,
+            }
+          : { code: code ?? 1, stdout, stderr },
+      ),
     );
-    if (opts.input !== undefined) {
-      child.stdin.end(opts.input);
-    }
+    // Always close stdin (with input when provided). `codex exec` reads piped
+    // stdin to EOF even when the prompt is an argument — an open pipe makes it
+    // wait forever before starting.
+    child.stdin.end(opts.input);
   });
 }
 
-const runGit: RunGit = (args) => runProcess("git", args, {});
-const runGh: RunGh = (args) => runProcess("gh", args, {});
+// Hard caps so no live subprocess can stall a run forever: `gh` calls are
+// quick API lookups; `git` covers shallow inspection clones of large repos.
+const GH_TIMEOUT_MS = 60_000;
+const GIT_TIMEOUT_MS = 5 * 60_000;
+
+const runGit: RunGit = (args) => runProcess("git", args, { timeoutMs: GIT_TIMEOUT_MS });
+const runGh: RunGh = (args) => runProcess("gh", args, { timeoutMs: GH_TIMEOUT_MS });
 
 const confirm = (message: string): Promise<boolean> =>
   inquirerConfirm({ message });

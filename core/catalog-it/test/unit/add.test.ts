@@ -1,12 +1,12 @@
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { runAdd, type AddDeps, type AddOptions } from "../../src/add.js";
 import { writeProjectYaml, projectFileExists } from "../../src/project-writer.js";
 import { FilesystemCatalog } from "../../src/filesystem-catalog.js";
-import type { RunProcess } from "../../src/coding-agent.js";
+import type { RunProcess, RunResult } from "../../src/coding-agent.js";
 import type { RunGh } from "../../src/github.js";
 import type { RunGit } from "../../src/inspection-clone.js";
 
@@ -120,6 +120,54 @@ describe("runAdd", () => {
     );
     expect(result).toEqual({ status: "skipped", exitCode: 1 });
     expect(cap.text()).toContain(`invalid id "Bad Owner/repo"`);
+  });
+
+  it("announces drafting on stderr (drafting is minutes-long with no output of its own)", async () => {
+    const cap = captureSink();
+    await runAdd(makeOpts({ catalogRoot }), makeDeps({ stderr: cap.sink }));
+    expect(cap.text()).toContain(`drafting "leanish/foo" via`);
+  });
+
+  it("reports completion with elapsed time after a successful draft", async () => {
+    const cap = captureSink();
+    await runAdd(makeOpts({ catalogRoot }), makeDeps({ stderr: cap.sink }));
+    expect(cap.text()).toMatch(/drafted "leanish\/foo" in \d+s/);
+  });
+
+  it("emits still-drafting heartbeats while the agent runs", async () => {
+    // Fake only the heartbeat's interval + clock; real timers keep driving the
+    // fs/promise machinery runAdd awaits before the draft starts.
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    try {
+      let release!: (r: RunResult) => void;
+      const gate = new Promise<RunResult>((resolve) => (release = resolve));
+      const cap = captureSink();
+      const pending = runAdd(
+        makeOpts({ catalogRoot }),
+        makeDeps({ stderr: cap.sink, runProcess: () => gate }),
+      );
+      // Wait (real time) until runAdd reaches the draft and starts the heartbeat.
+      while (!cap.text().includes("drafting")) {
+        await new Promise((r) => setTimeout(r, 1));
+      }
+      await vi.advanceTimersByTimeAsync(65_000);
+      expect(cap.text()).toContain(`still drafting "leanish/foo"`);
+      expect(cap.text()).toContain("s elapsed");
+      release({ code: 0, stdout: DRAFT_STDOUT, stderr: "" });
+      await pending;
+      // Heartbeat stops after completion: no further ticks accumulate.
+      const after = cap.text();
+      await vi.advanceTimersByTimeAsync(65_000);
+      expect(cap.text()).toBe(after);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("--skeleton stays silent on stderr (no drafting happens)", async () => {
+    const cap = captureSink();
+    await runAdd(makeOpts({ catalogRoot, skeleton: true }), makeDeps({ stderr: cap.sink }));
+    expect(cap.text()).toBe("");
   });
 
   // --- existing + force: spine preserved ------------------------------------
