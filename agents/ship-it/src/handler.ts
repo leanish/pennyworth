@@ -7,6 +7,7 @@ import {
   type ShipItRevisitPayload,
 } from "./payload.js";
 import { parseShipItRequest, type ShipItRequest } from "./request-schema.js";
+import { SHIP_IT_STEPS } from "./steps.js";
 
 /** Consumer id under which projects opt in (`extensions.ship-it`). */
 const SHIP_IT_CONSUMER_ID = "ship-it";
@@ -121,30 +122,67 @@ async function handleInit(payload: ShipItInitPayload, runtime: Runtime): Promise
     return;
   }
 
-  // Skill selection — the ticket's workflow status picks the skill. A
+  // Step selection — the ticket's workflow status picks the step. A
   // project may override the default map via extensions.ship-it.statusSkillMap.
   const statusSkillMap = resolveStatusSkillMap(extension);
-  const skill = statusSkillMap[request.ticketStatus];
-  if (skill === undefined) {
+  const stepName = statusSkillMap[request.ticketStatus];
+  if (stepName === undefined) {
     // Advisory skip, not an error: tickets move through many statuses and
     // only the mapped ones are ship-it's business.
-    log.info("ship-it: skipping — no skill mapped for ticket status", {
+    log.info("ship-it: skipping — no step mapped for ticket status", {
       ticketStatus: request.ticketStatus,
-    });
-    return;
-  }
-  if (skill !== "code-it") {
-    // Later phases (review-it / spec-it / groom-it) ride the same map; in
-    // phase 1 only code-it is implemented.
-    log.info("ship-it: skipping — mapped skill is not available in phase 1", {
-      ticketStatus: request.ticketStatus,
-      skill,
     });
     return;
   }
 
-  await runCodeIt(request, project, runtime, log);
+  // Per-step release switch (src/steps.ts): steps are developed and merged
+  // dark, then released by flipping one boolean. Routing to a dark or
+  // unknown step is an advisory skip, never a failure.
+  const step = SHIP_IT_STEPS[stepName];
+  if (step === undefined) {
+    log.warn("ship-it: skipping — mapped step is not in the step registry", {
+      ticketStatus: request.ticketStatus,
+      step: stepName,
+    });
+    return;
+  }
+  if (!step.released) {
+    log.info("ship-it: skipping — step is not released yet", {
+      ticketStatus: request.ticketStatus,
+      step: stepName,
+      note: step.note,
+    });
+    return;
+  }
+  const runStep = STEP_RUNNERS[stepName];
+  if (runStep === undefined) {
+    // Registry/runner drift — released without an implementation. Skip
+    // loudly instead of failing the ticket; the registry test pins this.
+    log.error("ship-it: skipping — released step has no runner", { step: stepName });
+    return;
+  }
+
+  await runStep(request, project, runtime, log);
 }
+
+/**
+ * Implementation dispatch for RELEASED steps. Adding a step: implement its
+ * runner + skills, register it here, and flip `released` in steps.ts when
+ * it's ready for real traffic.
+ */
+const STEP_RUNNERS: Readonly<
+  Record<
+    string,
+    (
+      request: ShipItRequest,
+      project: Project,
+      runtime: Runtime,
+      log: Runtime["logger"],
+    ) => Promise<void>
+  >
+> = {
+  "code-it": runCodeIt,
+};
 
 async function runCodeIt(
   request: ShipItRequest,

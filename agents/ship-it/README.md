@@ -18,7 +18,9 @@ Implemented in this package today:
   polls CI on the draft PR: green → flip to ready-for-review; red → fix and push, or close the PR
   and delete the branch; pending → poll again.
 
-Later steps behind the same status → skill map (not in this package yet):
+Later steps ride the same status → step map, gated by the **step registry** (`src/steps.ts`): each
+step carries a `released` switch, so a step can be developed and merged dark, then launched by
+flipping one boolean (plus declaring its skill entrypoint — a test pins the invariant):
 
 - **`review-it`** (phase 2) — independent cross-model PR review.
 - **`spec-it`** (phase 3) — iterate the spec on the ticket.

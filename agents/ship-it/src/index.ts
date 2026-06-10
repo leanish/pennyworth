@@ -8,3 +8,5 @@ export type {
 // Request shape: single source of truth in `request-schema.ts` (same module
 // that defines `parseShipItRequest`, so type and validator can't drift).
 export type { ShipItRequest } from "./request-schema.js";
+// Step registry: which lifecycle steps exist and which are released.
+export { releasedSteps, SHIP_IT_STEPS, type ShipItStep } from "./steps.js";

@@ -19,12 +19,15 @@ The normalizer is specified to emit a message only when the ticket carries the `
 the in-handler check on `request.labels` is defense in depth. A message without the label is logged
 and skipped, not failed.
 
-## 3. `statusSkillMap` and later phases
+## 3. `statusSkillMap`, the step registry, and later phases
 
-The ticket status → skill mapping defaults to `{"Ready for Implementation": "code-it"}` and can be
+The ticket status → step mapping defaults to `{"Ready for Implementation": "code-it"}` and can be
 overridden per project via `extensions.ship-it.statusSkillMap` (an override **replaces** the
-default, no merge). `review-it`, `spec-it`, and `groom-it` are later phases behind the same map; in
-phase 1 a status that maps to anything other than `code-it` is logged and skipped.
+default, no merge). Every step the lifecycle can route to lives in the **step registry**
+(`src/steps.ts`) with a per-step `released` switch: steps are developed and merged dark
+(`released: false`) and launched by flipping one boolean. A status mapped to a dark or unknown step
+is logged and skipped — never failed. A registry test pins that every released step is a declared
+skill entrypoint, so a step can't be flipped live without its skill shipping with it.
 
 ## 4. The `code-it-revisit` contract is defined here
 

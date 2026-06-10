@@ -284,6 +284,46 @@ describe("ship-it init — code-it", () => {
     expect(published).toHaveLength(0);
   });
 
+  it("skips statuses mapped to an unreleased step (merged dark, not yet flipped)", async () => {
+    const project: Project = {
+      ...ENABLED_PROJECT,
+      extensions: {
+        "ship-it": {
+          enabled: true,
+          statusSkillMap: { "In Review": "review-it" },
+        },
+      },
+    };
+    const { runtime, runner, published } = await buildHarness({ projects: [project] });
+    await handleShipItMessage(
+      initMessage(validRequest({ ticketStatus: "In Review" })),
+      runtime,
+    );
+    // review-it exists in the step registry but is not released: advisory
+    // skip — no skill run, no revisit, no failure.
+    expect(runner.invocations).toHaveLength(0);
+    expect(published).toHaveLength(0);
+  });
+
+  it("skips statuses mapped to a step the registry doesn't know", async () => {
+    const project: Project = {
+      ...ENABLED_PROJECT,
+      extensions: {
+        "ship-it": {
+          enabled: true,
+          statusSkillMap: { "Weird Status": "not-a-step" },
+        },
+      },
+    };
+    const { runtime, runner, published } = await buildHarness({ projects: [project] });
+    await handleShipItMessage(
+      initMessage(validRequest({ ticketStatus: "Weird Status" })),
+      runtime,
+    );
+    expect(runner.invocations).toHaveLength(0);
+    expect(published).toHaveLength(0);
+  });
+
   it("honors a statusSkillMap override from extensions (replaces the default map)", async () => {
     const project: Project = {
       ...ENABLED_PROJECT,
