@@ -13,7 +13,8 @@ back **for your review**. Focus on the product, not the plumbing.
 - **`agents/`** — the fleet (each independently deployable)
   - `ask-the-code` — read-only Q&A over the code
   - `secure-it` — keeps dependencies current (proposes PRs)
-  - *(document-it · triage-it · ship-it · monitor-it — designed, not yet built)*
+  - `document-it` — keeps the docs matching the code (proposes corrections)
+  - *(triage-it · ship-it · monitor-it — designed, not yet built)*
 - **`docs/`** — the **presentation** (`docs/presentation/`, ready for GitHub Pages)
 
 > The engineering **design docs** (CONTEXT / overview / ADRs) are maintained separately. This repo

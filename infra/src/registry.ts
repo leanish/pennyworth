@@ -28,4 +28,10 @@ export const AGENTS: ReadonlyArray<AgentRegistration> = [
     ecrRepositoryName: "leanish/agent-atc",
     imageTag: process.env["ATC_IMAGE_TAG"] ?? "latest",
   },
+  {
+    id: "document-it",
+    descriptorPath: join(repoRoot, "agents", "document-it", "agent.yaml"),
+    ecrRepositoryName: "leanish/agent-document-it",
+    imageTag: process.env["DOCUMENT_IT_IMAGE_TAG"] ?? "latest",
+  },
 ];
