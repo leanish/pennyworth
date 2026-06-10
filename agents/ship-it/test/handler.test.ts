@@ -1,7 +1,7 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildRuntime,
@@ -24,6 +24,20 @@ import {
 import { handleShipItMessage } from "../src/handler.js";
 import type { ShipItPayload } from "../src/payload.js";
 import { ShipItValidationError } from "../src/request-schema.js";
+
+// code-it is currently merged dark (the live rollout starts from groom-it);
+// these tests exercise the code-it flow itself, so flip it released here.
+// The production default is pinned in steps.test.ts.
+vi.mock("../src/steps.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/steps.js")>();
+  return {
+    ...actual,
+    SHIP_IT_STEPS: {
+      ...actual.SHIP_IT_STEPS,
+      "code-it": { ...actual.SHIP_IT_STEPS["code-it"]!, released: true },
+    },
+  };
+});
 
 const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 

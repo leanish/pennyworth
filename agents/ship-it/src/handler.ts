@@ -13,8 +13,14 @@ import { SHIP_IT_STEPS } from "./steps.js";
 const SHIP_IT_CONSUMER_ID = "ship-it";
 /** Per-ticket opt-in label, re-asserted in-handler (defense in depth). */
 const SHIP_IT_TICKET_LABEL = "ship-it";
-/** Ticket status → skill entrypoint, unless the project overrides it. */
+/**
+ * Ticket status → step, unless the project overrides it. Status names are
+ * tenant-specific placeholders — projects override the whole map via
+ * `extensions.ship-it.statusSkillMap`. Entries routing to dark steps are
+ * harmless (advisory skip) and become live when the step is released.
+ */
 const DEFAULT_STATUS_SKILL_MAP: Readonly<Record<string, string>> = {
+  "To Groom": "groom-it",
   "Ready for Implementation": "code-it",
 };
 /** Delay before the first CI revisit after code-it opens a draft PR. */

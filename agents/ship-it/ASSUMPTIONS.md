@@ -76,3 +76,11 @@ ship-it image for the cross-model path to be the norm.
 skips). The global `ship-it` label gate currently applies to ALL init events — the label-less
 GitHub-webhook path (gating on repo opt-in only) is part of the future normalizer work and will be
 revisited when review-it is released.
+
+## 10. Rollout starts from groom-it; code-it goes dark until then
+
+The live release order starts from the least brittle step: `groom-it` (no working copy, no GitHub
+access, no loops — worst case is an ignorable suggestion). `code-it`, `spec-it`, and `review-it`
+are implemented but work-in-progress dark. The default status map gained a placeholder
+`"To Groom" → groom-it` entry — like all default statuses it's tenant-specific and meant to be
+overridden per project via `statusSkillMap`.

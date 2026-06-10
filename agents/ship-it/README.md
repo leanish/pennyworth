@@ -7,9 +7,12 @@ transitions a ticket — it proposes (draft PRs, comments) and humans decide.
 Built on `@leanish/runtime`. See `1-pager.md` for the plain-language overview and
 `ASSUMPTIONS.md` for the phase-1 decisions.
 
-## Status — phase 1: `code-it`
+## Status — rollout step 1: `groom-it` (everything else merged dark)
 
-Implemented in this package today:
+**Released today: `groom-it` only** — the least brittle step starts the rollout: it touches no
+working copy, no GitHub, runs no loops; it assesses a labelled ticket against scrum-standard
+quality and proposes a groomed rewrite as a comment. The remaining steps are implemented but dark
+(`released: false` — work-in-progress; flip one boolean in `src/steps.ts` to launch each):
 
 - **`code-it`** — a ticket a human moved to *Ready for Implementation* (and labelled `ship-it`, on
   an opted-in project) gets implemented in the project working copy, tested with the project's own

@@ -18,21 +18,24 @@ export interface ShipItStep {
 }
 
 export const SHIP_IT_STEPS: Readonly<Record<string, ShipItStep>> = {
-  "code-it": {
+  // Rollout order starts from the least brittle step: groom-it touches no
+  // working copy, no GitHub, no loops — worst case is a suggestion a
+  // product owner ignores. Everything else is work-in-progress dark.
+  "groom-it": {
     released: true,
-    note: "phase 1 — implement a ready ticket as a draft PR",
+    note: "rollout step 1 — turn a raw ticket into a clear, product-ready one",
+  },
+  "code-it": {
+    released: false,
+    note: "implement a ready ticket as a draft PR (implemented, dark — WiP rollout)",
   },
   "review-it": {
     released: false,
-    note: "phase 2 — independent AI review of ready-for-review PRs (implemented, dark)",
+    note: "independent AI review of ready-for-review PRs (implemented, dark — WiP rollout)",
   },
   "spec-it": {
     released: false,
-    note: "phase 3 — iterate the specification on the ticket (implemented, dark)",
-  },
-  "groom-it": {
-    released: false,
-    note: "later — turn a raw ticket into a clear, product-ready one (implemented, dark)",
+    note: "iterate the specification on the ticket (implemented, dark — WiP rollout)",
   },
   "mock-it-up": {
     released: false,

@@ -10,8 +10,8 @@ import { releasedSteps, SHIP_IT_STEPS } from "../src/steps.js";
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 describe("ship-it step registry", () => {
-  it("phase 1 releases exactly code-it", () => {
-    expect(releasedSteps()).toEqual(["code-it"]);
+  it("the live rollout releases exactly groom-it (least brittle first; the rest are WiP dark)", () => {
+    expect(releasedSteps()).toEqual(["groom-it"]);
   });
 
   it("covers the full lifecycle vocabulary, dark steps included", () => {
