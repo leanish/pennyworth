@@ -43,7 +43,7 @@ export const SHIP_IT_STEPS: Readonly<Record<string, ShipItStep>> = {
   },
   "validate-it": {
     released: false,
-    note: "later — verify the deployed change actually works (needs deploy-env contracts; may split into its own agent)",
+    note: "verify the deployed change actually works (implemented, dark — WiP rollout; needs a real deploy + per-project validation contract to release; may split into its own agent)",
   },
 };
 

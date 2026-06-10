@@ -121,6 +121,34 @@ interface ReviewItOutput {
   readonly postedReview: boolean;
 }
 
+/** Provisional deployed-environment access contract (`extensions.ship-it.validation`). */
+interface ValidationConfig {
+  readonly environment?: string;
+  readonly baseUrl?: string;
+  readonly probes?: ReadonlyArray<string>;
+}
+
+interface ValidateItInput {
+  readonly ticketKey: string;
+  readonly projectId: string;
+  readonly ticketSummary: string;
+  readonly ticketDescription?: string;
+  readonly acceptanceCriteria?: ReadonlyArray<string>;
+  readonly validation: ValidationConfig;
+}
+
+interface ValidateItOutput {
+  readonly outcome: "validated" | "issues-found" | "cannot-validate";
+  readonly checks: ReadonlyArray<{
+    readonly target: string;
+    readonly expectation: string;
+    readonly result: "pass" | "fail" | "skipped";
+    readonly detail: string;
+  }>;
+  readonly summary: string;
+  readonly notes: string;
+}
+
 /**
  * ship-it's stage dispatcher.
  *
@@ -250,7 +278,67 @@ const STEP_RUNNERS: Readonly<
   "groom-it": runGroomIt,
   "spec-it": runSpecIt,
   "review-it": runReviewIt,
+  "validate-it": runValidateIt,
 };
+
+/**
+ * validate-it: read-only verification that the deployed change behaves as
+ * the ticket promised. The deployed system is reached only through the
+ * project-provided `extensions.ship-it.validation` contract; the working
+ * copy is mounted so the skill knows WHAT to verify. Advisory — observes
+ * and reports, never mutates anything.
+ */
+async function runValidateIt(
+  request: ShipItRequest,
+  project: Project,
+  runtime: Runtime,
+  log: Runtime["logger"],
+): Promise<void> {
+  const sync = await runtime.syncWorkingCopies([project]);
+  const output = await runtime.runSkill<ValidateItInput, ValidateItOutput>({
+    entrypoint: "validate-it",
+    input: {
+      ticketKey: request.ticketKey,
+      projectId: request.projectId,
+      ticketSummary: request.ticketSummary,
+      ...(request.ticketDescription !== undefined
+        ? { ticketDescription: request.ticketDescription }
+        : {}),
+      ...(request.acceptanceCriteria !== undefined
+        ? { acceptanceCriteria: request.acceptanceCriteria }
+        : {}),
+      validation: validationConfig(shipItExtension(project)),
+    },
+    workingCopies: sync.workingCopies,
+  });
+  log.info("ship-it: validate-it finished", {
+    outcome: output.outcome,
+    checks: output.checks.length,
+    failed: output.checks.filter((c) => c.result === "fail").length,
+  });
+}
+
+/**
+ * Narrow `extensions.ship-it.validation` defensively — malformed config
+ * degrades to `{}` (the skill then reports `cannot-validate`).
+ */
+function validationConfig(extension: Record<string, unknown> | undefined): ValidationConfig {
+  const raw = extension?.["validation"];
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return {};
+  }
+  const candidate = raw as Record<string, unknown>;
+  return {
+    ...(typeof candidate["environment"] === "string"
+      ? { environment: candidate["environment"] }
+      : {}),
+    ...(typeof candidate["baseUrl"] === "string" ? { baseUrl: candidate["baseUrl"] } : {}),
+    ...(Array.isArray(candidate["probes"]) &&
+    candidate["probes"].every((p) => typeof p === "string")
+      ? { probes: candidate["probes"] as ReadonlyArray<string> }
+      : {}),
+  };
+}
 
 /**
  * groom-it: assess the ticket against scrum-standard quality and propose a

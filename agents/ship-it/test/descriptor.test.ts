@@ -35,6 +35,7 @@ describe("agent-ship-it/agent.yaml", () => {
       "groom-it",
       "spec-it",
       "review-it",
+      "validate-it",
     ]);
     expect(descriptor.skills.support).toEqual(["karpathy-guidelines"]);
     expect(descriptor.needs).toEqual(["github", "jira"]);

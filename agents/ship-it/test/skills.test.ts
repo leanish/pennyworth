@@ -43,6 +43,20 @@ describe("agent-ship-it skills", () => {
     expect(skill.body.length).toBeGreaterThan(0);
   });
 
+  it("validate-it loads as a valid entry point with the read-only verification contract", async () => {
+    const loader = new SkillLoader({ skillsDirs: [agentSkillsDir] });
+    const validateIt = await loader.loadEntrypoint("validate-it");
+    expect(validateIt.compatibleCodingAgents).toContain("claude-code");
+    expect(validateIt.inputSchema).toMatchObject({
+      type: "object",
+      required: ["ticketKey", "projectId", "ticketSummary", "validation"],
+    });
+    expect(validateIt.outputSchema).toMatchObject({
+      type: "object",
+      required: ["outcome", "checks", "summary", "notes"],
+    });
+  });
+
   it("the dark steps' skills load as valid entry points (groom-it, spec-it, review-it)", async () => {
     const loader = new SkillLoader({ skillsDirs: [agentSkillsDir] });
 

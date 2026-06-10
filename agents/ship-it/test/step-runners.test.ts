@@ -29,7 +29,7 @@ import type { ShipItPayload } from "../src/payload.js";
 // handler. The production default is pinned separately in steps.test.ts.
 vi.mock("../src/steps.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/steps.js")>();
-  const flipped = ["groom-it", "spec-it", "review-it"];
+  const flipped = ["groom-it", "spec-it", "review-it", "validate-it"];
   const steps = Object.fromEntries(
     Object.entries(actual.SHIP_IT_STEPS).map(([name, step]) => [
       name,
@@ -218,5 +218,89 @@ describe("ship-it dark-step runners (released via test override)", () => {
       runtime,
     );
     expect(runner.invocations).toHaveLength(0);
+  });
+
+  it("validate-it: passes the project's validation contract and the criteria; read-only, no fan-out", async () => {
+    const project: Project = {
+      id: "acme/widgets",
+      source: { url: "https://github.com/acme/widgets.git", branch: "main" },
+      extensions: {
+        "ship-it": {
+          enabled: true,
+          statusSkillMap: { "Ready to Close": "validate-it" },
+          validation: {
+            environment: "staging",
+            baseUrl: "https://staging.example.test",
+            probes: ["GET /healthz"],
+          },
+        },
+      },
+    };
+    const { runtime, runner, published } = await buildHarness({
+      project,
+      outputs: {
+        "validate-it": {
+          outcome: "validated",
+          checks: [
+            {
+              target: "GET /healthz",
+              expectation: "service is up",
+              result: "pass",
+              detail: "200 OK",
+            },
+          ],
+          summary: "all checks passed",
+          notes: "",
+        },
+      },
+    });
+    await handleShipItMessage(
+      initMessage(
+        baseRequest({
+          ticketStatus: "Ready to Close",
+          acceptanceCriteria: ["the dashboard shows the widget count"],
+        }),
+      ),
+      runtime,
+    );
+    expect(runner.invocations).toHaveLength(1);
+    const invocation = runner.invocations[0]!;
+    expect(invocation.entrypoint.name).toBe("validate-it");
+    expect(invocation.workingCopies).toHaveLength(1);
+    expect(invocation.renderedArguments).toContain("baseUrl: https://staging.example.test");
+    expect(invocation.renderedArguments).toContain("GET /healthz");
+    expect(invocation.renderedArguments).toContain("the dashboard shows the widget count");
+    expect(published).toHaveLength(0);
+  });
+
+  it("validate-it: malformed validation config degrades to an empty contract", async () => {
+    const project: Project = {
+      id: "acme/widgets",
+      source: { url: "https://github.com/acme/widgets.git", branch: "main" },
+      extensions: {
+        "ship-it": {
+          enabled: true,
+          statusSkillMap: { "Ready to Close": "validate-it" },
+          validation: "not-an-object",
+        },
+      },
+    };
+    const { runtime, runner } = await buildHarness({
+      project,
+      outputs: {
+        "validate-it": {
+          outcome: "cannot-validate",
+          checks: [],
+          summary: "no access contract provided",
+          notes: "",
+        },
+      },
+    });
+    await handleShipItMessage(
+      initMessage(baseRequest({ ticketStatus: "Ready to Close" })),
+      runtime,
+    );
+    expect(runner.invocations).toHaveLength(1);
+    expect(runner.invocations[0]!.renderedArguments).toContain("validation: {}");
   });
 });

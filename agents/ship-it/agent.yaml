@@ -21,6 +21,7 @@ skills:
     - groom-it         # assess ticket quality, propose a groomed rewrite (dark — steps.ts)
     - spec-it          # iterate the spec on the ticket, grounded in code (dark — steps.ts)
     - review-it        # cross-model PR review when available (dark — steps.ts)
+    - validate-it      # read-only post-deploy verification (dark — steps.ts)
   support:
     - karpathy-guidelines
 

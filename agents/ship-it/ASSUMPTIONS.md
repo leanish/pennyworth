@@ -17,7 +17,10 @@ consumer; nothing in this package changes.
 
 The normalizer is specified to emit a message only when the ticket carries the `ship-it` label, so
 the in-handler check on `request.labels` is defense in depth. A message without the label is logged
-and skipped, not failed.
+and skipped, not failed. *(Owner-confirmed.)* Owner note folded in: a ticket comment mentioning
+`@ship-it` (or similar) is an accepted ALTERNATIVE queueing trigger — the normalizer carries that
+explicitly on the request rather than synthesizing the label, and the handler gate becomes
+"label OR explicit mention" when that path lands.
 
 ## 3. `statusSkillMap`, the step registry, and later phases
 
@@ -52,15 +55,19 @@ Both skills comment back on the ticket (PR link, ready-for-review, rollback expl
 ticket tooling is available in the execution environment, and a comment failure never fails the
 run — it is recorded in the skill's notes. Provisioning (queue, DLQ, schedule group, normalizer
 registration, image build) is deferred; `infra/src/registry.ts` carries the registration entry so
-the deploy roster already knows about ship-it.
+the deploy roster already knows about ship-it. *(Owner-confirmed: there is ZERO deploy so far.
+Adding one will require substantial speccing, under the standing invariant that no application's
+behavior changes without a human approving the change and applying it manually.)*
 
-## 7. The dark steps' contracts are defined here (groom-it, spec-it, review-it)
+## 7. The dark steps are every step except groom-it
 
-No prior spec pinned these steps' I/O; this package defines them: groom-it (ticket-quality
-assessment + proposed rewrite, comment-only), spec-it (code-grounded spec draft + open questions +
-`suggestReady` hint, comment-only), review-it (severity-ranked findings posted as ONE idempotent PR
-comment — never approve/request-changes/merge). All three ship `released: false`; flipping the
-registry boolean is the launch act.
+*(Owner-confirmed.)* Dark = all implemented steps other than the released `groom-it`: `code-it`
+(+ its revisit), `spec-it`, `review-it`, and `validate-it` all ship `released: false`; flipping the
+registry boolean is the launch act. No prior spec pinned the newer steps' I/O; this package defines
+them: groom-it (ticket-quality assessment + proposed rewrite, comment-only), spec-it (code-grounded
+spec draft + open questions + `suggestReady` hint, comment-only), review-it (severity-ranked
+findings posted as ONE idempotent PR comment — never approve/request-changes/merge), validate-it
+(read-only post-deploy verification — see §11). `mock-it-up` remains registry-only (design pending).
 
 ## 8. review-it's double verification is environment-dependent
 
@@ -84,3 +91,22 @@ access, no loops — worst case is an ignorable suggestion). `code-it`, `spec-it
 are implemented but work-in-progress dark. The default status map gained a placeholder
 `"To Groom" → groom-it` entry — like all default statuses it's tenant-specific and meant to be
 overridden per project via `statusSkillMap`.
+
+## 11. validate-it's contract is defined here (and release-blocked on a real deploy)
+
+Read-only post-deploy verification: the skill derives checks from the acceptance criteria, runs
+them ONLY through the project-provided `extensions.ship-it.validation` contract (provisional shape
+`{environment?, baseUrl?, probes?: string[]}` — malformed config degrades to `{}` and the skill
+reports `cannot-validate`), and reports pass/fail/skipped per check. It never mutates the deployed
+system — no writes, replays, restarts, or rollbacks; humans act on failures. Its real trigger (a
+deploy-completion event, or a scheduled delay after merge) is a seam that cannot exist before a
+real deploy does, so the step stays dark until then — and per the one-pager it may graduate into
+its own agent when released. Mention of revisit: validate-it is the one OTHER step that will likely
+need `publishDelayed` (waiting for a deploy to land), the same machine-async pattern as code-it's
+CI wait.
+
+## 12. README/status updates ride with each release flip
+
+Flipping a step's `released` boolean must come with the matching README status line and, when
+relevant, a statusSkillMap default — the registry test pins entrypoint declarations but prose is
+on the author.

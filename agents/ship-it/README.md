@@ -27,17 +27,18 @@ flipping one boolean (plus declaring its skill entrypoint — a test pins the in
 
 **Implemented, merged dark** (runner + skill shipped; flip `released` to launch):
 
-- **`groom-it`** — assesses a raw ticket against scrum-standard quality (clarity, actionability,
-  scope, acceptance criteria, standardization) and proposes a groomed rewrite as a ticket comment.
 - **`spec-it`** — refines the ticket's specification grounded in the project's actual code;
   iterates with people via ticket comments; suggests (never performs) the handoff to implementation.
 - **`review-it`** — reviews a ready-for-review PR. When the environment provides a consensus skill
   and a second model's CLI, the review runs **cross-model**: both models review independently and
   argue findings to agreement, and the output reports `verificationMode: "cross-model-consensus"`;
   otherwise it falls back to single-model and says so. Comment-only — never approves, never merges.
+- **`validate-it`** — read-only verification that the deployed change behaves as the ticket
+  promised: derives checks from the acceptance criteria, probes the deployed system ONLY through
+  the project-provided `extensions.ship-it.validation` contract, reports pass/fail per check.
+  Never mutates anything; release-blocked until a real deploy (and its trigger seam) exists.
 
-**Design pending** (registry entries only, no runner): **`mock-it-up`** (needs a design-tool seam),
-**`validate-it`** (needs deploy-environment contracts; may split into its own agent).
+**Design pending** (registry entry only, no runner): **`mock-it-up`** (needs a design-tool seam).
 
 ## Gates
 
