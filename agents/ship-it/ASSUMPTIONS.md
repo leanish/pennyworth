@@ -53,3 +53,26 @@ ticket tooling is available in the execution environment, and a comment failure 
 run — it is recorded in the skill's notes. Provisioning (queue, DLQ, schedule group, normalizer
 registration, image build) is deferred; `infra/src/registry.ts` carries the registration entry so
 the deploy roster already knows about ship-it.
+
+## 7. The dark steps' contracts are defined here (groom-it, spec-it, review-it)
+
+No prior spec pinned these steps' I/O; this package defines them: groom-it (ticket-quality
+assessment + proposed rewrite, comment-only), spec-it (code-grounded spec draft + open questions +
+`suggestReady` hint, comment-only), review-it (severity-ranked findings posted as ONE idempotent PR
+comment — never approve/request-changes/merge). All three ship `released: false`; flipping the
+registry boolean is the launch act.
+
+## 8. review-it's double verification is environment-dependent
+
+When a consensus skill and the second model's CLI are present and authenticated, review-it runs the
+review cross-model (independent reviews argued to agreement) and reports
+`verificationMode: "cross-model-consensus"`; otherwise it degrades to `"single-model"` and says so
+in the summary. The deploy follow-up should provision the second CLI + consensus skill in the
+ship-it image for the cross-model path to be the norm.
+
+## 9. PR-shaped events ride the same request shape
+
+`prNumber` is an optional request field (review-it requires it; PR-less review events are advisory
+skips). The global `ship-it` label gate currently applies to ALL init events — the label-less
+GitHub-webhook path (gating on repo opt-in only) is part of the future normalizer work and will be
+revisited when review-it is released.

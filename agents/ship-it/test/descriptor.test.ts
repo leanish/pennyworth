@@ -29,7 +29,13 @@ describe("agent-ship-it/agent.yaml", () => {
     ]);
     expect(descriptor.codingAgent).toBe("claude-code");
     expect(descriptor.model).toBe("claude-sonnet-4-6");
-    expect(descriptor.skills.entrypoints).toEqual(["code-it", "code-it-revisit"]);
+    expect(descriptor.skills.entrypoints).toEqual([
+      "code-it",
+      "code-it-revisit",
+      "groom-it",
+      "spec-it",
+      "review-it",
+    ]);
     expect(descriptor.skills.support).toEqual(["karpathy-guidelines"]);
     expect(descriptor.needs).toEqual(["github", "jira"]);
   });

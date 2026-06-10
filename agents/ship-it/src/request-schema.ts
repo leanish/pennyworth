@@ -19,6 +19,11 @@ export interface ShipItRequest {
   readonly ticketSummary: string;
   readonly ticketDescription?: string;
   readonly acceptanceCriteria?: ReadonlyArray<string>;
+  /**
+   * Pull-request number, present when the triggering event is PR-shaped
+   * (the review-it path). Jira-driven events omit it.
+   */
+  readonly prNumber?: number;
 }
 
 export class ShipItValidationError extends Error {
@@ -49,6 +54,7 @@ export function parseShipItRequest(raw: unknown): ShipItRequest {
     raw["acceptanceCriteria"] === undefined
       ? undefined
       : requireStringArray(raw, "acceptanceCriteria");
+  const prNumber = optionalPositiveInteger(raw, "prNumber");
 
   return {
     ticketKey,
@@ -58,7 +64,17 @@ export function parseShipItRequest(raw: unknown): ShipItRequest {
     ticketSummary,
     ...(ticketDescription !== undefined ? { ticketDescription } : {}),
     ...(acceptanceCriteria !== undefined ? { acceptanceCriteria } : {}),
+    ...(prNumber !== undefined ? { prNumber } : {}),
   };
+}
+
+function optionalPositiveInteger(obj: Record<string, unknown>, field: string): number | undefined {
+  const v = obj[field];
+  if (v === undefined) return undefined;
+  if (typeof v !== "number" || !Number.isInteger(v) || v <= 0) {
+    throw new ShipItValidationError(`request.${field} must be a positive integer when present`);
+  }
+  return v;
 }
 
 function requireNonEmptyString(obj: Record<string, unknown>, field: string): string {

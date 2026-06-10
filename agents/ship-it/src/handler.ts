@@ -58,6 +58,63 @@ interface CodeItRevisitOutput {
   readonly scheduleRevisit?: { readonly afterSeconds: number };
 }
 
+interface GroomItInput {
+  readonly ticketKey: string;
+  readonly projectId: string;
+  readonly ticketSummary: string;
+  readonly ticketDescription?: string;
+  readonly acceptanceCriteria?: ReadonlyArray<string>;
+  readonly labels: ReadonlyArray<string>;
+}
+
+interface GroomItOutput {
+  readonly outcome: "ready" | "needs-work";
+  readonly findings: ReadonlyArray<{
+    readonly aspect: "clarity" | "actionability" | "scope" | "acceptance-criteria" | "standardization";
+    readonly issue: string;
+    readonly suggestion: string;
+  }>;
+  readonly notes: string;
+}
+
+interface SpecItInput {
+  readonly ticketKey: string;
+  readonly ticketSummary: string;
+  readonly ticketDescription?: string;
+  readonly acceptanceCriteria?: ReadonlyArray<string>;
+  readonly project: {
+    readonly id: string;
+    readonly source: { readonly url: string; readonly branch?: string };
+  };
+}
+
+interface SpecItOutput {
+  readonly outcome: "specced" | "refined" | "clarification-needed";
+  readonly specDraft: string;
+  readonly openQuestions: ReadonlyArray<string>;
+  readonly suggestReady: boolean;
+  readonly notes: string;
+}
+
+interface ReviewItInput {
+  readonly projectId: string;
+  readonly prNumber: number;
+  readonly ticketKey?: string;
+}
+
+interface ReviewItOutput {
+  readonly outcome: "reviewed" | "skipped";
+  readonly verificationMode: "cross-model-consensus" | "single-model";
+  readonly findings: ReadonlyArray<{
+    readonly severity: "blocker" | "major" | "minor" | "nit";
+    readonly file?: string;
+    readonly title: string;
+    readonly detail: string;
+  }>;
+  readonly summary: string;
+  readonly postedReview: boolean;
+}
+
 /**
  * ship-it's stage dispatcher.
  *
@@ -182,7 +239,119 @@ const STEP_RUNNERS: Readonly<
   >
 > = {
   "code-it": runCodeIt,
+  // Implemented but DARK (released: false in steps.ts) — flipping the
+  // registry boolean is the launch switch for each of these.
+  "groom-it": runGroomIt,
+  "spec-it": runSpecIt,
+  "review-it": runReviewIt,
 };
+
+/**
+ * groom-it: assess the ticket against scrum-standard quality and propose a
+ * groomed rewrite. Pure ticket work — no working copy, no fan-out.
+ */
+async function runGroomIt(
+  request: ShipItRequest,
+  _project: Project,
+  runtime: Runtime,
+  log: Runtime["logger"],
+): Promise<void> {
+  const output = await runtime.runSkill<GroomItInput, GroomItOutput>({
+    entrypoint: "groom-it",
+    input: {
+      ticketKey: request.ticketKey,
+      projectId: request.projectId,
+      ticketSummary: request.ticketSummary,
+      ...(request.ticketDescription !== undefined
+        ? { ticketDescription: request.ticketDescription }
+        : {}),
+      ...(request.acceptanceCriteria !== undefined
+        ? { acceptanceCriteria: request.acceptanceCriteria }
+        : {}),
+      labels: request.labels,
+    },
+    workingCopies: [],
+  });
+  log.info("ship-it: groom-it finished", {
+    outcome: output.outcome,
+    findings: output.findings.length,
+  });
+}
+
+/**
+ * spec-it: refine the ticket's specification, grounded in the project's
+ * code (working copy mounted). Advisory; humans iterate and transition.
+ */
+async function runSpecIt(
+  request: ShipItRequest,
+  project: Project,
+  runtime: Runtime,
+  log: Runtime["logger"],
+): Promise<void> {
+  const sync = await runtime.syncWorkingCopies([project]);
+  const output = await runtime.runSkill<SpecItInput, SpecItOutput>({
+    entrypoint: "spec-it",
+    input: {
+      ticketKey: request.ticketKey,
+      ticketSummary: request.ticketSummary,
+      ...(request.ticketDescription !== undefined
+        ? { ticketDescription: request.ticketDescription }
+        : {}),
+      ...(request.acceptanceCriteria !== undefined
+        ? { acceptanceCriteria: request.acceptanceCriteria }
+        : {}),
+      project: {
+        id: project.id,
+        source: {
+          url: project.source.url,
+          ...(project.source.branch !== undefined ? { branch: project.source.branch } : {}),
+        },
+      },
+    },
+    workingCopies: sync.workingCopies,
+  });
+  log.info("ship-it: spec-it finished", {
+    outcome: output.outcome,
+    openQuestions: output.openQuestions.length,
+    suggestReady: output.suggestReady,
+  });
+}
+
+/**
+ * review-it: independent review of a ready-for-review PR — cross-model
+ * consensus when the environment provides it, single-model otherwise (the
+ * skill reports which via `verificationMode`). Requires `prNumber` on the
+ * event; PR-less events are advisory skips.
+ */
+async function runReviewIt(
+  request: ShipItRequest,
+  project: Project,
+  runtime: Runtime,
+  log: Runtime["logger"],
+): Promise<void> {
+  if (request.prNumber === undefined) {
+    log.warn("ship-it: skipping review-it — event carries no prNumber", {
+      ticketStatus: request.ticketStatus,
+    });
+    return;
+  }
+  const sync = await runtime.syncWorkingCopies([project]);
+  const output = await runtime.runSkill<ReviewItInput, ReviewItOutput>({
+    entrypoint: "review-it",
+    input: {
+      projectId: request.projectId,
+      prNumber: request.prNumber,
+      ticketKey: request.ticketKey,
+    },
+    workingCopies: sync.workingCopies,
+  });
+  log.info("ship-it: review-it finished", {
+    outcome: output.outcome,
+    verificationMode: output.verificationMode,
+    findings: output.findings.length,
+    postedReview: output.postedReview,
+  });
+}
 
 async function runCodeIt(
   request: ShipItRequest,

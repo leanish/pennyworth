@@ -43,6 +43,43 @@ describe("agent-ship-it skills", () => {
     expect(skill.body.length).toBeGreaterThan(0);
   });
 
+  it("the dark steps' skills load as valid entry points (groom-it, spec-it, review-it)", async () => {
+    const loader = new SkillLoader({ skillsDirs: [agentSkillsDir] });
+
+    const groomIt = await loader.loadEntrypoint("groom-it");
+    expect(groomIt.compatibleCodingAgents).toContain("claude-code");
+    expect(groomIt.inputSchema).toMatchObject({
+      type: "object",
+      required: ["ticketKey", "projectId", "ticketSummary", "labels"],
+    });
+    expect(groomIt.outputSchema).toMatchObject({
+      type: "object",
+      required: ["outcome", "findings", "notes"],
+    });
+
+    const specIt = await loader.loadEntrypoint("spec-it");
+    expect(specIt.compatibleCodingAgents).toContain("claude-code");
+    expect(specIt.inputSchema).toMatchObject({
+      type: "object",
+      required: ["ticketKey", "ticketSummary", "project"],
+    });
+    expect(specIt.outputSchema).toMatchObject({
+      type: "object",
+      required: ["outcome", "specDraft", "openQuestions", "suggestReady", "notes"],
+    });
+
+    const reviewIt = await loader.loadEntrypoint("review-it");
+    expect(reviewIt.compatibleCodingAgents).toContain("claude-code");
+    expect(reviewIt.inputSchema).toMatchObject({
+      type: "object",
+      required: ["projectId", "prNumber"],
+    });
+    expect(reviewIt.outputSchema).toMatchObject({
+      type: "object",
+      required: ["outcome", "verificationMode", "findings", "summary", "postedReview"],
+    });
+  });
+
   it("inherits karpathy-guidelines from the runtime's bundled skills (not duplicated here)", async () => {
     const own = new SkillLoader({ skillsDirs: [agentSkillsDir] });
     await expect(own.load("karpathy-guidelines")).rejects.toThrow(

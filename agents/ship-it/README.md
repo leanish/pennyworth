@@ -20,11 +20,21 @@ Implemented in this package today:
 
 Later steps ride the same status → step map, gated by the **step registry** (`src/steps.ts`): each
 step carries a `released` switch, so a step can be developed and merged dark, then launched by
-flipping one boolean (plus declaring its skill entrypoint — a test pins the invariant):
+flipping one boolean (plus declaring its skill entrypoint — a test pins the invariant).
 
-- **`review-it`** (phase 2) — independent cross-model PR review.
-- **`spec-it`** (phase 3) — iterate the spec on the ticket.
-- **`groom-it`**, **`mock-it-up`**, **`validate-it`** — future.
+**Implemented, merged dark** (runner + skill shipped; flip `released` to launch):
+
+- **`groom-it`** — assesses a raw ticket against scrum-standard quality (clarity, actionability,
+  scope, acceptance criteria, standardization) and proposes a groomed rewrite as a ticket comment.
+- **`spec-it`** — refines the ticket's specification grounded in the project's actual code;
+  iterates with people via ticket comments; suggests (never performs) the handoff to implementation.
+- **`review-it`** — reviews a ready-for-review PR. When the environment provides a consensus skill
+  and a second model's CLI, the review runs **cross-model**: both models review independently and
+  argue findings to agreement, and the output reports `verificationMode: "cross-model-consensus"`;
+  otherwise it falls back to single-model and says so. Comment-only — never approves, never merges.
+
+**Design pending** (registry entries only, no runner): **`mock-it-up`** (needs a design-tool seam),
+**`validate-it`** (needs deploy-environment contracts; may split into its own agent).
 
 ## Gates
 
