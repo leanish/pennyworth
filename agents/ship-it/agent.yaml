@@ -1,0 +1,26 @@
+identifier: ship-it
+compute: lambda
+
+triggers:
+  - type: consumer
+    queueArnRef: ship-it-requests
+    dlqArnRef: ship-it-requests-dlq
+    signedEnvelope: true
+
+# init    — consumer envelope (kind: ship-it-event) from the webhook normalizer
+# revisit — self-published via runtime.publishDelayed (ADR-0011) to poll CI on the draft PR
+stages: [init, revisit]
+
+codingAgent: claude-code
+model: claude-sonnet-4-6
+
+skills:
+  entrypoints:
+    - code-it          # implement the ready ticket → draft PR
+    - code-it-revisit  # poll CI on the draft PR → flip / adapt / rollback / defer
+  support:
+    - karpathy-guidelines
+
+needs:
+  - github  # branch/PR/CI work in the coding-agent subprocess (gh + inherited GITHUB_TOKEN)
+  - jira    # best-effort ticket comment-back from the coding-agent subprocess
