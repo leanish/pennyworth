@@ -11,6 +11,13 @@ implementation, review, and post-deploy validation — by doing the right step a
 **ticket's own workflow drives it**: when a ticket moves to a new state, Ship-it does that state's job.
 It **never merges or deploys on its own** — a person approves every consequential step.
 
+## Who it's for
+
+**Engineers and engineering managers.** Implementation, review, and validation are
+engineering-gated steps; ship-it works where they work — tickets and pull requests. The later
+grooming and mockup steps will bring product managers (and designers) into the loop, but day one is
+an engineering tool.
+
 ## The steps (added over time, not all at once)
 
 - **groom-it** — turn a raw ticket into a clear, product-ready one *(later)*

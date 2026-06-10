@@ -8,6 +8,13 @@ An internal **triage tool**. When a problem comes in, it gathers the relevant ev
 produces a **diagnosis with suggested next steps** — for a person to act on. It is advisory: it
 explains what is likely wrong and why; it does not fix anything itself.
 
+## Who it's for
+
+**Technical Success Managers and Support first.** They handle the incoming problems triage-it is
+built for, and get the evidence gathered and correlated instead of digging by hand. Engineers are
+the second audience — escalations arrive pre-investigated. Customer Success benefits indirectly:
+faster, better-grounded answers to customers without doing the digging themselves.
+
 ## What it does
 
 - Starts from an incoming problem — a support ticket, a customer complaint, or an alert.

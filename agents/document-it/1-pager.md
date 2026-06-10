@@ -11,6 +11,14 @@ and **proposes** fixes wherever the two have drifted apart. It is the natural pa
 where Ask-the-code *tells* you what the code really does, Document-it *keeps the written docs matching
 it*.
 
+## Who it's for
+
+**The people who answer with the docs: Technical Success Managers, Customer Success Managers, and
+Support.** They rely on documentation being right when guiding customers — they're the first to be
+burned when it drifts, and the main winners when it stops drifting. Engineers are the approval gate
+(each proposed fix is theirs to accept) and benefit on the developer-docs side; new joiners in any
+role get docs they can actually trust.
+
 ## What it does
 
 - On a regular schedule, it reviews a project's documentation — both the docs that live with the code

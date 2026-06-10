@@ -10,6 +10,16 @@ An assistant that answers questions about **how our software works**, in plain l
 the actual source code. Anyone — engineering, product, support, leadership — can ask and get a
 grounded answer.
 
+## Who it's for
+
+**The whole company, practically.** Anyone who needs to know how our software actually behaves:
+engineers, support, technical and customer success, product, leadership — even finance, when the
+question is "where does this number come from?". If your work ever depends on what one of our
+applications really does, this is for you.
+
+Answers adapt to the asker: a plain-language explanation for a non-engineer, file-and-detail level
+for an engineer.
+
 ## What it does
 
 - You ask a question: *"How does the checkout flow work?"*, *"Why does the system send two emails
