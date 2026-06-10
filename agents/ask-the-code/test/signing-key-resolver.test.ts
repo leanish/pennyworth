@@ -5,7 +5,7 @@ import {
   SSMClient,
 } from "@aws-sdk/client-ssm";
 
-import { EnvelopeVerificationError, type ConsumerRecord } from "@leanish/agent-runtime";
+import { EnvelopeVerificationError, type ConsumerRecord } from "@leanish/runtime";
 
 import { createSigningKeyResolver } from "../src/signing-key-resolver.js";
 

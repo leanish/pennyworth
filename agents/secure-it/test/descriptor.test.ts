@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { loadDescriptorFromFile } from "@leanish/agent-runtime";
+import { loadDescriptorFromFile } from "@leanish/runtime";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DESCRIPTOR_PATH = join(HERE, "..", "agent.yaml");

@@ -8,8 +8,8 @@ import {
   canonicalize,
   verifyEnvelope,
   type ConsumerRecord,
-} from "@leanish/agent-runtime";
-import { LocalStackHarness } from "@leanish/agent-runtime/testing";
+} from "@leanish/runtime";
+import { LocalStackHarness } from "@leanish/runtime/testing";
 
 import { createSigningKeyResolver } from "../src/signing-key-resolver.js";
 

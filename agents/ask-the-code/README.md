@@ -1,13 +1,13 @@
-# `@leanish/agent-atc`
+# `@leanish/ask-the-code`
 
-ATC backend — Layer-3 agent for codebase Q&A. Built on `@leanish/agent-runtime`.
+ATC backend — Layer-3 agent for codebase Q&A. Built on `@leanish/runtime`.
 
-**Specs**: `../../specs/agentic-development/agent-atc/` — `overview.md`, `architecture.md`, `queue-api.md`, `state-schema.md`.
+**Specs**: design contract — `overview.md`, `architecture.md`, `queue-api.md`, `state-schema.md` — maintained separately.
 
 **Sibling repos** (suite-0004 — one agent / library / one repo / one deployable):
 
-- `../../packages/agent-runtime/` — the substrate this depends on.
-- `../agent-secureit/` — a fellow Layer-3 agent (phase-2).
+- `../../core/runtime/` — the substrate this depends on.
+- `../secure-it/` — a fellow Layer-3 agent (phase-2).
 
 ## Status
 
@@ -26,7 +26,7 @@ Plus the surrounding ATC-owned protocol:
 - Terminal reply delivered to `envelope.replyTo` via SQS (`AtcTerminalSuccess` / `AtcTerminalFailure` shapes).
 - Error-kind mapping (validation-error / config-error / agent-error / io-error) per queue-api.md.
 
-The `ask` skill itself ships at `../../packages/agent-runtime/skills/ask/SKILL.md` (per ADR-0001 + suite-0010).
+The `ask` skill itself ships in this agent's own `skills/ask/SKILL.md` (per ADR-0001 + suite-0010).
 
 ## What's here vs. what's not here
 
@@ -34,7 +34,7 @@ The `ask` skill itself ships at `../../packages/agent-runtime/skills/ask/SKILL.m
 
 - The dispatch handler (`src/handler.ts`) + per-stage payload types.
 - The `atc-dev-publish` smoke-test CLI for local-mode pipelining.
-- The AWS Lambda entry module (`src/lambda.ts`) — see `@leanish/agent-atc/lambda`. Builds the runtime + AWS-mode adapters (Dynamo idempotency / Dynamo consumer registry / S3 catalog / `LocalGitWorkspace` rooted at `/tmp`) at cold start and exposes `atcLambdaHandler` for `agent-infra` to register with the Lambda runtime. Required env vars (provisioned by `agent-infra`): `IDEMPOTENCY_TABLE_NAME`, `CONSUMER_REGISTRY_TABLE_NAME`, `CATALOG_BUCKET`, optional `CATALOG_KEY` (`catalog.json`), `EVENT_BUS_NAME`, optional `WORKSPACE_ROOT` (`/tmp/atc-workspaces`).
+- The AWS Lambda entry module (`src/lambda.ts`) — see `@leanish/ask-the-code/lambda`. Builds the runtime + AWS-mode adapters (Dynamo idempotency / Dynamo consumer registry / S3 catalog / `LocalGitWorkspace` rooted at `/tmp`) at cold start and exposes `atcLambdaHandler` for `agent-infra` to register with the Lambda runtime. Required env vars (provisioned by `agent-infra`): `IDEMPOTENCY_TABLE_NAME`, `CONSUMER_REGISTRY_TABLE_NAME`, `CATALOG_BUCKET`, optional `CATALOG_KEY` (`catalog.json`), `EVENT_BUS_NAME`, optional `WORKSPACE_ROOT` (`/tmp/atc-workspaces`).
 
 **Not here:**
 
@@ -46,10 +46,10 @@ The `ask` skill itself ships at `../../packages/agent-runtime/skills/ask/SKILL.m
 
 ATC's tests depend on the runtime's testing sub-entrypoint:
 
-- `@leanish/agent-runtime/testing` — `InMemoryEventBus`, `InMemorySqsBus`,
+- `@leanish/runtime/testing` — `InMemoryEventBus`, `InMemorySqsBus`,
   `MemoryIdempotencyStore`, `FakeCodingAgentRunner` (strict by default), and
   related in-memory fakes. Import from this subpath in test code only.
-- `@leanish/agent-runtime/local` — local-mode adapter bundle the CLI uses.
+- `@leanish/runtime/local` — local-mode adapter bundle the CLI uses.
   ATC's handler tests don't need it; the test harness builds the runtime
   bag in-process.
 
@@ -68,7 +68,7 @@ npm run check           # typecheck + build + test — the phase-1 acceptance ga
 ## Layout
 
 ```
-agent.yaml              # the descriptor (matches ../../specs/agentic-development/agent-atc/specs/architecture.md)
+agent.yaml              # the descriptor (matches the architecture spec)
 src/
   agent.ts              # defineAgent({...}) — the runtime entry point
   payload.ts            # AtcPayload, AtcEnvelope, AtcRequest types

@@ -1,8 +1,8 @@
 {
-  "name": "@leanish/agent-secureit",
+  "name": "@leanish/secure-it",
   "version": "0.0.0",
   "private": true,
-  "description": "agent-secureit — phase-2 Layer-3 agent that opens draft PRs for security alerts. Built on @leanish/agent-runtime.",
+  "description": "agent-secureit — phase-2 Layer-3 agent that opens draft PRs for security alerts. Built on @leanish/runtime.",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {
@@ -26,7 +26,7 @@
     "check": "npm run typecheck && npm run build && npm test"
   },
   "dependencies": {
-    "@leanish/agent-runtime": "file:../../packages/agent-runtime"
+    "@leanish/runtime": "file:../../core/runtime"
   },
   "devDependencies": {
     "@types/node": "^24.12.4",

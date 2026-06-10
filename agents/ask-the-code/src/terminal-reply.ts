@@ -1,4 +1,4 @@
-import type { Runtime } from "@leanish/agent-runtime";
+import type { Runtime } from "@leanish/runtime";
 
 import type { AtcEnvelope } from "./payload.js";
 import type { ProjectScope } from "./project-scope.js";

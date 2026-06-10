@@ -1,11 +1,11 @@
 # AGENTS.md — agent-atc
 
-Working rules for any agent editing this repo. Inherits from `../../specs/agentic-development/AGENTS.md`. Key carry-overs:
+Working rules for any agent editing this repo. Key carry-overs from the shared agent guidelines:
 
 ## Posture
 - **Phase-1 release candidate**, still pre-v1.
-- **Specs are the contract** — `../../specs/agentic-development/agent-atc/`.
-- **Built on `@leanish/agent-runtime`** (sibling `../../packages/agent-runtime/`). Local-dev linked via `file:../../packages/agent-runtime`; production install resolves the published version.
+- **Specs are the contract.**
+- **Built on `@leanish/runtime`** (sibling `../../core/runtime/`). Local-dev linked via `file:../../core/runtime`; production install resolves the published version.
 
 ## Vocabulary
 - **American English everywhere.** Anchored on `catalog`.

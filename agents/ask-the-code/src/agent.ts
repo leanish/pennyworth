@@ -1,4 +1,4 @@
-import { defineAgent } from "@leanish/agent-runtime";
+import { defineAgent } from "@leanish/runtime";
 
 import { handleAtcMessage } from "./handler.js";
 import type { AtcPayload } from "./payload.js";
@@ -6,7 +6,7 @@ import type { AtcTerminalReply } from "./terminal-reply.js";
 
 /**
  * ATC's runtime entry point. The actual transformation pipeline lives in
- * `handler.ts`. See `../../../specs/agentic-development/agent-atc/specs/queue-api.md`
+ * `handler.ts`. See `queue-api.md`
  * §Handler transformation for the six-step contract.
  *
  * `handle` returns the terminal reply. AWS mode discards it (delivery

@@ -1,0 +1,33 @@
+{
+  "name": "@leanish/infra",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AWS CDK infrastructure for the leanish agent suite. Reads each Layer-3 agent's descriptor + the runtime's needs registry and provisions Lambda/SQS/DynamoDB/IAM + shared resources (suite-0006).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('cdk.out',{recursive:true,force:true});\"",
+    "typecheck": "tsc -b --noEmit",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run build && npm test",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "deploy": "cdk deploy"
+  },
+  "dependencies": {
+    "@leanish/runtime": "file:../core/runtime",
+    "aws-cdk-lib": "^2.160.0",
+    "constructs": "^10.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "aws-cdk": "^2.160.0",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
+  }
+}

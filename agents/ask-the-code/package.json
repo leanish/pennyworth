@@ -1,8 +1,8 @@
 {
-  "name": "@leanish/agent-atc",
+  "name": "@leanish/ask-the-code",
   "version": "0.0.0",
   "private": true,
-  "description": "agent-atc — ask-the-code (ATC) backend, the phase-1 Layer-3 agent for codebase Q&A. Built on @leanish/agent-runtime.",
+  "description": "agent-atc — ask-the-code (ATC) backend, the phase-1 Layer-3 agent for codebase Q&A. Built on @leanish/runtime.",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {
@@ -39,8 +39,8 @@
     "typecheck": "tsc -b --noEmit && tsc -p tsconfig.test.json --noEmit",
     "check": "npm run typecheck && npm run build && npm test",
     "check:full": "npm run check && npm run test:integration",
-    "smoke:local": "ATC_DEV_CONSUMER_SECRET=${ATC_DEV_CONSUMER_SECRET:-local-dev} node dist/bin/atc-dev-publish.js --question 'smoke test' --include-all | node ../../packages/agent-runtime/dist/bin/agent-runtime.js run-local --agent-config ./agent.yaml --fake-runner --log-level error",
-    "lambda:build:base": "bash ../../packages/agent-runtime/scripts/build-base.sh",
+    "smoke:local": "ATC_DEV_CONSUMER_SECRET=${ATC_DEV_CONSUMER_SECRET:-local-dev} node dist/bin/atc-dev-publish.js --question 'smoke test' --include-all | node ../../core/runtime/dist/bin/agent-runtime.js run-local --agent-config ./agent.yaml --fake-runner --log-level error",
+    "lambda:build:base": "bash ../../core/runtime/scripts/build-base.sh",
     "lambda:build": "npm run lambda:build:base && docker build -f Dockerfile -t atc-lambda:rehearsal ../..",
     "lambda:rehearsal": "tsx scripts/lambda-rehearsal.ts"
   },
@@ -48,13 +48,13 @@
     "@aws-sdk/client-dynamodb": "^3.1053.0",
     "@aws-sdk/client-s3": "^3.1053.0",
     "@aws-sdk/client-ssm": "^3.1053.0",
-    "@leanish/agent-runtime": "file:../../packages/agent-runtime"
+    "@leanish/runtime": "file:../../core/runtime"
   },
-  "devDependencies-comment": "EventBridge + SQS + catalogit pulled in via @leanish/agent-runtime at runtime; declared explicitly only for integration-test code that constructs SDK clients directly.",
+  "devDependencies-comment": "EventBridge + SQS + catalogit pulled in via @leanish/runtime at runtime; declared explicitly only for integration-test code that constructs SDK clients directly.",
   "devDependencies": {
     "@aws-sdk/client-eventbridge": "^3.1053.0",
     "@aws-sdk/client-sqs": "^3.1053.0",
-    "@leanish/catalogit": "file:../../packages/catalogit",
+    "@leanish/catalog-it": "file:../../core/catalog-it",
     "@types/node": "^24.12.4",
     "@vitest/coverage-v8": "^4.1.7",
     "tsx": "^4.22.3",

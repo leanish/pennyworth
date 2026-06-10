@@ -1,11 +1,11 @@
-import type { AgentPayloadBase } from "@leanish/agent-runtime";
+import type { AgentPayloadBase } from "@leanish/runtime";
 
 /**
  * Per-stage payload shapes for secureit. The discriminator is the runtime's
  * `stage` (init / breakdown / revisit), not a field inside the payload.
  *
- * See `../../../specs/agentic-development/agent-runtime/specs/overview.md` §Per-project fan-out pattern
- * and `../../../specs/agentic-development/agent-runtime/specs/skills/secureit-revisit.md`.
+ * See `overview.md` §Per-project fan-out pattern
+ * and `secureit-revisit.md`.
  */
 export interface SecureitInitPayload extends AgentPayloadBase {
   // Scheduler tick — no payload data needed. Empty so the field exists.

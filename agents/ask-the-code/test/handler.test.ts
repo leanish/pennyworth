@@ -10,7 +10,7 @@ import type {
   SendMessageRequest,
   SendMessageResult,
   SqsClient,
-} from "@leanish/agent-runtime";
+} from "@leanish/runtime";
 
 import { handleAtcMessage } from "../src/handler.js";
 import type { AtcPayload } from "../src/payload.js";
@@ -183,7 +183,7 @@ describe("ATC handleAtcMessage", () => {
   });
 
   it("scope-only with bad execution override fails BEFORE any skipped-stage events fire", async () => {
-    const { ExecutionResolveError } = await import("@leanish/agent-runtime");
+    const { ExecutionResolveError } = await import("@leanish/runtime");
     const { runtime, putEvents, sendMessage, runSkillCalls } = buildRuntime({});
     // Override resolve() to throw — simulates an invalid `payload.execution`.
     // Cast via `unknown` because `Runtime` is broader than the mock shape.
@@ -233,7 +233,7 @@ describe("ATC handleAtcMessage", () => {
   });
 
   it("missing router throws config-error (no silent fallback to all-projects)", async () => {
-    const { RouterNotConfiguredError } = await import("@leanish/agent-runtime");
+    const { RouterNotConfiguredError } = await import("@leanish/runtime");
     const { runtime, sendMessage, runSkillCalls } = buildRuntime({});
     // Override routeProjects to throw RouterNotConfiguredError — the
     // shape the runtime emits when no router was wired into buildRuntime.
@@ -274,7 +274,7 @@ describe("ATC handleAtcMessage", () => {
   });
 
   it("agent-error — skill output failure maps to terminal failure with the correct kind", async () => {
-    const { EntrypointInvocationError } = await import("@leanish/agent-runtime");
+    const { EntrypointInvocationError } = await import("@leanish/runtime");
     const { runtime, sendMessage } = buildRuntime({
       skillThrows: new EntrypointInvocationError(
         "output-validation-fail",

@@ -29,3 +29,7 @@ tmp/
 .DS_Store
 .idea/
 .vscode/
+
+# Internal-only docs (kept local; not part of the public repo)
+docs/consolidation-history.md
+docs/PHASE-1-ACCEPTANCE.md

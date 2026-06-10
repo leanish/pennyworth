@@ -1,20 +1,19 @@
-# `@leanish/agent-secureit` *(phase-2 placeholder — NOT part of phase-1 acceptance)*
+# `@leanish/secure-it` *(phase-2 placeholder — NOT part of phase-1 acceptance)*
 
-> ⚠️ **Out of scope for phase 1.** The phase-1 acceptance checklist
-> (`../PHASE-1-ACCEPTANCE.md`) covers `catalogit`, `agent-runtime`, and
-> `agent-atc` only. This package is shipped as a typed placeholder to
+> ⚠️ **Out of scope for phase 1.** The phase-1 acceptance checklist covers
+> `catalog-it`, `runtime`, and `ask-the-code` only. This package is shipped as a typed placeholder to
 > lock the phase-2 descriptor + payload shapes. See `SCOPE.md` in this
 > directory.
 
-Phase-2 Layer-3 agent. Scheduled cron scan → per-project fan-out → opens draft PRs for security alerts → schedules a `revisit` to flip / adapt / rollback / defer based on CI state. Built on `@leanish/agent-runtime`.
+Phase-2 Layer-3 agent. Scheduled cron scan → per-project fan-out → opens draft PRs for security alerts → schedules a `revisit` to flip / adapt / rollback / defer based on CI state. Built on `@leanish/runtime`.
 
-**Specs**: `../../specs/agentic-development/agent-runtime/specs/skills/secureit.md` + `secureit-revisit.md`; `../../specs/agentic-development/docs/adr/suite-0011-test-verification-via-project-ci.md`; ADRs 0011 + 0012.
+**Specs**: `secureit.md` + `secureit-revisit.md`; `suite-0011-test-verification-via-project-ci.md`; ADRs 0011 + 0012.
 
 **Sibling packages** (under `agentic-development/`):
 
-- `../../packages/agent-runtime/` — the substrate this depends on.
-- `../agent-atc/` — the phase-1 Layer-3 agent (ATC Q&A backend).
-- `../../packages/catalogit/` — read-side catalog library.
+- `../../core/runtime/` — the substrate this depends on.
+- `../ask-the-code/` — the phase-1 Layer-3 agent (ATC Q&A backend).
+- `../../core/catalog-it/` — read-side catalog library.
 
 ## Status
 
@@ -28,7 +27,7 @@ if (stage === "breakdown") → syncWorkingCopies + runSkill("secureit") + runtim
 if (stage === "revisit")   → syncWorkingCopies + runSkill("secureit-revisit") + optional reschedule
 ```
 
-The two skills (`secureit`, `secureit-revisit`) live bundled inside `../../packages/agent-runtime/skills/` per ADR-0001.
+The two skills (`secureit`, `secureit-revisit`) live bundled inside `../../core/runtime/skills/` per ADR-0001.
 
 ## Scripts
 
@@ -47,7 +46,7 @@ test that asserts the payload types compile and no default export exists
 yet. When phase-2 implementation lands and a handler appears in
 `src/agent.ts`, real handler tests will pull from:
 
-- `@leanish/agent-runtime/testing` — `MemoryIdempotencyStore`,
+- `@leanish/runtime/testing` — `MemoryIdempotencyStore`,
   `FakeCodingAgentRunner` (strict default — opt into synthesised responses
   with `{ synthesiseDefault: true }`), `InMemoryEventBus`, `InMemorySqsBus`,
   and the in-memory catalog/workspace.
@@ -55,7 +54,7 @@ yet. When phase-2 implementation lands and a handler appears in
 ## Layout
 
 ```
-agent.yaml              # descriptor (matches ../../specs/agentic-development/agent-runtime/specs/descriptor.md example)
+agent.yaml              # descriptor (matches the descriptor spec example)
 src/
   payload.ts            # per-stage payload types
   index.ts              # public re-exports

@@ -1,6 +1,6 @@
 # SCOPE — phase-2 placeholder (types only)
 
-`@leanish/agent-secureit` is a **phase-2 placeholder** and is NOT part of phase-1 acceptance.
+`@leanish/secure-it` is a **phase-2 placeholder** and is NOT part of phase-1 acceptance.
 
 What's here today:
 
@@ -13,14 +13,14 @@ The package builds, typechecks, and tests pass — but it ships **no executable 
 
 ## Why keep it at all
 
-1. Locks the **descriptor + payload contract** for phase-2 so the rest of the suite can reference `@leanish/agent-secureit`'s types (spec cross-refs, test fixtures, agent-infra IaC scaffolding) without inventing a moving target.
+1. Locks the **descriptor + payload contract** for phase-2 so the rest of the suite can reference `@leanish/secure-it`'s types (spec cross-refs, test fixtures, agent-infra IaC scaffolding) without inventing a moving target.
 2. The suite layout makes the phase-2 next step obvious from `agentic-development/` alone.
 
 The earlier scaffold shipped a typed handler that threw on every invocation, with a test asserting it threw. That was worse than not shipping at all — it gave the false impression of working code. Removed.
 
 ## Phase-1 acceptance
 
-Defined in `../PHASE-1-ACCEPTANCE.md`. The checklist scope is `catalogit` + `agent-runtime` + `agent-atc`. This package is **not** on it.
+Defined by the phase-1 acceptance checklist, whose scope is `catalog-it` + `runtime` + `ask-the-code`. This package is **not** on it.
 
 ## When phase 2 starts
 
@@ -29,7 +29,7 @@ The blockers are spec'd:
 - `runtime.publish` real implementation (currently absent from the phase-1 `Runtime` interface).
 - `runtime.publishDelayed` real implementation (same).
 - `type: scheduler` trigger support in the descriptor parser + Lambda shim.
-- The `secureit` + `secureit-revisit` skills bundled in `@leanish/agent-runtime/skills/`.
+- The `secureit` + `secureit-revisit` skills bundled in `@leanish/runtime/skills/`.
 
 When those land:
 
@@ -49,7 +49,7 @@ This pattern generalises: any future side-effecting agent in the suite should la
 
 ## See also
 
-- `../../specs/agentic-development/agent-runtime/specs/skills/secureit.md` — phase-2 skill spec.
-- `../../specs/agentic-development/agent-runtime/specs/skills/secureit-revisit.md` — phase-2 skill spec.
-- `../../specs/agentic-development/docs/adr/suite-0011-test-verification-via-project-ci.md` — why secureit uses GH Actions for verification.
-- `../../specs/agentic-development/agent-runtime/docs/adr/0011-delayed-self-publish.md` — `publishDelayed` design.
+- `secureit.md` — phase-2 skill spec.
+- `secureit-revisit.md` — phase-2 skill spec.
+- `suite-0011-test-verification-via-project-ci.md` — why secureit uses GH Actions for verification.
+- `0011-delayed-self-publish.md` — `publishDelayed` design.

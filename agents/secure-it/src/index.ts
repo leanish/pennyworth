@@ -1,5 +1,5 @@
 /**
- * `@leanish/agent-secureit` — phase-2 placeholder.
+ * `@leanish/secure-it` — phase-2 placeholder.
  *
  * Phase 1 ships **types only**. There is no `defineAgent({...})` here yet:
  * the handler depends on `runtime.publish` / `runtime.publishDelayed`,

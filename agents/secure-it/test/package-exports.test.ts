@@ -8,7 +8,7 @@ import type {
 } from "../src/index.js";
 import * as pkg from "../src/index.js";
 
-describe("@leanish/agent-secureit package exports (phase-2 placeholder)", () => {
+describe("@leanish/secure-it package exports (phase-2 placeholder)", () => {
   it("exports the per-stage payload types but no runtime values", () => {
     // Compile-time anchors: if any of the type aliases below disappears
     // the test file fails to typecheck.

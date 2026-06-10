@@ -36,12 +36,12 @@ import { GetItemCommand } from "@aws-sdk/client-dynamodb";
 import {
   DynamoConsumerRegistry,
   canonicalize,
-} from "@leanish/agent-runtime";
-import { publishCatalog, type Project } from "@leanish/catalogit";
+} from "@leanish/runtime";
+import { publishCatalog, type Project } from "@leanish/catalog-it";
 import {
   LocalStackHarness,
   isLocalStackReachable,
-} from "@leanish/agent-runtime/testing";
+} from "@leanish/runtime/testing";
 
 const IMAGE = process.env["LAMBDA_IMAGE"] ?? "atc-lambda:rehearsal";
 const CONTAINER_NAME = "atc-lambda-rehearsal";

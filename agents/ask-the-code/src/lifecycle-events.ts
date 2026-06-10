@@ -1,4 +1,4 @@
-import type { Runtime } from "@leanish/agent-runtime";
+import type { Runtime } from "@leanish/runtime";
 
 import type { AtcEnvelope } from "./payload.js";
 import type { ProjectScope } from "./project-scope.js";
@@ -23,7 +23,7 @@ export class LifecycleProgrammingError extends Error {
 
 /**
  * ATC's outbound lifecycle events on the `atc-events` EventBridge bus.
- * Per `../../../specs/agentic-development/agent-atc/specs/queue-api.md` §EventBridge events.
+ * Per `queue-api.md` §EventBridge events.
  *
  * The runtime emits no ATC events; ATC's handler is responsible for the
  * ordered protocol below.

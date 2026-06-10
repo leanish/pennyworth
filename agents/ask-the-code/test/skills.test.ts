@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { SkillLoader } from "@leanish/agent-runtime/testing";
+import { SkillLoader } from "@leanish/runtime/testing";
 
 /**
  * Sanity-check that ATC's agent-specific skills live in this package
@@ -21,7 +21,7 @@ describe("agent-atc skills", () => {
 
   // Mirrors the production search order: agent's own skills first,
   // then the runtime's bundled skills as the fallback for shared
-  // support skills that live in @leanish/agent-runtime.
+  // support skills that live in @leanish/runtime.
   const runtimeSkillsDir = join(
     dirname(fileURLToPath(import.meta.url)),
     "..",

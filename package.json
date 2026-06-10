@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "description": "leanish — a butler for your codebase: a suite of focused, human-gated AI agents on a shared runtime.",
   "workspaces": [
-    "packages/*",
-    "agents/*"
+    "core/*",
+    "agents/*",
+    "infra"
   ]
 }

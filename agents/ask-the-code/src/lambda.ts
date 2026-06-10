@@ -23,7 +23,7 @@ import {
   type ConsumerRecord,
   type SqsBatchResponse,
   type SqsEvent,
-} from "@leanish/agent-runtime/lambda";
+} from "@leanish/runtime/lambda";
 import { S3Client as AwsS3Client } from "@aws-sdk/client-s3";
 import { SSMClient } from "@aws-sdk/client-ssm";
 
@@ -111,7 +111,7 @@ export async function createAtcLambdaHandler(
   // ADR-0001 — agent-specific entry-point skills live with the agent).
   // The runtime's bundled skills/ is the fallback for shared support
   // skills (`karpathy-guidelines`); `defaultRuntimeSkillsDir()` resolves
-  // to it relative to the @leanish/agent-runtime install.
+  // to it relative to the @leanish/runtime install.
   const agentSkillsDir = join(dirname(agentConfigPath), "skills");
 
   // Build the logger early so the S3 catalog can surface refresh errors

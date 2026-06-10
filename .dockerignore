@@ -27,5 +27,5 @@ docker-compose.yml
 README.md
 docs/
 agents/secure-it/
-packages/agent-infra/
+infra/
 tooling/

@@ -1,4 +1,4 @@
-import type { Project, Runtime } from "@leanish/agent-runtime";
+import type { Project, Runtime } from "@leanish/runtime";
 
 import type { AtcRequest } from "./request-schema.js";
 import { AtcValidationError } from "./request-schema.js";

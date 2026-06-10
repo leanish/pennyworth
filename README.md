@@ -6,19 +6,18 @@ back **for your review**. Focus on the product, not the plumbing.
 
 ## Layout
 
-- **`packages/`** — the framework
-  - `catalogit` — the project catalog (read-only library + curation CLI)
-  - `agent-runtime` — the shared runtime + bundled skills every agent builds on
-  - `agent-infra` — infrastructure-as-code (provisions each agent)
+- **`core/`** — the framework
+  - `runtime` — the shared runtime + bundled skills every agent builds on
+  - `catalog-it` — the project catalog (read-only library + curation CLI)
+- **`infra/`** — infrastructure-as-code (provisions each agent)
 - **`agents/`** — the fleet (each independently deployable)
   - `ask-the-code` — read-only Q&A over the code
   - `secure-it` — keeps dependencies current (proposes PRs)
   - *(document-it · triage-it · ship-it · monitor-it — designed, not yet built)*
-- **`docs/`** — the **presentation** (`docs/presentation/`, ready for GitHub Pages), phase-1
-  acceptance, and the consolidation audit
+- **`docs/`** — the **presentation** (`docs/presentation/`, ready for GitHub Pages)
 
-> The engineering **design docs** (CONTEXT / overview / ADRs) live in a separate **private specs repo**,
-> by design. This repo carries code, intros, and the public front door.
+> The engineering **design docs** (CONTEXT / overview / ADRs) are maintained separately. This repo
+> carries the code, intros, and the public front door.
 
 ## About this repo
 

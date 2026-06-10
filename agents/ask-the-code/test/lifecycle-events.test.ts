@@ -6,7 +6,7 @@ import type {
   PutEventsRequest,
   PutEventsResult,
   Runtime,
-} from "@leanish/agent-runtime";
+} from "@leanish/runtime";
 
 import { LifecycleEmitter, LifecycleProgrammingError } from "../src/lifecycle-events.js";
 import type { AtcEnvelope } from "../src/payload.js";

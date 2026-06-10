@@ -3,7 +3,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 
-import type { Runtime } from "@leanish/agent-runtime";
+import type { Runtime } from "@leanish/runtime";
 
 import type { AtcRequest, AtcAttachment, AtcTranscriptTurn } from "./request-schema.js";
 

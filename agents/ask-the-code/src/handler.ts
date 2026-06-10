@@ -2,7 +2,7 @@ import {
   EntrypointInvocationError,
   ExecutionResolveError,
   RouterNotConfiguredError,
-} from "@leanish/agent-runtime";
+} from "@leanish/runtime";
 
 import { LifecycleProgrammingError } from "./lifecycle-events.js";
 import type {
@@ -10,7 +10,7 @@ import type {
   RuntimeMessage,
   SyncReportEntry,
   WorkingCopy,
-} from "@leanish/agent-runtime";
+} from "@leanish/runtime";
 
 import { materializeAttachments } from "./attachments.js";
 import type { MaterializeResult, MaterializedAttachment, MaterializedTurn } from "./attachments.js";
@@ -42,7 +42,7 @@ interface AskSkillOutput {
 /**
  * The 6-step transformation from `payload.request` (consumer-request shape)
  * to the `ask` skill's input + the surrounding lifecycle / delivery logic.
- * Matches `../../../specs/agentic-development/agent-atc/specs/queue-api.md` §Handler transformation.
+ * Matches `queue-api.md` §Handler transformation.
  *
  * Ordering (every *work* fail-path emits `atc.ask.failed`, never a partial
  * protocol; the one exception is a terminal-reply *delivery* failure after

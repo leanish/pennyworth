@@ -5,7 +5,7 @@ import {
   canonicalize,
   envelopeToRuntimeMessage,
   type SignedEnvelope,
-} from "@leanish/agent-runtime";
+} from "@leanish/runtime";
 
 import type { AtcRequest } from "./request-schema.js";
 

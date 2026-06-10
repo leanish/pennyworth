@@ -3,8 +3,8 @@ import {
   SSMClient,
 } from "@aws-sdk/client-ssm";
 
-import { EnvelopeVerificationError } from "@leanish/agent-runtime";
-import type { ConsumerRecord } from "@leanish/agent-runtime/lambda";
+import { EnvelopeVerificationError } from "@leanish/runtime";
+import type { ConsumerRecord } from "@leanish/runtime/lambda";
 
 /**
  * Resolve a `ConsumerRecord`'s `signingKey` into raw HMAC-key bytes.

@@ -1,10 +1,10 @@
-import type { AgentPayloadBase } from "@leanish/agent-runtime";
+import type { AgentPayloadBase } from "@leanish/runtime";
 
 import type { AtcRequest } from "./request-schema.js";
 
 /**
  * ATC's `RuntimeMessage.payload` shape. Produced by the SQS adapter from
- * the consumer's signed envelope — see `../../../specs/agentic-development/agent-atc/specs/queue-api.md`
+ * the consumer's signed envelope — see `queue-api.md`
  * §Envelope to RuntimeMessage mapping.
  *
  * `envelope` carries the consumer's wire-level domain fields; `request`
@@ -35,7 +35,7 @@ export interface AtcEnvelope {
   readonly timestamp: string;
   /**
    * Optional. SQS queue ARN where ATC delivers the terminal reply in AWS
-   * mode (per `../../../specs/agentic-development/agent-atc/specs/queue-api.md`). Local mode envelopes omit it; the
+   * mode (per `queue-api.md`). Local mode envelopes omit it; the
    * handler returns the reply directly via `run-local`'s Promise instead.
    */
   readonly replyTo?: string;

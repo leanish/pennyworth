@@ -6,10 +6,10 @@ import { GetItemCommand } from "@aws-sdk/client-dynamodb";
 import { PutRuleCommand, PutTargetsCommand } from "@aws-sdk/client-eventbridge";
 import { SetQueueAttributesCommand } from "@aws-sdk/client-sqs";
 
-import { canonicalize } from "@leanish/agent-runtime";
-import { FakeCodingAgentRunner } from "@leanish/agent-runtime/testing";
-import { publishCatalog, type Project } from "@leanish/catalogit";
-import { LocalStackHarness } from "@leanish/agent-runtime/testing";
+import { canonicalize } from "@leanish/runtime";
+import { FakeCodingAgentRunner } from "@leanish/runtime/testing";
+import { publishCatalog, type Project } from "@leanish/catalog-it";
+import { LocalStackHarness } from "@leanish/runtime/testing";
 
 import { createAtcLambdaHandler } from "../src/lambda.js";
 import type { AtcTerminalReply } from "../src/terminal-reply.js";
@@ -108,7 +108,7 @@ describe("ATC ask end-to-end against LocalStack", () => {
       secretValue,
     );
     const dynamo = stack.dynamoClient();
-    const { DynamoConsumerRegistry } = await import("@leanish/agent-runtime");
+    const { DynamoConsumerRegistry } = await import("@leanish/runtime");
     const registry = new DynamoConsumerRegistry({
       tableName: consumerRegistryTable,
       client: dynamo,

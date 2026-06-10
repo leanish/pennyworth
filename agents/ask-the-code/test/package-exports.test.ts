@@ -7,7 +7,7 @@ import * as devPublish from "../src/dev-publish.js";
  * Smoke test for the package's public surface. Asserts the default export
  * (the agent definition) and the dev-publish CLI are both wired correctly.
  */
-describe("@leanish/agent-atc package exports", () => {
+describe("@leanish/ask-the-code package exports", () => {
   it("default export is an agent definition with identifier 'atc'", () => {
     expect(agent).toBeDefined();
     expect(agent.identifier).toBe("atc");

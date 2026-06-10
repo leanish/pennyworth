@@ -1,8 +1,8 @@
-import { EFFORTS, type ExecutionOverride } from "@leanish/agent-runtime";
+import { EFFORTS, type ExecutionOverride } from "@leanish/runtime";
 
 /**
  * ATC consumer-request shape — the inner `payload` of the signed envelope.
- * Per `../../../specs/agentic-development/agent-atc/specs/queue-api.md` §kind: "ask".
+ * Per `queue-api.md` §kind: "ask".
  *
  * Validated by `parseAtcRequest` at the handler boundary (not by the runtime
  * — there are no per-stage payload schemas in v1 per ADR-0012).
