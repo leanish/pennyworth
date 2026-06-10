@@ -18,12 +18,19 @@ export interface RunResult {
 export type RunProcess = (
   cmd: string,
   args: readonly string[],
-  opts: { cwd?: string; input?: string },
+  opts: { cwd?: string; input?: string; timeoutMs?: number },
 ) => Promise<RunResult>;
 
 export class DraftError extends Error {}
 
 const KNOWN_AGENTS: ReadonlySet<string> = new Set<CodingAgent>(["codex", "claude"]);
+
+/**
+ * Hard cap per drafting attempt. Bounds agent hangs (network stalls, a CLI
+ * waiting on input it will never get): the run fails with DraftError and the
+ * caller's retry/skeleton fallback takes over instead of waiting forever.
+ */
+export const DRAFT_TIMEOUT_MS = 10 * 60_000;
 
 /**
  * Returns the trimmed body of the last ```markdown fenced block in `stdout`.
@@ -80,7 +87,7 @@ export async function draftDescription(opts: {
   const { agent, cwd, prompt, runProcess } = opts;
 
   const argv: string[] = agent === "codex" ? ["exec", prompt] : ["-p", prompt];
-  const result = await runProcess(agent, argv, { cwd });
+  const result = await runProcess(agent, argv, { cwd, timeoutMs: DRAFT_TIMEOUT_MS });
 
   if (result.code !== 0) {
     const tail = result.stderr.slice(-500);

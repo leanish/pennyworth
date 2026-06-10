@@ -10,6 +10,7 @@ import { catalogitCli } from "../../src/index.js";
 import {
   buildAddOptionsFromFlags,
   buildDiscoverOptionsFromFlags,
+  runProcess,
   type MixedFlags,
 } from "../../src/cli.js";
 
@@ -495,5 +496,38 @@ describe("buildDiscoverOptionsFromFlags", () => {
       booleans: { "include-archived": true },
     });
     expect(opts.includeArchived).toBe(true);
+  });
+});
+
+// Live-seam regression test: deliberately spawns a tiny `node -e` child.
+// `runProcess` must close the child's stdin even without `input` — `codex exec`
+// reads piped stdin to EOF before starting, so an open pipe hangs it forever.
+describe("runProcess", () => {
+  it("closes the child's stdin when no input is given (EOF reaches the child)", async () => {
+    const result = await runProcess(
+      "node",
+      ["-e", "process.stdin.on('data', () => {}); process.stdin.on('end', () => process.exit(7));"],
+      {},
+    );
+    expect(result.code).toBe(7);
+  });
+
+  it("delivers input then EOF when input is given", async () => {
+    const result = await runProcess(
+      "node",
+      ["-e", "let b = ''; process.stdin.on('data', (d) => (b += d)); process.stdin.on('end', () => { process.stdout.write(b); process.exit(0); });"],
+      { input: "hi" },
+    );
+    expect(result).toEqual({ code: 0, stdout: "hi", stderr: "" });
+  });
+
+  it("kills the child and reports code 124 when timeoutMs elapses", async () => {
+    const result = await runProcess(
+      "node",
+      ["-e", "setTimeout(() => {}, 60_000);"],
+      { timeoutMs: 200 },
+    );
+    expect(result.code).toBe(124);
+    expect(result.stderr).toContain("timed out after 200ms");
   });
 });

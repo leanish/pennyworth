@@ -51,6 +51,9 @@ export type AddStatus = "added" | "overridden" | "skeleton" | "skipped";
 
 const URL_RE = /^https?:\/\/|^git@/;
 
+/** Interval between "still drafting…" liveness ticks on stderr. */
+const DRAFT_HEARTBEAT_MS = 30_000;
+
 /** Split `"owner/repo"` on the first slash. `repo` is `""` when there's no slash. */
 function splitOwnerRepo(input: string): { owner: string; repo: string } {
   const slash = input.indexOf("/");
@@ -129,7 +132,11 @@ export async function runAdd(
     return { status: "skeleton", exitCode: 0 };
   }
 
-  // 6. Draft (with one retry on DraftError)
+  // 6. Draft (with one retry on DraftError). Drafting clones + runs a coding
+  // agent and can take minutes with no output of its own — announce it so
+  // interactive `add`/`discover` runs don't look hung.
+  d.stderr.write(`drafting "${id}" via ${o.agent} — this can take a few minutes…\n`);
+
   let githubMeta: { description: string | null; topics: readonly string[] } | undefined;
   if (o.fromGithub !== undefined) {
     const { owner: ghOwner, repo: ghRepo } = splitOwnerRepo(o.fromGithub);
@@ -152,6 +159,14 @@ export async function runAdd(
     }
   }
 
+  // Liveness heartbeat: the agent subprocess produces no output of its own,
+  // so tick on stderr while it runs to distinguish "working" from "hung".
+  const draftStartedAt = Date.now();
+  const elapsedS = (): number => Math.round((Date.now() - draftStartedAt) / 1000);
+  const heartbeat = setInterval(() => {
+    d.stderr.write(`still drafting "${id}" via ${o.agent}… (${elapsedS()}s elapsed)\n`);
+  }, DRAFT_HEARTBEAT_MS);
+
   let description: string;
   try {
     if (o.from !== undefined && (await isLocalDir(o.from))) {
@@ -171,11 +186,14 @@ export async function runAdd(
       return { status: "skeleton", exitCode: 4 };
     }
     throw err;
+  } finally {
+    clearInterval(heartbeat);
   }
 
   // 7. Write full project record
   const project: Project = { id, source, extensions, description };
   await writeProjectYaml(o.catalogRoot, project);
+  d.stderr.write(`drafted "${id}" in ${elapsedS()}s\n`);
 
   return { status: exists ? "overridden" : "added", exitCode: 0 };
 }
