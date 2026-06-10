@@ -30,11 +30,12 @@ interface RawRepoEntry {
   url: string;
   defaultBranchRef?: { name: string } | null;
   description: string | null;
-  repositoryTopics: Array<string | { name: string }>;
+  // gh emits null (not []) for repos with no topics.
+  repositoryTopics: Array<string | { name: string }> | null;
 }
 
-function normalizeTopics(raw: Array<string | { name: string }>): readonly string[] {
-  return raw.map(t => (typeof t === "string" ? t : t.name));
+function normalizeTopics(raw: Array<string | { name: string }> | null): readonly string[] {
+  return (raw ?? []).map(t => (typeof t === "string" ? t : t.name));
 }
 
 function toGhRepo(entry: RawRepoEntry): GhRepo {
@@ -109,7 +110,7 @@ export async function getRepoMeta(opts: {
 
   const raw = JSON.parse(result.stdout) as {
     description: string | null;
-    repositoryTopics: Array<string | { name: string }>;
+    repositoryTopics: Array<string | { name: string }> | null;
   };
 
   return {

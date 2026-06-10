@@ -30,6 +30,14 @@ describe("listRepos", () => {
     const runGh = async () => ({ code: 127, stdout: "", stderr: "command not found: gh" });
     await expect(listRepos({ owner: "x", includeArchived: false, runGh })).rejects.toBeInstanceOf(GhError);
   });
+  it("normalizes null repositoryTopics (gh emits null for topic-less repos) to []", async () => {
+    const entry = JSON.stringify([
+      { name: "a", owner: { login: "leanish" }, isArchived: false, isFork: false, url: "https://github.com/leanish/a", defaultBranchRef: { name: "main" }, description: null, repositoryTopics: null },
+    ]);
+    const runGh = async () => ({ code: 0, stdout: entry, stderr: "" });
+    const repos = await listRepos({ owner: "leanish", includeArchived: false, runGh });
+    expect(repos[0]?.topics).toEqual([]);
+  });
 });
 
 describe("getRepoMeta", () => {
@@ -37,5 +45,10 @@ describe("getRepoMeta", () => {
     const runGh = async () => ({ code: 0, stdout: JSON.stringify({ description: "D", repositoryTopics: [{ name: "t1" }] }), stderr: "" });
     const meta = await getRepoMeta({ owner: "leanish", repo: "a", runGh });
     expect(meta).toEqual({ description: "D", topics: ["t1"] });
+  });
+  it("normalizes null repositoryTopics to []", async () => {
+    const runGh = async () => ({ code: 0, stdout: JSON.stringify({ description: null, repositoryTopics: null }), stderr: "" });
+    const meta = await getRepoMeta({ owner: "leanish", repo: "a", runGh });
+    expect(meta).toEqual({ description: null, topics: [] });
   });
 });
