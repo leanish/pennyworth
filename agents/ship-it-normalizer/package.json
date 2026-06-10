@@ -1,0 +1,50 @@
+{
+  "name": "@leanish/ship-it-normalizer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Webhook normalizer for ship-it — a single Lambda (Function URL) that gates, filters, and normalizes Jira/GitHub webhook events into signed `ship-it-event` envelopes on ship-it's SQS queue. Registered as just another consumer (`webhook-normalizer`).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./lambda": {
+      "types": "./dist/lambda.d.ts",
+      "import": "./dist/lambda.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo",
+    "src",
+    "ASSUMPTIONS.md"
+  ],
+  "scripts": {
+    "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('.tsbuildinfo',{force:true});\"",
+    "build": "npm run clean && tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "check": "npm run typecheck && npm run build && npm test"
+  },
+  "dependencies-comment": "AWS SDK clients are constructed directly only in src/lambda.ts (cold-start wiring) and src/sender.ts (SQS SendMessage); everything else is injectable.",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1053.0",
+    "@aws-sdk/client-sqs": "^3.1053.0",
+    "@leanish/catalog-it": "file:../../core/catalog-it",
+    "@leanish/runtime": "file:../../core/runtime",
+    "@leanish/ship-it": "file:../ship-it"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
+  }
+}
