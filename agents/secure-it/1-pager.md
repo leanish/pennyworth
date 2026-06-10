@@ -7,6 +7,15 @@
 An assistant that keeps our software's third-party components **up to date** — automatically
 preparing the updates and proposing them for a person to review and approve.
 
+## Who it's for
+
+**Engineering.** Day to day, it's the engineers who review and approve its proposed updates, and the
+engineering leads who own keeping each project current. It also serves whoever answers our security
+audits: a documented, repeatable, always-on patching process is exactly the evidence auditors ask
+for.
+
+Other roles shouldn't ever need to interact with it — they just inherit safer, more stable software.
+
 ## Why this matters
 
 Modern software is built on top of many third-party building blocks ("components"). They release new
