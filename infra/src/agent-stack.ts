@@ -87,7 +87,7 @@ export class AgentStack extends Stack {
           : {}),
         CATALOG_BUCKET: shared.catalogBucket.bucketName,
         EVENT_BUS_NAME: shared.eventBus.eventBusName,
-        WORKSPACE_ROOT: "/tmp/atc-workspaces",
+        WORKSPACE_ROOT: `/tmp/${descriptor.identifier}-workspaces`,
       },
     });
 
@@ -113,6 +113,7 @@ export class AgentStack extends Stack {
     for (const need of descriptor.needs) {
       for (const statement of needPolicyStatements({
         need,
+        agentId: descriptor.identifier,
         region: this.region,
         account: this.account,
         eventBusArn: shared.eventBus.eventBusArn,

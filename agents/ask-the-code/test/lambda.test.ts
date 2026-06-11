@@ -14,7 +14,7 @@ import * as lambdaModule from "../src/lambda.js";
  * `agent-runtime/test/unit/sqs-lambda-shim.test.ts`; this test just
  * proves the wiring composes.
  */
-describe("agent-atc lambda module", () => {
+describe("ask-the-code lambda module", () => {
   it("exposes the canonical Lambda surface", () => {
     expect(typeof lambdaModule.atcLambdaHandler).toBe("function");
     expect(typeof lambdaModule.createAtcLambdaHandler).toBe("function");
@@ -38,7 +38,7 @@ describe("agent-atc lambda module", () => {
     await expect(
       lambdaModule.resolveSigningKeyFromRecord({
         consumerId: "atc-ui",
-        signingKey: { kind: "ssm-parameter", name: "/leanish/agents/atc/signing-keys/atc-ui" },
+        signingKey: { kind: "ssm-parameter", name: "/leanish/agents/ask-the-code/signing-keys/atc-ui" },
         allowedKinds: ["ask"],
       }),
     ).rejects.toThrowError(/only supports signingKey\.kind='literal'/);

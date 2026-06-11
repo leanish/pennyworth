@@ -61,7 +61,7 @@ import { createSigningKeyResolver } from "./signing-key-resolver.js";
  *                                   to exercise refresh quickly, or to a very
  *                                   large value to effectively disable refresh.
  *   EVENT_BUS_NAME                — EventBridge custom bus for ATC's lifecycle events.
- *   WORKSPACE_ROOT                — optional, defaults to `/tmp/atc-workspaces`.
+ *   WORKSPACE_ROOT                — optional, defaults to `/tmp/ask-the-code-workspaces`.
  *   AGENT_CONFIG_PATH             — optional, override the path to agent.yaml. Defaults
  *                                   to the bundled `<pkg>/agent.yaml` (resolved
  *                                   relative to this module); ops scenarios that ship
@@ -103,7 +103,7 @@ export async function createAtcLambdaHandler(
   const catalogBucket = requireEnv("CATALOG_BUCKET");
   const catalogKey = process.env["CATALOG_KEY"] ?? "catalog.json";
   const catalogTtlMs = parseOptionalInt("CATALOG_TTL_MS");
-  const workspaceRoot = process.env["WORKSPACE_ROOT"] ?? "/tmp/atc-workspaces";
+  const workspaceRoot = process.env["WORKSPACE_ROOT"] ?? "/tmp/ask-the-code-workspaces";
 
   const agentConfigPath = process.env["AGENT_CONFIG_PATH"] ?? defaultAgentYamlPath();
   const descriptor = await loadDescriptorFromFile(agentConfigPath);
@@ -156,7 +156,7 @@ export async function createAtcLambdaHandler(
     },
   });
   const workspace = new LocalGitWorkspace({ workspaceRoot });
-  const signingKeyTtlMs = parseOptionalInt("ATC_SIGNING_KEY_TTL_MS");
+  const signingKeyTtlMs = parseOptionalInt("ASK_THE_CODE_SIGNING_KEY_TTL_MS");
   const resolveSigningKey = createSigningKeyResolver({
     ssmClient: ssm,
     ...(signingKeyTtlMs !== undefined ? { cacheTtlMs: signingKeyTtlMs } : {}),

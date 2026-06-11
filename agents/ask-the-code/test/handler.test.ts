@@ -17,9 +17,9 @@ import type { AtcPayload } from "../src/payload.js";
 import { SCOPE_ONLY_ANSWER } from "../src/terminal-reply.js";
 
 const PROJECT: Project = {
-  id: "leanish/agent-atc",
-  source: { url: "https://github.com/leanish/agent-atc.git", branch: "main" },
-  extensions: { atc: { enabled: true } },
+  id: "leanish/agent-ask-the-code",
+  source: { url: "https://github.com/leanish/agent-ask-the-code.git", branch: "main" },
+  extensions: { "ask-the-code": { enabled: true } },
 };
 
 function buildRuntime(args: {
@@ -49,6 +49,12 @@ function buildRuntime(args: {
       }),
     },
     routeProjects: async () => [PROJECT],
+    publish: async () => {
+      throw new Error("publish not configured in this test runtime");
+    },
+    publishDelayed: async () => {
+      throw new Error("publishDelayed not configured in this test runtime");
+    },
     syncWorkingCopies: async (projects) => ({
       workingCopies: projects.map((p) => ({
         projectId: p.id,
@@ -119,11 +125,11 @@ describe("ATC handleAtcMessage", () => {
       (call) => (call[0] as PutEventsRequest).entries[0]!.detailType,
     );
     expect(detailTypes).toEqual([
-      "atc.ask.started",
-      "atc.ask.status",
-      "atc.ask.status",
-      "atc.ask.status",
-      "atc.ask.completed",
+      "ask-the-code.ask.started",
+      "ask-the-code.ask.status",
+      "ask-the-code.ask.status",
+      "ask-the-code.ask.status",
+      "ask-the-code.ask.completed",
     ]);
     expect(sendMessage).toHaveBeenCalledOnce();
     const reply = JSON.parse(sendMessage.mock.calls[0]![0].body);
@@ -164,11 +170,11 @@ describe("ATC handleAtcMessage", () => {
     // branch decides anything; sync + execution skips fire from inside
     // the scope-only branch.
     expect(detailTypes).toEqual([
-      "atc.ask.started",
-      "atc.ask.status",
-      "atc.ask.status",
-      "atc.ask.status",
-      "atc.ask.completed",
+      "ask-the-code.ask.started",
+      "ask-the-code.ask.status",
+      "ask-the-code.ask.status",
+      "ask-the-code.ask.status",
+      "ask-the-code.ask.completed",
     ]);
     const reply = JSON.parse(sendMessage.mock.calls[0]![0].body);
     expect(reply.status).toBe("completed");
@@ -200,7 +206,7 @@ describe("ATC handleAtcMessage", () => {
     );
     // started → failed; NO `status` events emitted because the throw
     // happens BEFORE any stage transition. This is what #6 guards against.
-    expect(detailTypes).toEqual(["atc.ask.started", "atc.ask.failed"]);
+    expect(detailTypes).toEqual(["ask-the-code.ask.started", "ask-the-code.ask.failed"]);
     const reply = JSON.parse(sendMessage.mock.calls[0]![0].body);
     expect(reply).toMatchObject({
       status: "failed",
@@ -222,9 +228,9 @@ describe("ATC handleAtcMessage", () => {
       (call) => (call[0] as PutEventsRequest).entries[0]!.detailType,
     );
     expect(detailTypes).toEqual([
-      "atc.ask.started",
-      "atc.ask.status", // project-resolution entered fires before the throw
-      "atc.ask.failed",
+      "ask-the-code.ask.started",
+      "ask-the-code.ask.status", // project-resolution entered fires before the throw
+      "ask-the-code.ask.failed",
     ]);
     const reply = JSON.parse(sendMessage.mock.calls[0]![0].body);
     expect(reply).toMatchObject({ status: "failed", error: { kind: "validation-error" } });
@@ -358,7 +364,7 @@ describe("ATC handleAtcMessage", () => {
     const detailTypes = putEvents.mock.calls.map(
       (c) => (c[0] as PutEventsRequest).entries[0]!.detailType,
     );
-    expect(detailTypes).toContain("atc.ask.completed"); // work succeeded → completed fired
-    expect(detailTypes).not.toContain("atc.ask.failed"); // delivery failure is NOT a work failure
+    expect(detailTypes).toContain("ask-the-code.ask.completed"); // work succeeded → completed fired
+    expect(detailTypes).not.toContain("ask-the-code.ask.failed"); // delivery failure is NOT a work failure
   });
 });
