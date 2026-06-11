@@ -3,17 +3,17 @@
 Decisions taken while implementing the agent, recorded so reviewers and
 future contributors don't have to reverse-engineer them from the code.
 
-## 1. Per-alert PRs, not one batched PR
+## 1. One batched dependency-refresh PR per project (owner-settled)
 
-The `1-pager.md` describes bundling updates "into a single proposed
-change". The implementation follows the skill contracts instead: **one
-draft PR per actionable security alert**, on branch
-`secure-it/<alertRef>`. Per-alert PRs keep the revisit loop simple (one
-PR ↔ one alert ↔ one revisit chain), make rollback surgical (closing one
-PR never discards unrelated safe bumps), and give the branch prefix a
-stable routing key for a future webhook-driven revisit source. The
-one-pager stays as the plain-language pitch; this file records the
-divergence.
+Originally implemented as one draft PR per security alert (per the early skill contracts); the
+owner settled the recorded drift the other way: the skill now runs a **full dependency-freshness +
+CVE pass** — direct deps, the Gradle wrapper, GitHub-workflow action pins, Dependabot PRs folded
+in, resolved-graph verification, CVE floors with `because(CVE-…)` reasons — batched into **one
+draft PR per project** on the stable branch `secure-it/dependency-refresh` (matching the 1-pager's
+"single proposed change" and the owner's own dependency-upgrade workflow). The output schema is
+unchanged: `alerts[]` carries per-advisory outcomes, `pullRequests[]` typically holds the single
+batched entry (`alertRef: "dependency-refresh"`), and the handler's per-PR revisit scheduling now
+naturally means one revisit chain per project.
 
 ## 2. Revisit delays and cap
 

@@ -1,6 +1,6 @@
 ---
 name: secure-it
-description: Scan one project's open GitHub security alerts and open or update a draft fix PR per actionable alert.
+description: Full dependency-freshness + CVE pass over one project — deps, Gradle wrapper, workflow actions — folded into ONE draft upgrade PR.
 compatibleCodingAgents:
   - claude-code
   - codex
@@ -57,71 +57,81 @@ outputSchema:
             type: string
 ---
 
-# secure-it
+# secure-it — dependency freshness + CVE triage, one draft PR per project
 
-You fix open security and dependency alerts for the single project mounted in the working set. For each actionable alert you produce one **draft** pull request with the narrowest dependency fix that resolves it, then report what you did as terminal JSON. A separate follow-up run (`secure-it-revisit`) handles CI results later — you never wait for CI.
+You are running a full dependency-freshness and CVE pass over the project mounted in the working
+copy (`<project.id>`). Triage with REAL repo state first; prefer CLI over browsing unless a primary
+source is needed to verify a version or advisory. The result is **one batched draft PR** carrying
+every safe upgrade — never one PR per dependency. A separate follow-up run (`secure-it-revisit`)
+handles CI results later — you never wait for CI.
 
-## Frame
+## Workflow
 
-- `project.id` is the repo's full name (e.g. `owner/name`); `project.source.url` is its clone URL and `project.source.branch` (when present) the default branch. The repo is already cloned into the mounted working-copy directory — do your code work there.
-- `GITHUB_TOKEN` is inherited in your environment. Use the `gh` CLI (or direct GitHub API calls) for everything GitHub-side: listing alerts, listing PRs, pushing, opening PRs, labeling.
-- Resolve the canonical repo identity first (`gh repo view`) so alert and PR queries hit the right repository even if the clone URL is a mirror or redirect.
+1. **Resolve the canonical repo identity** before querying anything:
+   `gh repo view --json nameWithOwner,url,defaultBranchRef` and compare with `git remote -v`.
+   Treat `gh repo view` as the source of truth for GitHub metadata.
 
-## Scan
+2. **Enumerate open PRs unfiltered** (`gh pr list --state open --limit 30 --json
+   number,title,author,headRefName,url`) before any filtered search. Identify Dependabot PRs from
+   the full list; read their exact diffs (`gh pr diff <n> --patch`) and treat them as primary
+   upgrade signals — FOLD their concrete changes into your upgrade branch instead of paraphrasing.
 
-1. List the project's open security alerts: `gh api repos/<owner>/<name>/dependabot/alerts --paginate` (state `open`). Include code-scanning/security advisories only if they map to a dependency fix; everything else is `unsupported`.
-2. List existing open PRs (`gh pr list --state open --json number,headRefName,isDraft,labels,title,url`) **before** deciding anything — earlier runs may already have a PR per alert.
-3. Derive a stable `alertRef` per alert — prefer the GHSA id; fall back to the Dependabot alert number (e.g. `dependabot-12`).
+3. **Inventory every upgrade surface** before deciding anything is current:
+   - direct dependencies in the build files (Gradle/Maven/npm — whatever the repo uses);
+   - the **Gradle wrapper** version (`gradle/wrapper/gradle-wrapper.properties`) — Gradle itself is
+     in scope;
+   - **GitHub Actions** pins in `.github/workflows/*.yml` and local composite actions — they are
+     dependencies too (omit `aws-actions/amazon-ecr-login` unless explicitly requested);
+   - never conclude "already up to date" from library coordinates alone.
 
-## Per-alert workflow
+4. **Discover candidates with a temporary updater** where the ecosystem has one (Gradle: add
+   `com.github.ben-manes.versions` locally, run it, capture results, REMOVE it before commit).
+   Verify interesting findings against primary sources (Maven Central / Gradle Plugin Portal /
+   official action releases / Gradle releases) — not search snippets.
 
-For each open alert, in a fresh branch context:
+5. **Apply the upgrades on one branch**: `secure-it/dependency-refresh`.
+   - Wrapper bumps: `./gradlew wrapper --gradle-version <target>` then `./gradlew wrapper` again;
+     revert unrelated generated churn before committing.
+   - Workflow actions: update the `uses:` pins deliberately.
+   - Run the project's own quality gate locally (`./gradlew check` or equivalent) and fix what the
+     upgrades broke when it's clearly mechanical; drop (and note) any single upgrade that can't be
+     made safe — keep the rest.
 
-1. **Check for an existing PR.** The branch convention is `secure-it/<alertRef>`. If an open PR for that branch (or carrying the marker/label below for the same `alertRef`) exists, update it instead of opening a duplicate — record `pr-updated`.
-2. **Verify the alert is real in the resolved graph.** Inspect the dependency surface the alert points at (lockfiles, manifests, build files, resolved dependency reports — e.g. `npm ls`, `./gradlew dependencyInsight`, `pip show`, whatever the ecosystem provides). If the resolved graph is already outside the vulnerable range, record `already-fixed` and move on — no PR.
-3. **Apply the narrowest fix that resolves the alert.** Bump the affected dependency (or add the minimal constraint/override for a vulnerable transitive) to the smallest safe version. Verify against primary sources (the advisory, the package's release listing) — do not guess versions. Re-resolve the graph and prove the vulnerable version is gone before committing.
-4. **Keep the change clean.** No unrelated upgrades, no formatting churn, no leftover scratch tooling. If a safe fix cannot be produced (no fixed release, fix requires a major rewrite, ecosystem you cannot operate), record `no-safe-fix` (or `unsupported`) with no PR.
-5. **Publish as a draft PR.**
-   - Branch: `secure-it/<alertRef>`, created from the default branch. Never force-push; if the branch exists, add commits or recreate the PR content idempotently.
-   - Open the PR in **draft** mode (`gh pr create --draft`), or push updates to the existing one.
-   - Label it `leanish:agent:secure-it` (create the label if missing).
-   - End the PR body with the marker footer (machine-readable, survives edits above it):
-     `<!-- leanish:agent=secure-it; alertRef=<alertRef> -->`
-   - PR body: what the alert is, what changed, and how you verified the resolved graph no longer contains the vulnerable version.
-6. **Do not wait for CI.** Pushing triggers the project's CI automatically; the revisit run reads the results later.
+6. **Verify the RESOLVED graph, not declarations**: `./gradlew dependencies --configuration
+   runtimeClasspath` (+ `testRuntimeClasspath`), `dependencyInsight` where a floor needs proof. A
+   bump hasn't happened until the resolved graph says so.
 
-## Hard rules
+7. **CVE pass on the resolved graph**: check the concrete resolved artifacts (Netty, Apache
+   HttpClient, Commons, Jackson, AWS SDK transitives, testcontainers are the usual suspects in
+   Java repos; use primary advisory sources — GitHub Advisories, official project security pages,
+   OSV). Also list open Dependabot ALERTS when accessible (`gh` may lack scopes — then say so in
+   the summary and continue with graph-based triage; absence of alerts ≠ clean graph).
+   - Add a version floor ONLY for a real resolved vulnerability, as an explicit dependency at the
+     top of the dependencies block with `because("CVE-XXXX-NNNNN: <what it fixes>")`.
+   - Remove stale CVE floors whose fallback resolution is already outside the affected range.
 
-- **Draft PRs only. Never merge a PR. Never mark one ready-for-review** — that is the revisit skill's decision.
-- **Never force-push.**
-- **Idempotent re-runs**: a second invocation over the same alert set must converge on the same PRs (update, not duplicate).
-- Touch only what the fix requires.
+8. **Open or update the draft PR**:
+   - branch `secure-it/dependency-refresh`, **draft** PR against the default branch, label
+     `leanish:agent:secure-it`, marker footer `<!-- leanish:agent=secure-it; alertRef=dependency-refresh -->`;
+   - PR body: what was upgraded (deps / wrapper / actions), what was deliberately skipped and why,
+     the CVE findings with their resolution state, and which Dependabot PRs it folds in
+     (mention them with `Closes #<n>` ONLY when the fold is exact);
+   - idempotent re-runs: if an open `secure-it/dependency-refresh` PR exists, UPDATE that branch
+     (regular pushes) instead of opening a duplicate;
+   - never wait for CI in-process; never merge; never force-push; never push to the default branch.
 
-## Output
+## Output mapping
 
-End your response with a single fenced JSON block as the final non-whitespace content, matching the output schema:
+- `alerts[]` — one entry per CVE/advisory you actively handled or consciously deferred:
+  `alertRef` = the CVE/GHSA id, `outcome` ∈ pr-opened | pr-updated | already-fixed | unsupported |
+  no-safe-fix. A pure freshness run with no advisories produces `[]`.
+- `pullRequests[]` — the batched PR (single entry when one was opened/updated, empty when the repo
+  was fully current): `alertRef: "dependency-refresh"`, plus the PR's real url/branch/number/title.
+- `summary` — two-to-four sentences: what was current, what moved, what was skipped, CVE posture.
 
-- `summary` — one or two sentences on what the scan found and did.
-- `alerts` — one entry per alert processed, with its `alertRef` and `outcome` (`pr-opened`, `pr-updated`, `already-fixed`, `unsupported`, `no-safe-fix`). This is the audit log.
-- `pullRequests` — one entry per PR you opened or updated this run: `alertRef`, `url`, `branch`, `number`, `title`. Every `pr-opened` / `pr-updated` outcome must have a matching entry here; outcomes without a PR must not.
-
-A clean scan with no open alerts returns `alerts: []` and `pullRequests: []` with a summary saying so.
+End your response with a single fenced JSON block as the final non-whitespace content, matching the
+output schema:
 
 ```json
-{
-  "summary": "Scanned 2 open alerts; opened one draft PR, one alert already fixed.",
-  "alerts": [
-    { "alertRef": "GHSA-xxxx-yyyy-zzzz", "outcome": "pr-opened" },
-    { "alertRef": "GHSA-aaaa-bbbb-cccc", "outcome": "already-fixed" }
-  ],
-  "pullRequests": [
-    {
-      "alertRef": "GHSA-xxxx-yyyy-zzzz",
-      "url": "https://github.com/owner/name/pull/123",
-      "branch": "secure-it/GHSA-xxxx-yyyy-zzzz",
-      "number": 123,
-      "title": "fix: bump vulnerable-package past GHSA-xxxx-yyyy-zzzz"
-    }
-  ]
-}
+{ "summary": "…", "alerts": [ { "alertRef": "CVE-2026-12345", "outcome": "pr-opened" } ], "pullRequests": [ { "alertRef": "dependency-refresh", "url": "…", "branch": "secure-it/dependency-refresh", "number": 7, "title": "…" } ] }
 ```
