@@ -367,4 +367,40 @@ describe("runAdd", () => {
     expect(capturedArgs).toContain("view");
     expect(capturedArgs).toContain("leanish/foo");
   });
+
+  it("fromGithub: source.branch comes from the SOURCE repo, never the --from-github metadata repo", async () => {
+    // Regression: --from-github fetches description/topics from a DIFFERENT
+    // repo; its default branch must not leak into the source spine.
+    const runGh: RunGh = async (args) => {
+      const target = args.find((a) => a.includes("/")) ?? "";
+      if (target === "upstream/bar") {
+        // the metadata repo — different default branch on purpose
+        return {
+          code: 0,
+          stdout: JSON.stringify({
+            description: "from upstream",
+            repositoryTopics: [],
+            defaultBranchRef: { name: "trunk" },
+          }),
+          stderr: "",
+        };
+      }
+      // the source repo (leanish/foo)
+      return {
+        code: 0,
+        stdout: JSON.stringify({ description: "src", repositoryTopics: [], defaultBranchRef: { name: "master" } }),
+        stderr: "",
+      };
+    };
+
+    await runAdd(
+      makeOpts({ catalogRoot, fromGithub: "upstream/bar" }),
+      makeDeps({ runGh }),
+    );
+
+    const catalog = await FilesystemCatalog.load({ catalogRoot });
+    const project = catalog.get("leanish/foo");
+    expect(project?.source.url).toBe("https://github.com/leanish/foo.git");
+    expect(project?.source.branch).toBe("master"); // source, not "trunk"
+  });
 });

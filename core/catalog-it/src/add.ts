@@ -137,26 +137,32 @@ export async function runAdd(
   // interactive `add`/`discover` runs don't look hung.
   d.stderr.write(`drafting "${id}" via ${o.agent} — this can take a few minutes…\n`);
 
+  // Drafting metadata: `--from-github` pulls description/topics from a
+  // (possibly DIFFERENT) repo for the prompt only. It must NOT influence
+  // `source.branch` — that belongs to the source repo, not the metadata repo.
   let githubMeta: RepoMeta | undefined;
   if (o.fromGithub !== undefined) {
     const { owner: ghOwner, repo: ghRepo } = splitOwnerRepo(o.fromGithub);
     githubMeta = await getRepoMeta({ owner: ghOwner, repo: ghRepo, runGh: d.runGh });
-  } else if (!exists) {
-    // Plain `add <owner/repo>`: resolve the repo's REAL default branch so a
-    // fresh spine doesn't hardcode "main" (the inspection clone checks out
-    // the default HEAD either way, so a wrong recorded branch otherwise goes
-    // unnoticed until something consumes it). Soft fallback — `gh` being
-    // absent/offline must not break a plain add.
+  }
+
+  // Fresh spine: record the SOURCE repo's real default branch instead of
+  // hardcoding "main" (the inspection clone checks out the default HEAD, so
+  // a wrong recorded branch otherwise goes unnoticed until something consumes
+  // it). Resolved from the source repo identity (`owner/slug`) ONLY — never
+  // from the `--from-github` metadata repo — and only when the source IS that
+  // canonical repo (a custom `--from <url>` may point elsewhere, and
+  // getRepoMeta is keyed by owner/repo, not URL; that case keeps "main").
+  // Soft fallback: `gh` absent/offline must not break a plain add.
+  if (!exists && sourceUrl === derivedUrl) {
     try {
-      githubMeta = await getRepoMeta({ owner, repo: slug, runGh: d.runGh });
+      const sourceMeta = await getRepoMeta({ owner, repo: slug, runGh: d.runGh });
+      source = { url: sourceUrl, branch: sourceMeta.defaultBranch };
     } catch {
       d.stderr.write(
         `catalogit add: could not resolve the default branch for "${id}"; assuming "main".\n`,
       );
     }
-  }
-  if (!exists && githubMeta !== undefined) {
-    source = { url: sourceUrl, branch: githubMeta.defaultBranch };
   }
 
   const prompt = buildDraftingPrompt(
