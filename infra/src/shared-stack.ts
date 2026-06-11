@@ -5,7 +5,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import type { Construct } from "constructs";
 
 export interface SharedStackProps extends StackProps {
-  /** EventBridge bus name (default `atc-events`). */
+  /** EventBridge bus name (default `agent-events`). */
   readonly eventBusName?: string;
 }
 
@@ -31,7 +31,7 @@ export class SharedStack extends Stack {
     });
 
     this.eventBus = new events.EventBus(this, "Events", {
-      eventBusName: props.eventBusName ?? "atc-events",
+      eventBusName: props.eventBusName ?? "agent-events",
     });
 
     this.secretsKey = new kms.Key(this, "SecretsKey", {

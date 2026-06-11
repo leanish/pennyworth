@@ -22,7 +22,7 @@ describe("createSigningKeyResolver", () => {
     return { send } as unknown as SSMClient;
   }
 
-  const PARAM_NAME = "/leanish/agents/atc/signing-keys/atc-ui";
+  const PARAM_NAME = "/leanish/agents/ask-the-code/signing-keys/atc-ui";
 
   it("resolves a literal key without ever calling SSM", async () => {
     const send = vi.fn();
@@ -123,7 +123,7 @@ describe("createSigningKeyResolver", () => {
       ssmClient: mockSsmClient(send),
     });
 
-    const missingParam = "/leanish/agents/atc/signing-keys/missing";
+    const missingParam = "/leanish/agents/ask-the-code/signing-keys/missing";
     let caught: unknown;
     try {
       await resolver({
@@ -148,7 +148,7 @@ describe("createSigningKeyResolver", () => {
     await expect(
       resolver({
         consumerId: "atc-ui",
-        signingKey: { kind: "ssm-parameter", name: "/leanish/agents/atc/signing-keys/empty" },
+        signingKey: { kind: "ssm-parameter", name: "/leanish/agents/ask-the-code/signing-keys/empty" },
         allowedKinds: ["ask"],
       }),
     ).rejects.toMatchObject({

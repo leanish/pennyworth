@@ -6,11 +6,11 @@ import { AGENTS } from "../src/registry.js";
 // instantiating any aws-cdk-lib construct, so it runs in the fast gate.
 describe("agent registry", () => {
   it("registers the ask-the-code agent with a descriptor path + ECR repo", () => {
-    const atc = AGENTS.find((a) => a.id === "atc");
-    expect(atc).toBeDefined();
-    expect(atc?.descriptorPath).toMatch(/ask-the-code\/agent\.yaml$/);
-    expect(atc?.ecrRepositoryName).toBe("leanish/agent-atc");
-    expect(atc?.imageTag.length).toBeGreaterThan(0);
+    const askTheCode = AGENTS.find((a) => a.id === "ask-the-code");
+    expect(askTheCode).toBeDefined();
+    expect(askTheCode?.descriptorPath).toMatch(/ask-the-code\/agent\.yaml$/);
+    expect(askTheCode?.ecrRepositoryName).toBe("leanish/agent-ask-the-code");
+    expect(askTheCode?.imageTag.length).toBeGreaterThan(0);
   });
 
   it("registers the ship-it agent with a descriptor path + ECR repo", () => {

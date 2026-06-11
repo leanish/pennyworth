@@ -106,4 +106,4 @@ COPY --from=build /src/agents/ask-the-code/node_modules /var/task/node_modules
 CMD ["dist/lambda.atcLambdaHandler"]
 
 LABEL leanish.role=agent
-LABEL leanish.agent=atc
+LABEL leanish.agent=ask-the-code
