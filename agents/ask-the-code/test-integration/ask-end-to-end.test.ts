@@ -81,18 +81,18 @@ describe("ATC ask end-to-end against LocalStack", () => {
     consumerId: string;
   }> {
     // ---- Provision LocalStack resources for one fresh ATC stack ----
-    const idempotencyTable = await stack.createIdempotencyTable("atc-idem");
-    const consumerRegistryTable = await stack.createConsumerRegistryTable("atc-consumers");
-    const bucket = await stack.createBucket("atc-catalog");
-    const eventBus = await stack.createEventBus("atc-events");
-    const replyQueue = await stack.createQueue("atc-reply");
+    const idempotencyTable = await stack.createIdempotencyTable("ask-the-code-idem");
+    const consumerRegistryTable = await stack.createConsumerRegistryTable("ask-the-code-consumers");
+    const bucket = await stack.createBucket("ask-the-code-catalog");
+    const eventBus = await stack.createEventBus("ask-the-code-events");
+    const replyQueue = await stack.createQueue("ask-the-code-reply");
 
     // ---- Publish a small catalog (one ATC-enabled project) ----
     const project: Project = {
       id: "demo",
       source: { url: "https://example.invalid/demo.git", branch: "main" },
       description: "Demo project for end-to-end test",
-      extensions: { atc: { enabled: true } },
+      extensions: { "ask-the-code": { enabled: true } },
     };
     await publishCatalog({
       bucket,
@@ -104,7 +104,7 @@ describe("ATC ask end-to-end against LocalStack", () => {
     // ---- Register a consumer with ssm-parameter signing key ----
     const secretValue = "e2e-test-hmac-key";
     const signingKeyParam = await stack.createSecureStringParameter(
-      `/leanish/test/${stack.id}/atc-hmac`,
+      `/leanish/test/${stack.id}/ask-the-code-hmac`,
       secretValue,
     );
     const dynamo = stack.dynamoClient();
@@ -121,7 +121,7 @@ describe("ATC ask end-to-end against LocalStack", () => {
     });
 
     // ---- Subscribe an SQS queue to the event bus so we can assert events ----
-    const eventCaptureQueue = await stack.createQueue("atc-events-cap");
+    const eventCaptureQueue = await stack.createQueue("ask-the-code-events-cap");
     await attachSqsTargetToEventBus(stack, eventBus, eventCaptureQueue.queueArn, eventCaptureQueue.queueUrl);
 
     // ---- Set the env vars createAtcLambdaHandler reads ----
@@ -132,7 +132,7 @@ describe("ATC ask end-to-end against LocalStack", () => {
     // Skip the working-copy git clone path entirely — the demo project has
     // a fake URL; we rely on the test always using `noSync: true` in the
     // request payload so syncWorkingCopies isn't called.
-    process.env["WORKSPACE_ROOT"] = "/tmp/atc-e2e-workspace";
+    process.env["WORKSPACE_ROOT"] = "/tmp/ask-the-code-e2e-workspace";
 
     // ---- Wire a FakeCodingAgentRunner so we don't need the live CLI ----
     const fakeRunner = new FakeCodingAgentRunner("claude-code", [
@@ -291,8 +291,8 @@ describe("ATC ask end-to-end against LocalStack", () => {
       })
       .filter((t): t is string => t !== undefined);
 
-    expect(detailTypes).toContain("atc.ask.started");
-    expect(detailTypes).toContain("atc.ask.completed");
+    expect(detailTypes).toContain("ask-the-code.ask.started");
+    expect(detailTypes).toContain("ask-the-code.ask.completed");
   });
 
   it("ATC rejects envelope with bad signature (DLQ via maxReceiveCount path)", async () => {

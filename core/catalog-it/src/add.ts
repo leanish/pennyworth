@@ -11,7 +11,7 @@ import { stat } from "node:fs/promises";
 import { type CodingAgent, type RunProcess, DraftError, draftDescription } from "./coding-agent.js";
 import { buildDraftingPrompt } from "./drafting-prompt.js";
 import { loadProjectFile } from "./filesystem-catalog.js";
-import { type RunGh, getRepoMeta } from "./github.js";
+import { type RepoMeta, type RunGh, getRepoMeta } from "./github.js";
 import { type RunGit, withInspectionClone } from "./inspection-clone.js";
 import type { Project, ProjectSource } from "./project.js";
 import { projectFileExists, writeProjectYaml, writeSkeleton } from "./project-writer.js";
@@ -137,10 +137,32 @@ export async function runAdd(
   // interactive `add`/`discover` runs don't look hung.
   d.stderr.write(`drafting "${id}" via ${o.agent} — this can take a few minutes…\n`);
 
-  let githubMeta: { description: string | null; topics: readonly string[] } | undefined;
+  // Drafting metadata: `--from-github` pulls description/topics from a
+  // (possibly DIFFERENT) repo for the prompt only. It must NOT influence
+  // `source.branch` — that belongs to the source repo, not the metadata repo.
+  let githubMeta: RepoMeta | undefined;
   if (o.fromGithub !== undefined) {
     const { owner: ghOwner, repo: ghRepo } = splitOwnerRepo(o.fromGithub);
     githubMeta = await getRepoMeta({ owner: ghOwner, repo: ghRepo, runGh: d.runGh });
+  }
+
+  // Fresh spine: record the SOURCE repo's real default branch instead of
+  // hardcoding "main" (the inspection clone checks out the default HEAD, so
+  // a wrong recorded branch otherwise goes unnoticed until something consumes
+  // it). Resolved from the source repo identity (`owner/slug`) ONLY — never
+  // from the `--from-github` metadata repo — and only when the source IS that
+  // canonical repo (a custom `--from <url>` may point elsewhere, and
+  // getRepoMeta is keyed by owner/repo, not URL; that case keeps "main").
+  // Soft fallback: `gh` absent/offline must not break a plain add.
+  if (!exists && sourceUrl === derivedUrl) {
+    try {
+      const sourceMeta = await getRepoMeta({ owner, repo: slug, runGh: d.runGh });
+      source = { url: sourceUrl, branch: sourceMeta.defaultBranch };
+    } catch {
+      d.stderr.write(
+        `catalogit add: could not resolve the default branch for "${id}"; assuming "main".\n`,
+      );
+    }
   }
 
   const prompt = buildDraftingPrompt(

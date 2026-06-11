@@ -1,0 +1,51 @@
+{
+  "name": "@leanish/ship-it",
+  "version": "0.0.0",
+  "private": true,
+  "description": "agent-ship-it — ticket-lifecycle Layer-3 agent. Phase 1 ships the code-it step: implement a ready ticket, open a draft PR, drive CI green via a revisit loop. Built on @leanish/runtime.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./lambda": {
+      "types": "./dist/lambda.d.ts",
+      "import": "./dist/lambda.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo",
+    "src",
+    "skills",
+    "agent.yaml",
+    "ASSUMPTIONS.md"
+  ],
+  "scripts": {
+    "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('.tsbuildinfo',{force:true});\"",
+    "build": "npm run clean && tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "check": "npm run typecheck && npm run build && npm test"
+  },
+  "dependencies-comment": "AWS SDK clients are constructed directly only in src/lambda.ts (cold-start wiring); everything else flows through @leanish/runtime.",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1053.0",
+    "@aws-sdk/client-s3": "^3.1053.0",
+    "@aws-sdk/client-ssm": "^3.1053.0",
+    "@leanish/runtime": "file:../../core/runtime"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
+  }
+}

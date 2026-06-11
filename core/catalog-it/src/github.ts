@@ -85,21 +85,28 @@ export async function listRepos(opts: {
   return includeArchived ? repos : repos.filter(r => !r.isArchived);
 }
 
+export interface RepoMeta {
+  readonly description: string | null;
+  readonly topics: readonly string[];
+  /** The repository's real default branch (falls back to "main" if absent). */
+  readonly defaultBranch: string;
+}
+
 /**
- * Fetches description and topics for a single repository.
+ * Fetches description, topics, and the default branch for a single repository.
  */
 export async function getRepoMeta(opts: {
   owner: string;
   repo: string;
   runGh: RunGh;
-}): Promise<{ description: string | null; topics: readonly string[] }> {
+}): Promise<RepoMeta> {
   const { owner, repo, runGh } = opts;
   const result = await runGh([
     "repo",
     "view",
     `${owner}/${repo}`,
     "--json",
-    "description,repositoryTopics",
+    "description,repositoryTopics,defaultBranchRef",
   ]);
 
   if (result.code !== 0) {
@@ -111,10 +118,12 @@ export async function getRepoMeta(opts: {
   const raw = JSON.parse(result.stdout) as {
     description: string | null;
     repositoryTopics: Array<string | { name: string }> | null;
+    defaultBranchRef?: { name: string } | null;
   };
 
   return {
     description: raw.description,
     topics: normalizeTopics(raw.repositoryTopics),
+    defaultBranch: raw.defaultBranchRef?.name ?? "main",
   };
 }

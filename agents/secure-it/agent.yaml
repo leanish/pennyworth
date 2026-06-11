@@ -1,12 +1,13 @@
-identifier: secureit
+identifier: secure-it
 compute: lambda
 
 triggers:
   - type: scheduler
-    queueArnRef: secureit-requests
-    dlqArnRef: secureit-requests-dlq
-    # scheduled tick fires stage=init; runtime.publish fires stage=breakdown (sourceTrigger=self);
-    # publishDelayed fires stage=revisit (sourceTrigger=self); phase-3+ gh-webhook also fires stage=revisit
+    queueArnRef: secure-it-requests
+    dlqArnRef: secure-it-requests-dlq
+    # The recurring tick fires stage=init (sourceTrigger=scheduler);
+    # runtime.publish fires stage=breakdown (sourceTrigger=self);
+    # runtime.publishDelayed fires stage=revisit (sourceTrigger=self).
 
 stages: [init, breakdown, revisit]
 
@@ -15,11 +16,10 @@ model: claude-sonnet-4-6
 
 skills:
   entrypoints:
-    - secureit          # invoked from the breakdown handler — scans GH alerts, opens draft PRs
-    - secureit-revisit  # invoked from the revisit handler — decides flip / adapt / rollback / defer
+    - secure-it          # invoked from the breakdown handler — scans GH alerts, opens draft PRs
+    - secure-it-revisit  # invoked from the revisit handler — decides flip / adapt / rollback / defer
   support:
     - karpathy-guidelines
-    - diagnose
 
 needs:
   - github

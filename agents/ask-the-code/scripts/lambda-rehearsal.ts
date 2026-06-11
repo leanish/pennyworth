@@ -64,11 +64,11 @@ async function main(): Promise<void> {
   try {
     // ---- Provision LocalStack resources ----
     const t0 = Date.now();
-    const idempotencyTable = await stack.createIdempotencyTable("atc-idem");
-    const consumerRegistryTable = await stack.createConsumerRegistryTable("atc-consumers");
-    const catalogBucket = await stack.createBucket("atc-catalog");
-    const eventBus = await stack.createEventBus("atc-events");
-    const replyQueue = await stack.createQueue("atc-reply");
+    const idempotencyTable = await stack.createIdempotencyTable("ask-the-code-idem");
+    const consumerRegistryTable = await stack.createConsumerRegistryTable("ask-the-code-consumers");
+    const catalogBucket = await stack.createBucket("ask-the-code-catalog");
+    const eventBus = await stack.createEventBus("ask-the-code-events");
+    const replyQueue = await stack.createQueue("ask-the-code-reply");
     process.stdout.write(`✔ AWS resources provisioned (${Date.now() - t0}ms)\n`);
 
     // ---- Publish a small catalog ----
@@ -76,7 +76,7 @@ async function main(): Promise<void> {
       id: "demo",
       source: { url: "https://example.invalid/demo.git", branch: "main" },
       description: "Demo project for the Lambda rehearsal",
-      extensions: { atc: { enabled: true } },
+      extensions: { "ask-the-code": { enabled: true } },
     };
     await publishCatalog({
       bucket: catalogBucket,
@@ -120,7 +120,7 @@ async function main(): Promise<void> {
       CONSUMER_REGISTRY_TABLE_NAME: consumerRegistryTable,
       CATALOG_BUCKET: catalogBucket,
       EVENT_BUS_NAME: eventBus,
-      WORKSPACE_ROOT: "/tmp/atc-workspaces",
+      WORKSPACE_ROOT: "/tmp/ask-the-code-workspaces",
       // Force-refresh the catalog every read so we exercise that path.
       CATALOG_TTL_MS: "1",
     } as const;

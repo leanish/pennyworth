@@ -22,8 +22,8 @@ export class LifecycleProgrammingError extends Error {
 }
 
 /**
- * ATC's outbound lifecycle events on the `atc-events` EventBridge bus.
- * Per `queue-api.md` §EventBridge events.
+ * ATC's outbound lifecycle events on the shared agent EventBridge bus
+ * (`EVENT_BUS_NAME`). Per `queue-api.md` §EventBridge events.
  *
  * The runtime emits no ATC events; ATC's handler is responsible for the
  * ordered protocol below.
@@ -43,7 +43,7 @@ export class LifecycleEmitter {
   }
 
   async started(): Promise<void> {
-    await this.#put("atc.ask.started", {});
+    await this.#put("ask-the-code.ask.started", {});
   }
 
   async stage(name: AskStage, state: AskStageState, reason?: AskStageSkipReason): Promise<void> {
@@ -65,7 +65,7 @@ export class LifecycleEmitter {
     if (state === "skipped" && reason !== undefined) {
       detail["reason"] = reason;
     }
-    await this.#put("atc.ask.status", detail);
+    await this.#put("ask-the-code.ask.status", detail);
   }
 
   async completed(args: {
@@ -74,7 +74,7 @@ export class LifecycleEmitter {
     readonly agent: { readonly kind: string; readonly model: string };
     readonly durationMs: number;
   }): Promise<void> {
-    await this.#put("atc.ask.completed", {
+    await this.#put("ask-the-code.ask.completed", {
       projectScope: args.projectScope,
       syncReport: args.syncReport,
       agent: args.agent,
@@ -86,7 +86,7 @@ export class LifecycleEmitter {
     readonly kind: "aborted" | "timeout" | "agent-error" | "io-error" | "config-error" | "validation-error";
     readonly message: string;
   }): Promise<void> {
-    await this.#put("atc.ask.failed", { error: args });
+    await this.#put("ask-the-code.ask.failed", { error: args });
   }
 
   /**
@@ -113,7 +113,7 @@ export class LifecycleEmitter {
       await this.#runtime.clients.eventbridge.putEvents({
         entries: [
           {
-            source: "atc",
+            source: "ask-the-code",
             detailType,
             detail: {
               requestId: this.#envelope.requestId,
