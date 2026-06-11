@@ -15,7 +15,8 @@ back **for your review**. Focus on the product, not the plumbing.
   - `secure-it` — fixes security/dependency alerts (proposes draft PRs)
   - `document-it` — keeps the docs matching the code (proposes corrections)
   - `ship-it` — implements ready tickets as draft PRs (phase 1: the code-it step)
-  - *(triage-it · monitor-it — designed, not yet built)*
+  - `triage-it` — advisory diagnosis from curated evidence (config, stats, code)
+  - *(monitor-it — designed, not yet built)*
 - **`docs/`** — the **presentation** (`docs/presentation/`, ready for GitHub Pages)
 
 > The engineering **design docs** (CONTEXT / overview / ADRs) are maintained separately. This repo

@@ -46,4 +46,10 @@ export const AGENTS: ReadonlyArray<AgentRegistration> = [
     ecrRepositoryName: "leanish/agent-document-it",
     imageTag: process.env["DOCUMENT_IT_IMAGE_TAG"] ?? "latest",
   },
+  {
+    id: "triage-it",
+    descriptorPath: join(repoRoot, "agents", "triage-it", "agent.yaml"),
+    ecrRepositoryName: "leanish/agent-triage-it",
+    imageTag: process.env["TRIAGE_IT_IMAGE_TAG"] ?? "latest",
+  },
 ];
