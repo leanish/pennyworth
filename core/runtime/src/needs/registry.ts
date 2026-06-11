@@ -1,5 +1,6 @@
 import { eventbridgeNeed } from "./eventbridge.js";
 import { githubNeed } from "./github.js";
+import { jiraNeed } from "./jira.js";
 import { s3Need } from "./s3.js";
 import type { NeedSpec } from "./spec.js";
 import { sqsNeed } from "./sqs.js";
@@ -19,6 +20,7 @@ export const needSpecs: ReadonlyMap<string, NeedSpec> = new Map<string, NeedSpec
   [sqsNeed.name, sqsNeed as NeedSpec],
   [s3Need.name, s3Need as NeedSpec],
   [githubNeed.name, githubNeed as NeedSpec],
+  [jiraNeed.name, jiraNeed as NeedSpec],
 ]);
 
 export function getNeedSpec(name: string): NeedSpec | undefined {

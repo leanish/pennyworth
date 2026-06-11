@@ -33,6 +33,16 @@ export { SkillLoader, parseSkillFile } from "../skill/skill-loader.js";
 // Envelope canonicaliser — useful for tests that sign their own envelopes.
 export { canonicalize } from "../envelope/canonical.js";
 
+// In-process self-publisher (phase-2, ADR-0011) — lets handler tests
+// assert on `runtime.publish` / `runtime.publishDelayed` fan-out without
+// SQS/Scheduler. The queue array is caller-owned; `publishDelayed` records
+// `afterSeconds` and delivers immediately (local-mode semantics).
+export {
+  createLocalSelfPublisher,
+  type LocalSelfPublishEntry,
+} from "../self-publish/local-self-publisher.js";
+export type { SelfPublisher } from "../self-publish/self-publisher.js";
+
 // In-memory EventBridge + SQS clients — let tests assert on emissions
 // instead of running them through the local-mode "log and forget" path.
 export {

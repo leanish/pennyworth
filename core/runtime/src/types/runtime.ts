@@ -23,13 +23,15 @@ import type { SyncResult, WorkingCopy } from "./working-copy.js";
  *     in v1 (see ADR-0004).
  *   - No envelope verification API — handled inside the SQS adapter via
  *     `ConsumerRegistry` for `signedEnvelope` triggers; agents never see it.
- *   - **No `runtime.publish` / `runtime.publishDelayed`** — phase-2 helpers
- *     (ADR-0011). They are *deliberately absent* from the phase-1 interface
- *     so a downstream agent that reaches for them gets a compile-time
- *     error rather than a runtime `PhaseUnavailableError`. Phase-2 will
- *     widen `Runtime` to include them; the `PublishArgs` /
- *     `PublishDelayedArgs` types below remain exported as the phase-2
- *     payload contracts for spec / planning use.
+ *
+ * Phase-2 widened the surface with `publish` / `publishDelayed`
+ * (ADR-0011): self-publish to the agent's **own** input queue, immediate
+ * or scheduled. They are wired only when the entry shim provides a
+ * `SelfPublisher` (`BuildRuntimeOptions.selfPublisher`); calling them on a
+ * runtime built without one throws `SelfPublishNotConfiguredError` — so a
+ * phase-1 agent that never declares fan-out stages keeps working
+ * untouched, and a misconfigured phase-2 deployment fails loudly on first
+ * use rather than dropping messages.
  *
  * `CatalogReadOnly`, `ConsumerCatalogView`, and `Project` are owned by
  * `@leanish/catalog-it` (per suite-0007); agent-runtime re-exports them
@@ -41,6 +43,20 @@ export interface Runtime {
   syncWorkingCopies(projects: ReadonlyArray<Project>): Promise<SyncResult>;
   readonly execution: ExecutionHelper;
   runSkill<TInput, TOutput>(args: RunSkillArgs<TInput>): Promise<TOutput>;
+  /**
+   * Phase-2 (ADR-0011): enqueue a `RuntimeMessage` onto the agent's own
+   * input queue (`metadata.sourceTrigger: "self"`). Used for per-project
+   * fan-out (`stage: "breakdown"`). Self-delivery only — no cross-agent
+   * publish.
+   */
+  publish(args: PublishArgs): Promise<void>;
+  /**
+   * Phase-2 (ADR-0011): like `publish`, but delivered at
+   * `now + afterSeconds` via a one-shot EventBridge schedule. Local mode
+   * delivers immediately (delay is informational). Repeated calls with a
+   * structurally-equal payload dedupe; there is no cancellation API in v1.
+   */
+  publishDelayed(args: PublishDelayedArgs): Promise<void>;
   readonly clients: Clients;
   readonly logger: Logger;
 }
@@ -85,9 +101,7 @@ export interface RunSkillArgs<TInput> {
 }
 
 /**
- * Phase-2 self-publish payload. Not part of the phase-1 `Runtime` surface,
- * exported here so the phase-2 design docs (ADR-0011, secureit spec) can
- * type-check against the canonical shape.
+ * Self-publish payload for `runtime.publish` (phase-2, ADR-0011).
  */
 export interface PublishArgs {
   readonly stage: Stage;

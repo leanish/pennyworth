@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { defaultRuntimeSkillsDir } from "@leanish/runtime";
 import { SkillLoader } from "@leanish/runtime/testing";
 
 /**
@@ -21,15 +22,10 @@ describe("agent-atc skills", () => {
 
   // Mirrors the production search order: agent's own skills first,
   // then the runtime's bundled skills as the fallback for shared
-  // support skills that live in @leanish/runtime.
-  const runtimeSkillsDir = join(
-    dirname(fileURLToPath(import.meta.url)),
-    "..",
-    "node_modules",
-    "@leanish",
-    "agent-runtime",
-    "skills",
-  );
+  // support skills that live in @leanish/runtime. Resolved via the
+  // runtime's own helper (same as the Lambda entry) rather than a
+  // hand-built node_modules path, which broke under workspace hoisting.
+  const runtimeSkillsDir = defaultRuntimeSkillsDir();
 
   it("ask loads as a valid entry-point skill from agent-atc/skills/", async () => {
     const loader = new SkillLoader({ skillsDirs: [agentSkillsDir] });

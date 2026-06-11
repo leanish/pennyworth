@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 
 import type { CatalogReadOnly, Project } from "@leanish/catalog-it";
 
-import { RouterNotConfiguredError } from "../errors.js";
+import { RouterNotConfiguredError, SelfPublishNotConfiguredError } from "../errors.js";
+import type { SelfPublisher } from "../self-publish/self-publisher.js";
 import { gateClientsByNeeds } from "../needs/wire-clients.js";
 import { createExecutionHelper } from "../execution/resolve.js";
 import { ConsoleLogger } from "../logger/console-logger.js";
@@ -72,6 +73,13 @@ export interface BuildRuntimeOptions {
    * skill fixtures may opt out; production code should not.
    */
   readonly skipCompatCheck?: boolean;
+  /**
+   * Optional. Backs `runtime.publish` / `runtime.publishDelayed`
+   * (phase-2, ADR-0011). AWS entry shims pass `createAwsSelfPublisher`;
+   * local mode and tests pass `createLocalSelfPublisher`. When absent,
+   * calling either method throws `SelfPublishNotConfiguredError`.
+   */
+  readonly selfPublisher?: SelfPublisher;
 }
 
 export async function buildRuntime(options: BuildRuntimeOptions): Promise<Runtime> {
@@ -126,6 +134,18 @@ export async function buildRuntime(options: BuildRuntimeOptions): Promise<Runtim
         },
         args,
       );
+    },
+    async publish(args) {
+      if (options.selfPublisher === undefined) {
+        throw new SelfPublishNotConfiguredError(options.descriptor.identifier);
+      }
+      return options.selfPublisher.publish(args);
+    },
+    async publishDelayed(args) {
+      if (options.selfPublisher === undefined) {
+        throw new SelfPublishNotConfiguredError(options.descriptor.identifier);
+      }
+      return options.selfPublisher.publishDelayed(args);
     },
     clients: gateClientsByNeeds(options.descriptor.needs, options.clients),
     logger: baseLogger,

@@ -197,6 +197,7 @@ export {
   PhaseUnavailableError,
   RouterNotConfiguredError,
   RuntimeError,
+  SelfPublishNotConfiguredError,
   UnhandledStageError,
   type DescriptorIssue,
   type DescriptorIssueCategory,
@@ -204,3 +205,22 @@ export {
   type EntrypointInvocationReason,
   type SchemaErrorItem,
 } from "./errors.js";
+
+// Self-publish (phase-2, ADR-0011) — the adapter behind `runtime.publish`
+// / `runtime.publishDelayed`. AWS entry shims wire the AWS implementation;
+// tests and local mode use the in-process one.
+export type { SelfPublisher } from "./self-publish/self-publisher.js";
+export {
+  createAwsSelfPublisher,
+  type AwsSelfPublisherOptions,
+} from "./self-publish/aws-self-publisher.js";
+export {
+  createLocalSelfPublisher,
+  type LocalSelfPublishEntry,
+} from "./self-publish/local-self-publisher.js";
+export {
+  buildSelfMessageBody,
+  canonicalJson,
+  deriveScheduleName,
+  type SelfMessageBody,
+} from "./self-publish/serialize.js";

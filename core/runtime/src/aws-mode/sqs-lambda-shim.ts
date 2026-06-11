@@ -9,7 +9,9 @@ import type { AgentDescriptor, ConsumerTrigger } from "../types/descriptor.js";
 import type { AgentPayloadBase } from "../types/execution-override.js";
 import type { Logger } from "../types/logger.js";
 import type { Runtime } from "../types/runtime.js";
+import type { RuntimeMessage } from "../types/runtime-message.js";
 
+import { parseSelfRuntimeMessageBody } from "./runtime-message-body.js";
 import type {
   SqsBatchResponse,
   SqsEvent,
@@ -18,25 +20,38 @@ import type {
 } from "./sqs-event.js";
 
 /**
- * AWS-mode Lambda entry shim for `type: consumer` triggers. Per SQS record:
+ * AWS-mode Lambda entry shim. Per SQS record, the body is one of two
+ * wire shapes:
  *
- *   1. Parse the body as JSON (the signed envelope).
- *   2. Verify the envelope (HMAC + clock-skew + ConsumerRegistry + allowedKinds).
- *   3. Map to `RuntimeMessage` (nested envelope + request layout).
- *   4. Issue the three-state idempotency claim (ADR-0006).
- *   5. On `claimed` → call `dispatch(agent, descriptor, runtime, message)`.
- *      On success → `complete()` and ACK.
- *      On caught throw → `expire()`, rethrow into `batchItemFailures`.
- *   6. On `duplicate-completed` → skip + warn + ACK.
- *   7. On `duplicate-in-flight` → skip + warn + report to `batchItemFailures`.
+ *   A. **Consumer envelope** (`type: consumer` trigger) — signed (or, for
+ *      local-dev, unsigned) request from a registered consumer:
+ *      1. Parse the body as JSON (the signed envelope).
+ *      2. Verify the envelope (HMAC + clock-skew + ConsumerRegistry + allowedKinds).
+ *      3. Map to `RuntimeMessage` (nested envelope + request layout).
  *
- * Envelope-verification failures → DLQ via SQS's `maxReceiveCount` after
- * exhausting retries (we report them as `batchItemFailures` so SQS doesn't
- * ACK the message; agent-infra wires the DLQ).
+ *   B. **Self / scheduler runtime message** (phase-2, ADR-0011) — a
+ *      serialised `RuntimeMessage` published by the agent itself
+ *      (`runtime.publish*`, `sourceTrigger: "self"`) or by the
+ *      infra-provisioned recurring tick (`sourceTrigger: "scheduler"`).
+ *      No envelope verification — the input queue is IAM-private; the shim
+ *      validates shape, stage admissibility, and (for `scheduler`) that
+ *      the descriptor actually declares a scheduler trigger.
  *
- * The shim is agent-agnostic — ATC's lifecycle events / terminal reply
- * happen inside the handler. The shim's only job is the
- * verify+claim+dispatch+complete dance.
+ * Both shapes then share the same tail:
+ *      4. Issue the three-state idempotency claim (ADR-0006), keyed by the
+ *         SQS `MessageId`.
+ *      5. On `claimed` → `dispatch(...)`; success → `complete()` + ACK;
+ *         throw → `expire()` + `batchItemFailures`.
+ *      6. `duplicate-completed` → skip + warn + ACK.
+ *      7. `duplicate-in-flight` → skip + warn + `batchItemFailures`.
+ *
+ * Rejected bodies (verification failures, inadmissible stage/trigger) →
+ * DLQ via SQS's `maxReceiveCount` (reported as `batchItemFailures` so SQS
+ * doesn't ACK; agent-infra wires the DLQ).
+ *
+ * The shim is agent-agnostic — lifecycle events / terminal replies happen
+ * inside the handler. The shim's only job is the
+ * parse+verify+claim+dispatch+complete dance.
  */
 export interface SqsLambdaShimOptions<P extends AgentPayloadBase = AgentPayloadBase> {
   readonly agent: AgentDefinition<P>;
@@ -52,6 +67,18 @@ export interface SqsLambdaShimOptions<P extends AgentPayloadBase = AgentPayloadB
   readonly resolveSigningKey?: (record: ConsumerRecord) => Promise<Buffer>;
   /** `claimUntil` window in ms. ADR-0006 default: 16 minutes. */
   readonly claimWindowMs?: number;
+  /**
+   * Trust acknowledgment for agents that combine a `signedEnvelope`
+   * consumer trigger WITH unsigned runtime-message traffic (self-published
+   * fan-out/revisit or scheduler ticks). Default `false`: such an agent
+   * rejects `sourceTrigger: "self" | "scheduler"` bodies, because any
+   * principal with SendMessage on the input queue (i.e. its consumers)
+   * could otherwise submit a runtime-message-shaped body and bypass HMAC
+   * verification. Setting `true` documents that the queue's SendMessage
+   * grants are limited to trusted internal principals (record the
+   * reasoning in the agent's ASSUMPTIONS/SCOPE doc).
+   */
+  readonly allowUnsignedRuntimeMessagesWithConsumerTrigger?: boolean;
 }
 
 const DEFAULT_CLAIM_WINDOW_MS = 16 * 60 * 1000;
@@ -64,12 +91,13 @@ export function createSqsLambdaShim<P extends AgentPayloadBase>(
   const consumerTrigger = options.descriptor.triggers.find(
     (t): t is ConsumerTrigger => t.type === "consumer",
   );
-  if (consumerTrigger === undefined) {
+  const hasSchedulerTrigger = options.descriptor.triggers.some((t) => t.type === "scheduler");
+  if (consumerTrigger === undefined && !hasSchedulerTrigger) {
     throw new Error(
-      `createSqsLambdaShim: agent '${options.descriptor.identifier}' does not declare a 'consumer' trigger`,
+      `createSqsLambdaShim: agent '${options.descriptor.identifier}' declares neither a 'consumer' nor a 'scheduler' trigger`,
     );
   }
-  if (consumerTrigger.signedEnvelope && options.consumerRegistry === undefined) {
+  if (consumerTrigger?.signedEnvelope === true && options.consumerRegistry === undefined) {
     throw new Error(
       `createSqsLambdaShim: agent '${options.descriptor.identifier}' declares signedEnvelope=true but no ConsumerRegistry was provided`,
     );
@@ -83,7 +111,8 @@ export function createSqsLambdaShim<P extends AgentPayloadBase>(
           options,
           clock,
           claimWindowMs,
-          requireVerification: consumerTrigger.signedEnvelope,
+          consumerTrigger,
+          hasSchedulerTrigger,
         }),
       ),
     );
@@ -119,54 +148,97 @@ async function processRecord<P extends AgentPayloadBase>(args: {
   options: SqsLambdaShimOptions<P>;
   clock: () => string;
   claimWindowMs: number;
-  requireVerification: boolean;
+  consumerTrigger: ConsumerTrigger | undefined;
+  hasSchedulerTrigger: boolean;
 }): Promise<SqsRecordOutcome> {
-  const { record, options, clock, claimWindowMs, requireVerification } = args;
+  const { record, options, clock, claimWindowMs, consumerTrigger, hasSchedulerTrigger } = args;
   const log = options.logger.with({ messageId: record.messageId });
 
   // 1 — parse body
-  let envelopeRaw: unknown;
+  let bodyRaw: unknown;
   try {
-    envelopeRaw = JSON.parse(record.body);
+    bodyRaw = JSON.parse(record.body);
   } catch (err) {
     const error = errorMessage(err);
-    log.error("envelope JSON parse failed", { error });
+    log.error("body JSON parse failed", { error });
     return { messageId: record.messageId, status: "envelope-parse-failed", error };
   }
 
-  // 2 — verify (when signedEnvelope:true)
-  let verified;
-  try {
-    if (!requireVerification) {
-      // For unsigned consumer messages (local-dev, etc.) — shape-validate and
-      // trust as-is (HMAC + clock-skew skipped; signature optional).
-      verified = parseEnvelopeShape(envelopeRaw, { requireSignature: false });
-    } else {
-      verified = await verifyEnvelope({
-        envelope: envelopeRaw,
-        consumerRegistry: options.consumerRegistry!,
-        ...(options.resolveSigningKey !== undefined
-          ? { resolveSigningKey: options.resolveSigningKey }
-          : {}),
-      });
+  // 2 — branch on wire shape: self/scheduler runtime message vs consumer envelope.
+  const selfBody = parseSelfRuntimeMessageBody(bodyRaw);
+  let message: RuntimeMessage<P>;
+  if (selfBody !== undefined) {
+    if (selfBody.sourceTrigger === "scheduler" && !hasSchedulerTrigger) {
+      const error = `scheduler-sourced message but agent '${options.descriptor.identifier}' declares no scheduler trigger`;
+      log.warn("runtime-message rejected", { error });
+      return { messageId: record.messageId, status: "runtime-message-rejected", error };
     }
-  } catch (err) {
-    const error = errorMessage(err);
-    if (err instanceof EnvelopeVerificationError) {
-      log.warn("envelope verification failed", { reason: err.reason, message: err.message });
-    } else {
-      log.error("envelope verification threw", { error });
+    if (
+      consumerTrigger?.signedEnvelope === true &&
+      options.allowUnsignedRuntimeMessagesWithConsumerTrigger !== true
+    ) {
+      // Forgery guard: a consumer holding SendMessage on this queue could
+      // craft a runtime-message-shaped body (self OR scheduler) to bypass
+      // HMAC verification. Mixing signed-envelope consumers with unsigned
+      // runtime-message traffic requires the explicit
+      // `allowUnsignedRuntimeMessagesWithConsumerTrigger` acknowledgment.
+      const error = `${selfBody.sourceTrigger}-sourced message rejected: agent '${options.descriptor.identifier}' has a signedEnvelope consumer trigger and allowUnsignedRuntimeMessagesWithConsumerTrigger is not set`;
+      log.warn("runtime-message rejected", { error });
+      return { messageId: record.messageId, status: "runtime-message-rejected", error };
     }
-    return { messageId: record.messageId, status: "envelope-rejected", error };
+    if (!options.descriptor.stages.includes(selfBody.stage)) {
+      const error = `stage '${selfBody.stage}' not in declared stages [${options.descriptor.stages.join(", ")}]`;
+      log.warn("runtime-message rejected", { error });
+      return { messageId: record.messageId, status: "runtime-message-rejected", error };
+    }
+    // Re-stamp delivery metadata: the SQS MessageId is the idempotency
+    // key; the publish-time provenance id stays inside the body only.
+    message = {
+      stage: selfBody.stage,
+      payload: selfBody.payload as unknown as P,
+      metadata: {
+        receivedAt: clock(),
+        sourceTrigger: selfBody.sourceTrigger,
+        requestId: record.messageId,
+      },
+    };
+  } else {
+    if (consumerTrigger === undefined) {
+      const error = `envelope-shaped body but agent '${options.descriptor.identifier}' declares no consumer trigger`;
+      log.warn("envelope rejected", { error });
+      return { messageId: record.messageId, status: "envelope-rejected", error };
+    }
+    let verified;
+    try {
+      if (!consumerTrigger.signedEnvelope) {
+        // For unsigned consumer messages (local-dev, etc.) — shape-validate and
+        // trust as-is (HMAC + clock-skew skipped; signature optional).
+        verified = parseEnvelopeShape(bodyRaw, { requireSignature: false });
+      } else {
+        verified = await verifyEnvelope({
+          envelope: bodyRaw,
+          consumerRegistry: options.consumerRegistry!,
+          ...(options.resolveSigningKey !== undefined
+            ? { resolveSigningKey: options.resolveSigningKey }
+            : {}),
+        });
+      }
+    } catch (err) {
+      const error = errorMessage(err);
+      if (err instanceof EnvelopeVerificationError) {
+        log.warn("envelope verification failed", { reason: err.reason, message: err.message });
+      } else {
+        log.error("envelope verification threw", { error });
+      }
+      return { messageId: record.messageId, status: "envelope-rejected", error };
+    }
+    message = envelopeToRuntimeMessage(verified, {
+      sqsMessageId: record.messageId,
+      receivedAt: clock(),
+    }) as unknown as RuntimeMessage<P>;
   }
 
-  // 3 — map to RuntimeMessage
-  const message = envelopeToRuntimeMessage(verified, {
-    sqsMessageId: record.messageId,
-    receivedAt: clock(),
-  });
-
-  // 4 — three-state claim
+  // 3 — three-state claim
   const now = clock();
   const claimUntil = new Date(Date.parse(now) + claimWindowMs).toISOString();
   const claimOutcome = await options.idempotencyStore.claim(record.messageId, {
@@ -190,7 +262,7 @@ async function processRecord<P extends AgentPayloadBase>(args: {
     return { messageId: record.messageId, status: "duplicate-in-flight" };
   }
 
-  // 5 — dispatch (carrying the original claim window for the finalize guard).
+  // 4 — dispatch (carrying the original claim window for the finalize guard).
   // The dispatch and the completed-marker write are deliberately in SEPARATE
   // try blocks: a handler failure and a finalize-write failure are different
   // outcomes (ADR-0006 § post-handler) and must not be conflated.

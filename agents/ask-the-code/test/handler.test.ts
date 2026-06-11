@@ -49,6 +49,12 @@ function buildRuntime(args: {
       }),
     },
     routeProjects: async () => [PROJECT],
+    publish: async () => {
+      throw new Error("publish not configured in this test runtime");
+    },
+    publishDelayed: async () => {
+      throw new Error("publishDelayed not configured in this test runtime");
+    },
     syncWorkingCopies: async (projects) => ({
       workingCopies: projects.map((p) => ({
         projectId: p.id,
