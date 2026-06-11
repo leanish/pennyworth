@@ -1,0 +1,22 @@
+identifier: document-it
+compute: lambda
+
+triggers:
+  - type: scheduler
+    queueArnRef: document-it-requests
+    dlqArnRef: document-it-requests-dlq
+    # scheduled tick fires stage=init; runtime.publish fires stage=breakdown (sourceTrigger=self)
+
+stages: [init, breakdown]
+
+codingAgent: claude-code
+model: claude-sonnet-4-6
+
+skills:
+  entrypoints:
+    - verify-docs   # invoked from the breakdown handler — audits docs against code, drafts corrections
+  support:
+    - karpathy-guidelines
+
+needs:
+  - github
