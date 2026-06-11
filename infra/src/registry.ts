@@ -23,10 +23,16 @@ export interface AgentRegistration {
 
 export const AGENTS: ReadonlyArray<AgentRegistration> = [
   {
-    id: "atc",
+    id: "ask-the-code",
     descriptorPath: join(repoRoot, "agents", "ask-the-code", "agent.yaml"),
-    ecrRepositoryName: "leanish/agent-atc",
-    imageTag: process.env["ATC_IMAGE_TAG"] ?? "latest",
+    ecrRepositoryName: "leanish/agent-ask-the-code",
+    imageTag: process.env["ASK_THE_CODE_IMAGE_TAG"] ?? "latest",
+  },
+  {
+    id: "ship-it",
+    descriptorPath: join(repoRoot, "agents", "ship-it", "agent.yaml"),
+    ecrRepositoryName: "leanish/agent-ship-it",
+    imageTag: process.env["SHIP_IT_IMAGE_TAG"] ?? "latest",
   },
   {
     id: "secure-it",

@@ -3,6 +3,8 @@ import { getNeedSpec } from "@leanish/runtime";
 
 export interface NeedPolicyContext {
   readonly need: string;
+  /** The agent's descriptor `identifier` (scopes per-agent resource names). */
+  readonly agentId: string;
   readonly region: string;
   readonly account: string;
   /** ARN of the suite EventBridge bus (for the `eventbridge` need). */
@@ -39,7 +41,7 @@ export function needPolicyStatements(ctx: NeedPolicyContext): iam.PolicyStatemen
       return [
         new iam.PolicyStatement({
           actions, // sqs:SendMessage
-          resources: [`arn:aws:sqs:${ctx.region}:${ctx.account}:*-atc-replies`],
+          resources: [`arn:aws:sqs:${ctx.region}:${ctx.account}:*-${ctx.agentId}-replies`],
         }),
       ];
 

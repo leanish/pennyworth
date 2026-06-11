@@ -41,14 +41,22 @@ describe("listRepos", () => {
 });
 
 describe("getRepoMeta", () => {
-  it("returns description + topics", async () => {
-    const runGh = async () => ({ code: 0, stdout: JSON.stringify({ description: "D", repositoryTopics: [{ name: "t1" }] }), stderr: "" });
+  it("returns description + topics + default branch", async () => {
+    const runGh = async () => ({
+      code: 0,
+      stdout: JSON.stringify({
+        description: "D",
+        repositoryTopics: [{ name: "t1" }],
+        defaultBranchRef: { name: "master" },
+      }),
+      stderr: "",
+    });
     const meta = await getRepoMeta({ owner: "leanish", repo: "a", runGh });
-    expect(meta).toEqual({ description: "D", topics: ["t1"] });
+    expect(meta).toEqual({ description: "D", topics: ["t1"], defaultBranch: "master" });
   });
-  it("normalizes null repositoryTopics to []", async () => {
+  it("normalizes null repositoryTopics to [] and a missing defaultBranchRef to main", async () => {
     const runGh = async () => ({ code: 0, stdout: JSON.stringify({ description: null, repositoryTopics: null }), stderr: "" });
     const meta = await getRepoMeta({ owner: "leanish", repo: "a", runGh });
-    expect(meta).toEqual({ description: null, topics: [] });
+    expect(meta).toEqual({ description: null, topics: [], defaultBranch: "main" });
   });
 });

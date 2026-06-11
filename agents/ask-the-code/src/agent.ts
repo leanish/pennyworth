@@ -15,9 +15,9 @@ import type { AtcTerminalReply } from "./terminal-reply.js";
  * `run-local` invocation's Promise resolution.
  */
 export default defineAgent<AtcPayload, AtcTerminalReply>({
-  identifier: "atc",
+  identifier: "ask-the-code",
   async handle(message, runtime) {
-    runtime.logger.info("atc: received message", {
+    runtime.logger.info("ask-the-code: received message", {
       requestId: message.payload.envelope.requestId,
       consumer: message.payload.envelope.consumer,
     });

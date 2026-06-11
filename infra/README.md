@@ -37,7 +37,7 @@ This is the first scaffold — **not yet `cdk synth`-validated here** (it's writ
 gate a real deploy (see the contract §9):
 
 1. **Base image needs `git`** — added to `agent-runtime/Dockerfile.base`; verify via
-   `agent-atc`'s `npm run lambda:rehearsal`.
+   `ask-the-code`'s `npm run lambda:rehearsal`.
 2. **Packages must be publishable** — `@leanish/runtime` / `@leanish/ask-the-code` are still
    `private` / `file:`-linked; `agent-infra` consumes the descriptor locally via `file:` today,
    and pins versions once they publish under the `@leanish` npm scope.

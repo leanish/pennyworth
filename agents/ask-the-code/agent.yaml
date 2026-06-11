@@ -1,10 +1,10 @@
-identifier: atc
+identifier: ask-the-code
 compute: lambda
 
 triggers:
   - type: consumer
-    queueArnRef: atc-requests
-    dlqArnRef: atc-requests-dlq
+    queueArnRef: ask-the-code-requests
+    dlqArnRef: ask-the-code-requests-dlq
     signedEnvelope: true
 
 stages: [init]

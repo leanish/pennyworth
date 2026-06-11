@@ -2,7 +2,7 @@
   "name": "@leanish/ask-the-code",
   "version": "0.0.0",
   "private": true,
-  "description": "agent-atc — ask-the-code (ATC) backend, the phase-1 Layer-3 agent for codebase Q&A. Built on @leanish/runtime.",
+  "description": "ask-the-code (ATC) — the phase-1 Layer-3 agent for codebase Q&A. Built on @leanish/runtime.",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {

@@ -1,6 +1,6 @@
 # `@leanish/ask-the-code`
 
-ATC backend — Layer-3 agent for codebase Q&A. Built on `@leanish/runtime`.
+ask-the-code (abbreviated "ATC" below) — Layer-3 agent for codebase Q&A. Built on `@leanish/runtime`.
 
 **Specs**: design contract — `overview.md`, `architecture.md`, `queue-api.md`, `state-schema.md` — maintained separately.
 
@@ -22,7 +22,7 @@ ATC backend — Layer-3 agent for codebase Q&A. Built on `@leanish/runtime`.
 
 Plus the surrounding ATC-owned protocol:
 
-- Ordered lifecycle events on EventBridge (`atc.ask.started` → `atc.ask.status` × stages → `atc.ask.completed` / `atc.ask.failed`).
+- Ordered lifecycle events on EventBridge (`ask-the-code.ask.started` → `ask-the-code.ask.status` × stages → `ask-the-code.ask.completed` / `ask-the-code.ask.failed`).
 - Terminal reply delivered to `envelope.replyTo` via SQS (`AtcTerminalSuccess` / `AtcTerminalFailure` shapes).
 - Error-kind mapping (validation-error / config-error / agent-error / io-error) per queue-api.md.
 
@@ -34,7 +34,7 @@ The `ask` skill itself ships in this agent's own `skills/ask/SKILL.md` (per ADR-
 
 - The dispatch handler (`src/handler.ts`) + per-stage payload types.
 - The `atc-dev-publish` smoke-test CLI for local-mode pipelining.
-- The AWS Lambda entry module (`src/lambda.ts`) — see `@leanish/ask-the-code/lambda`. Builds the runtime + AWS-mode adapters (Dynamo idempotency / Dynamo consumer registry / S3 catalog / `LocalGitWorkspace` rooted at `/tmp`) at cold start and exposes `atcLambdaHandler` for `agent-infra` to register with the Lambda runtime. Required env vars (provisioned by `agent-infra`): `IDEMPOTENCY_TABLE_NAME`, `CONSUMER_REGISTRY_TABLE_NAME`, `CATALOG_BUCKET`, optional `CATALOG_KEY` (`catalog.json`), `EVENT_BUS_NAME`, optional `WORKSPACE_ROOT` (`/tmp/atc-workspaces`).
+- The AWS Lambda entry module (`src/lambda.ts`) — see `@leanish/ask-the-code/lambda`. Builds the runtime + AWS-mode adapters (Dynamo idempotency / Dynamo consumer registry / S3 catalog / `LocalGitWorkspace` rooted at `/tmp`) at cold start and exposes `atcLambdaHandler` for `agent-infra` to register with the Lambda runtime. Required env vars (provisioned by `agent-infra`): `IDEMPOTENCY_TABLE_NAME`, `CONSUMER_REGISTRY_TABLE_NAME`, `CATALOG_BUCKET`, optional `CATALOG_KEY` (`catalog.json`), `EVENT_BUS_NAME`, optional `WORKSPACE_ROOT` (`/tmp/ask-the-code-workspaces`).
 
 **Not here:**
 
