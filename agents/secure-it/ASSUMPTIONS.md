@@ -68,3 +68,14 @@ documents the env contract those pieces must satisfy.
 - **Support skills: `karpathy-guidelines` only.** Earlier descriptor
   drafts also listed `diagnose`; the settled contract drops it — the two
   skill bodies carry their own failure-analysis guidance.
+
+## (deploy prerequisite) Private-repo clones need git credentials in the environment
+
+The runtime's `LocalGitWorkspace` clones `project.source.url` over HTTPS with NO credential
+injection — by design it relies on credentials available in the execution environment's git config
+(see its module doc). Public projects clone fine; a PRIVATE project fails the working-copy sync
+with `git clone … exited 128` ("could not read Username") BEFORE the skill runs. A manual e2e
+caught this on a private leanish repo. The deploy MUST configure git auth from the agent's
+`GITHUB_TOKEN` — e.g. an `x-access-token` credential helper or a `url."https://x-access-token:$TOKEN@github.com/".insteadOf`
+rewrite — for any agent expected to sync private repositories. (Verified locally by injecting that
+rewrite via process-scoped `GIT_CONFIG_*`, after which the private-repo breakdown succeeded.)
