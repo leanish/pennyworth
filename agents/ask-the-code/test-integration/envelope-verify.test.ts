@@ -26,7 +26,7 @@ import { createSigningKeyResolver } from "../src/signing-key-resolver.js";
  * isn't reachable — the integration gate fails loudly rather than
  * silently skipping.
  */
-describe("agent-atc envelope verification against LocalStack", () => {
+describe("ask-the-code envelope verification against LocalStack", () => {
   const stack = new LocalStackHarness();
 
   beforeAll(async () => {
@@ -354,7 +354,7 @@ describe("agent-atc envelope verification against LocalStack", () => {
 });
 
 /**
- * Mirror of the production sign logic from `agent-atc/src/dev-publish.ts`
+ * Mirror of the production sign logic from `ask-the-code/src/dev-publish.ts`
  * (kept inline to avoid coupling this test to a non-public helper).
  */
 function makeSignedEnvelope(args: {
