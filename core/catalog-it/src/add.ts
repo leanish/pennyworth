@@ -11,7 +11,7 @@ import { stat } from "node:fs/promises";
 import { type CodingAgent, type RunProcess, DraftError, draftDescription } from "./coding-agent.js";
 import { buildDraftingPrompt } from "./drafting-prompt.js";
 import { loadProjectFile } from "./filesystem-catalog.js";
-import { type RunGh, getRepoMeta } from "./github.js";
+import { type RepoMeta, type RunGh, getRepoMeta } from "./github.js";
 import { type RunGit, withInspectionClone } from "./inspection-clone.js";
 import type { Project, ProjectSource } from "./project.js";
 import { projectFileExists, writeProjectYaml, writeSkeleton } from "./project-writer.js";
@@ -137,10 +137,26 @@ export async function runAdd(
   // interactive `add`/`discover` runs don't look hung.
   d.stderr.write(`drafting "${id}" via ${o.agent} — this can take a few minutes…\n`);
 
-  let githubMeta: { description: string | null; topics: readonly string[] } | undefined;
+  let githubMeta: RepoMeta | undefined;
   if (o.fromGithub !== undefined) {
     const { owner: ghOwner, repo: ghRepo } = splitOwnerRepo(o.fromGithub);
     githubMeta = await getRepoMeta({ owner: ghOwner, repo: ghRepo, runGh: d.runGh });
+  } else if (!exists) {
+    // Plain `add <owner/repo>`: resolve the repo's REAL default branch so a
+    // fresh spine doesn't hardcode "main" (the inspection clone checks out
+    // the default HEAD either way, so a wrong recorded branch otherwise goes
+    // unnoticed until something consumes it). Soft fallback — `gh` being
+    // absent/offline must not break a plain add.
+    try {
+      githubMeta = await getRepoMeta({ owner, repo: slug, runGh: d.runGh });
+    } catch {
+      d.stderr.write(
+        `catalogit add: could not resolve the default branch for "${id}"; assuming "main".\n`,
+      );
+    }
+  }
+  if (!exists && githubMeta !== undefined) {
+    source = { url: sourceUrl, branch: githubMeta.defaultBranch };
   }
 
   const prompt = buildDraftingPrompt(

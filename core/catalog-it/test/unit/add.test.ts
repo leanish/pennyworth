@@ -96,6 +96,34 @@ describe("runAdd", () => {
     expect(project?.source.branch).toBe("main");
   });
 
+  it("fresh add records the repo's REAL default branch (master), not a hardcoded main", async () => {
+    const runGh: RunGh = async (_args) => ({
+      code: 0,
+      stdout: JSON.stringify({
+        description: "legacy repo",
+        repositoryTopics: [],
+        defaultBranchRef: { name: "master" },
+      }),
+      stderr: "",
+    });
+    const result = await runAdd(makeOpts({ catalogRoot }), makeDeps({ runGh }));
+
+    expect(result).toEqual({ status: "added", exitCode: 0 });
+    const catalog = await FilesystemCatalog.load({ catalogRoot });
+    expect(catalog.get("leanish/foo")?.source.branch).toBe("master");
+  });
+
+  it("fresh add falls back to main with a warning when gh can't resolve the branch", async () => {
+    const runGh: RunGh = async (_args) => ({ code: 1, stdout: "", stderr: "gh: not logged in" });
+    const { sink, text } = captureSink();
+    const result = await runAdd(makeOpts({ catalogRoot }), makeDeps({ runGh, stderr: sink }));
+
+    expect(result).toEqual({ status: "added", exitCode: 0 });
+    const catalog = await FilesystemCatalog.load({ catalogRoot });
+    expect(catalog.get("leanish/foo")?.source.branch).toBe("main");
+    expect(text()).toContain('could not resolve the default branch for "leanish/foo"');
+  });
+
   // --- --skeleton -------------------------------------------------------------
 
   it("--skeleton: writes skeleton, status skeleton, exitCode 0", async () => {
