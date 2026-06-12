@@ -4,26 +4,74 @@
 runtime: they handle the toil (questions, dependencies, docs, triage, drafts) and hand everything
 back **for your review**. Focus on the product, not the plumbing.
 
+📖 **[Documentation hub](docs/README.md)** ·
+🎞️ **[Presentation](docs/presentation/index.html)**
+([view online](https://htmlpreview.github.io/?https://github.com/leanish/pennyworth/blob/main/docs/presentation/index.html) —
+interim link until GitHub Pages is enabled)
+
+## Why
+
+Engineering runs on toil: answering the same code questions, chasing dependency updates, watching
+docs drift, re-triaging familiar problems. Each is small; together they crowd out product work —
+and each is exactly what a coding agent does well *if* it's pointed at one narrow job and never
+allowed to act on its own conclusions. That's the whole idea here: **AI does the legwork, a person
+makes every call** ([overview](docs/overview.md)).
+
+## The fleet
+
+| Agent | Posture | In one line |
+|---|---|---|
+| [ask-the-code](agents/ask-the-code/README.md) | reads | Plain-language answers grounded in the actual source. |
+| [triage-it](agents/triage-it/README.md) | advises | Evidence in, diagnosis + next steps out; mutates nothing. |
+| [secure-it](agents/secure-it/README.md) | proposes | Dependency/security upkeep: one batched draft PR per project, revisited until CI is green. |
+| [document-it](agents/document-it/README.md) | proposes | Audits docs against code; batches fixes into one draft PR. |
+| [ship-it](agents/ship-it/README.md) | proposes | Runs the right `-it` skill for a ticket's state — a person at every gate. |
+| [ship-it-normalizer](agents/ship-it-normalizer/README.md) | *gate* | Verifies, filters, and signs inbound webhooks so only relevant events start an agent. |
+
+*(monitor-it — alerts → triaged recommendation — is designed, not yet built.)*
+
+**Proposes** means draft PRs and comments only: no agent merges, approves, deploys, or transitions
+final state. Write-capable agents also require a per-project **opt-in** in the catalog. The full
+tour is in [fleet.md](docs/fleet.md).
+
+## How it's built
+
+Four layers ([architecture](docs/architecture.md)): a **catalog** of projects + per-agent opt-ins,
+one shared **runtime** that does all the mechanical plumbing in deterministic code and starts a
+coding agent (Claude/Codex) only where judgment is needed, the **fleet** of thin independently
+deployable agents, and **CDK infra** that provisions each agent from its own descriptor. Signed
+envelopes, DynamoDB idempotency, and scoped IAM make it safe to say yes to; the webhook gate plus
+deterministic plumbing keep the cost proportional.
+
+## Quick start (local)
+
+```bash
+npm install
+docker compose up -d localstack        # LocalStack backs the integration suites
+npm run check --workspaces             # typecheck + build + unit tests, every package
+npm --workspace @leanish/ask-the-code run smoke:local   # one Q&A through the real pipeline (fake-runner wiring; no live model needed)
+```
+
+Packages with a LocalStack integration suite also expose `npm run check:full` (the fast `check`
+stays Docker-free). The integration gate fails loudly if LocalStack isn't running — it never
+silently skips.
+
 ## Layout
 
-- **`core/`** — the framework
-  - `runtime` — the shared runtime + bundled skills every agent builds on
-  - `catalog-it` — the project catalog (read-only library + curation CLI)
-- **`infra/`** — infrastructure-as-code (provisions each agent)
+- **`core/`** — the framework: [`runtime`](core/runtime/README.md) (shared runtime + bundled
+  skills) and [`catalog-it`](core/catalog-it/README.md) (project catalog: read-only library +
+  curation CLI)
 - **`agents/`** — the fleet (each independently deployable)
-  - `ask-the-code` — read-only Q&A over the code
-  - `secure-it` — fixes security/dependency alerts (proposes draft PRs)
-  - `document-it` — keeps the docs matching the code (proposes corrections)
-  - `ship-it` — implements ready tickets as draft PRs (phase 1: the code-it step)
-  - `triage-it` — advisory diagnosis from curated evidence (config, stats, code)
-  - *(monitor-it — designed, not yet built)*
-- **`docs/`** — the **presentation** (`docs/presentation/`, ready for GitHub Pages)
-
-> The engineering **design docs** (CONTEXT / overview / ADRs) are maintained separately. This repo
-> carries the code, intros, and the public front door.
+- **`infra/`** — AWS CDK; provisions every agent from its descriptor (app repos carry zero IaC)
+- **`docs/`** — [the documentation hub](docs/README.md) and the
+  [presentation](docs/presentation/index.html)
 
 ## About this repo
 
 A monorepo consolidation of what were previously separate component repos — **full git history
-preserved** for each. Packages still publish and deploy independently; the monorepo just makes the
-suite easy to find and work in.
+preserved** for each (audited in
+[consolidation-history.md](docs/consolidation-history.md)). Packages still publish and deploy
+independently; the monorepo just makes the suite easy to find and work in.
+
+> The engineering **design docs** (CONTEXT / overview / ADRs) are maintained separately. This repo
+> carries the code, the docs above, and the public front door.
