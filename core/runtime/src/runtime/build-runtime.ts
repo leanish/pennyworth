@@ -3,7 +3,11 @@ import { fileURLToPath } from "node:url";
 
 import type { CatalogReadOnly, Project } from "@leanish/catalog-it";
 
-import { RouterNotConfiguredError, SelfPublishNotConfiguredError } from "../errors.js";
+import {
+  RouterNotConfiguredError,
+  SelfPublishNotConfiguredError,
+  TargetCredentialsError,
+} from "../errors.js";
 import type { SelfPublisher } from "../self-publish/self-publisher.js";
 import { gateClientsByNeeds } from "../needs/wire-clients.js";
 import { createExecutionHelper } from "../execution/resolve.js";
@@ -82,12 +86,12 @@ export interface BuildRuntimeOptions {
    */
   readonly selfPublisher?: SelfPublisher;
   /**
-   * Optional. Resolves per-target-project credentials (`extensions.
-   * credentials`) at each `runSkill` — required whenever the descriptor
-   * declares the `target-credentials` need (a `runSkill` on a runtime
-   * built without one then throws `TargetCredentialsError`,
-   * "not-configured"). Entry shims pass
-   * `createTargetCredentialsResolver(...)`.
+   * Required iff the descriptor declares the `target-credentials` need:
+   * resolves per-target-project credentials (`extensions.credentials`) at
+   * each `runSkill`. The builder fails at startup on either mismatch
+   * (declared-but-unwired, wired-but-undeclared) — a misconfigured
+   * deployment must not consume messages. Entry shims pass
+   * `createTargetCredentialsResolver(...)` conditionally on the need.
    */
   readonly targetCredentials?: TargetCredentialsResolver;
 }
@@ -107,6 +111,25 @@ export async function buildRuntime(options: BuildRuntimeOptions): Promise<Runtim
   // exact issue categories surfaced.
   if (options.skipCompatCheck !== true) {
     await validateSkillsCompatibility(options.descriptor, skillLoader);
+  }
+
+  // Startup-time target-credentials gate: both mismatch directions are
+  // deploy-time misconfigurations and must fail before any message is
+  // consumed (`runSkill` keeps its own guard as defence-in-depth).
+  const declaresTargetCredentials = options.descriptor.needs.includes("target-credentials");
+  if (declaresTargetCredentials && options.targetCredentials === undefined) {
+    throw new TargetCredentialsError(
+      "not-configured",
+      `agent '${options.descriptor.identifier}' declares the 'target-credentials' need but ` +
+        `BuildRuntimeOptions.targetCredentials is not wired — pass createTargetCredentialsResolver(...).`,
+    );
+  }
+  if (!declaresTargetCredentials && options.targetCredentials !== undefined) {
+    throw new TargetCredentialsError(
+      "not-configured",
+      `agent '${options.descriptor.identifier}' wires BuildRuntimeOptions.targetCredentials but ` +
+        `does not declare the 'target-credentials' need — declare it in agent.yaml or drop the resolver.`,
+    );
   }
 
   const runnerFor = (codingAgent: string): CodingAgentRunner => {

@@ -94,6 +94,16 @@ function parseExtensions(raw: unknown, locate: string): Record<string, unknown> 
         `${locate} extensions key '${key}' must match ${EXTENSION_KEY_RE.source}`,
       );
     }
+    // The reserved runtime-owned `credentials` namespace is a LIST of
+    // provider entries (see Project jsdoc); every per-consumer namespace
+    // stays a JSON object. Entry-level validation is the runtime's job —
+    // catalogit only admits the structural shape.
+    if (key === "credentials") {
+      if (!Array.isArray(val)) {
+        throw new Error(`${locate} extensions.credentials must be a JSON array`);
+      }
+      continue;
+    }
     if (typeof val !== "object" || val === null || Array.isArray(val)) {
       throw new Error(`${locate} extensions.${key} must be a JSON object`);
     }

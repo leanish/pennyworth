@@ -72,4 +72,25 @@ describe("parseProjectRecord", () => {
     );
     expect(project.extensions).toEqual({ atc: { enabled: false } });
   });
+
+  it("accepts the reserved credentials namespace as a list", () => {
+    const credentials = [
+      {
+        provider: "ssm",
+        parameter: "/leanish/projects/acme/app/credentials/NPM_TOKEN",
+        env: "NPM_TOKEN",
+      },
+    ];
+    const project = parseProjectRecord(
+      { ...base(), extensions: { credentials, atc: { enabled: true } } },
+      LOCATE,
+    );
+    expect(project.extensions["credentials"]).toEqual(credentials);
+  });
+
+  it("rejects a credentials namespace that is not a list", () => {
+    expect(() =>
+      parseProjectRecord({ ...base(), extensions: { credentials: { provider: "ssm" } } }, LOCATE),
+    ).toThrowError(/extensions\.credentials must be a JSON array/);
+  });
 });

@@ -133,10 +133,9 @@ describe("runSkill target-credentials threading", () => {
     ]);
   });
 
-  it("throws not-configured when the need is declared but no resolver is wired", async () => {
-    const { runSkill } = await runtimeWith({ needs: ["target-credentials"], wireResolver: false });
+  it("fails at startup when the need is declared but no resolver is wired", async () => {
     try {
-      await runSkill();
+      await runtimeWith({ needs: ["target-credentials"], wireResolver: false });
       expect.unreachable("expected TargetCredentialsError");
     } catch (err) {
       expect(err).toBeInstanceOf(TargetCredentialsError);
@@ -144,8 +143,18 @@ describe("runSkill target-credentials threading", () => {
     }
   });
 
-  it("never resolves when the need is not declared, even with a resolver wired", async () => {
-    const { runner, runSkill } = await runtimeWith({ needs: [], wireResolver: true });
+  it("fails at startup when a resolver is wired without the need declared", async () => {
+    try {
+      await runtimeWith({ needs: [], wireResolver: true });
+      expect.unreachable("expected TargetCredentialsError");
+    } catch (err) {
+      expect(err).toBeInstanceOf(TargetCredentialsError);
+      expect((err as TargetCredentialsError).reason).toBe("not-configured");
+    }
+  });
+
+  it("injects nothing when the need is not declared", async () => {
+    const { runner, runSkill } = await runtimeWith({ needs: [], wireResolver: false });
     await runSkill();
     expect(runner.invocations[0]?.env).toBeUndefined();
     expect(runner.invocations[0]?.secrets).toBeUndefined();

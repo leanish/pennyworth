@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { InMemoryCatalog, type Project } from "@leanish/catalog-it";
+import { InMemoryCatalog, parseProjectYaml, type Project } from "@leanish/catalog-it";
 
 import { ConsoleLogger } from "../src/logger/console-logger.js";
 import { createTargetCredentialsResolver } from "../src/target-credentials/resolver.js";
@@ -34,19 +34,28 @@ describe("target-credentials ssm provider against LocalStack", () => {
     await stack.stop();
   });
 
-  it("resolves a SecureString under the project convention path", async () => {
+  it("resolves a SecureString under the project convention path (documented YAML form)", async () => {
     const parameter = await stack.createSecureStringParameter(
       "/leanish/projects/acme/app/credentials/NPM_TOKEN",
       "shhh-npm-token",
     );
 
-    const project: Project = {
-      id: "acme/app",
-      source: { url: "https://github.com/acme/app.git", branch: "main" },
-      extensions: {
-        credentials: [{ provider: "ssm", parameter, env: "NPM_TOKEN" }],
-      },
-    };
+    // Go through the real catalog YAML parser, not a hand-built Project —
+    // this is the load path a production catalog record takes.
+    const project: Project = parseProjectYaml(
+      [
+        "id: acme/app",
+        "source:",
+        "  url: https://github.com/acme/app.git",
+        "  branch: main",
+        "extensions:",
+        "  credentials:",
+        "    - provider: ssm",
+        `      parameter: ${parameter}`,
+        "      env: NPM_TOKEN",
+      ].join("\n"),
+      "target-credentials-ssm.test",
+    );
 
     const resolver = createTargetCredentialsResolver({
       catalog: new InMemoryCatalog([project]),
