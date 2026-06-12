@@ -13,7 +13,7 @@ services:
       # Restrict to the services integration tests actually exercise — keeps
       # cold-start time down and surfaces missing-service errors loudly
       # instead of silently lazy-loading.
-      - SERVICES=dynamodb,sqs,events,s3,ssm
+      - SERVICES=dynamodb,sqs,events,s3,ssm,scheduler
       # EAGER_SERVICE_LOADING=1 boots every declared service at container
       # start instead of lazy-init on first request — predictable cold time.
       - EAGER_SERVICE_LOADING=1

@@ -34,7 +34,7 @@ describe("S3Catalog against LocalStack", () => {
 
   const projects: Project[] = [
     {
-      id: "atc",
+      id: "example/atc",
       source: { url: "https://github.com/example/atc.git", branch: "main" },
       description: "Ask-the-Code agent",
       extensions: {
@@ -43,7 +43,7 @@ describe("S3Catalog against LocalStack", () => {
       },
     },
     {
-      id: "shared-lib",
+      id: "example/shared-lib",
       source: { url: "https://github.com/example/shared-lib.git", branch: "main" },
       description: "Shared utilities",
       extensions: {
@@ -51,7 +51,7 @@ describe("S3Catalog against LocalStack", () => {
       },
     },
     {
-      id: "reviewer-only",
+      id: "example/reviewer-only",
       source: { url: "https://github.com/example/reviewer-only.git", branch: "main" },
       description: "Reviewit-only; ATC explicitly opted out",
       extensions: {
@@ -79,7 +79,7 @@ describe("S3Catalog against LocalStack", () => {
     });
 
     expect(catalog.list()).toHaveLength(3);
-    expect(catalog.get("atc")?.description).toBe("Ask-the-Code agent");
+    expect(catalog.get("example/atc")?.description).toBe("Ask-the-Code agent");
     expect(catalog.version).toBe("1");
   });
 
@@ -96,7 +96,7 @@ describe("S3Catalog against LocalStack", () => {
       key: "catalog.json",
       client: stack.s3Client(),
     });
-    expect(catalog.list().map((p) => p.id).sort()).toEqual(["atc", "reviewer-only", "shared-lib"]);
+    expect(catalog.list().map((p) => p.id).sort()).toEqual(["example/atc", "example/reviewer-only", "example/shared-lib"]);
   });
 
   it("forConsumer('atc') filters to ATC-enabled projects", async () => {
@@ -118,16 +118,16 @@ describe("S3Catalog against LocalStack", () => {
     const atcList = atcView.list();
     // `atc` (enabled: true) + `shared-lib` (default-on, no atc opt-out)
     // — NOT `reviewer-only` (extensions.atc.enabled === false).
-    expect(atcList.map((p) => p.id).sort()).toEqual(["atc", "shared-lib"]);
+    expect(atcList.map((p) => p.id).sort()).toEqual(["example/atc", "example/shared-lib"]);
 
-    expect(atcView.get("atc")).toBeDefined();
-    expect(atcView.get("reviewer-only")).toBeUndefined();
+    expect(atcView.get("example/atc")).toBeDefined();
+    expect(atcView.get("example/reviewer-only")).toBeUndefined();
 
     // Cross-consumer check — `reviewit` view excludes `atc` (which has
     // extensions.reviewit.enabled === false) but includes `shared-lib`
     // (default-on for any consumer that isn't explicitly opted out).
     const reviewitView = catalog.forConsumer("reviewit");
-    expect(reviewitView.list().map((p) => p.id).sort()).toEqual(["reviewer-only", "shared-lib"]);
+    expect(reviewitView.list().map((p) => p.id).sort()).toEqual(["example/reviewer-only", "example/shared-lib"]);
   });
 
   it("throws a useful error when the bucket exists but the key is missing", async () => {
@@ -165,7 +165,7 @@ describe("S3Catalog against LocalStack", () => {
     // Publish a smaller catalog with a different project set
     const trimmed: Project[] = [
       {
-        id: "new-only",
+        id: "example/new-only",
         source: { url: "https://example.invalid/new-only.git", branch: "main" },
         description: "Replaced catalog content",
         extensions: { atc: { enabled: true } },
@@ -176,10 +176,10 @@ describe("S3Catalog against LocalStack", () => {
     // Tiny pause to ensure TTL elapsed
     await new Promise((resolve) => setTimeout(resolve, 5));
     // First read after TTL serves the OLD snapshot AND triggers refresh
-    expect(catalog.list().map((p) => p.id).sort()).toEqual(["atc", "reviewer-only", "shared-lib"]);
+    expect(catalog.list().map((p) => p.id).sort()).toEqual(["example/atc", "example/reviewer-only", "example/shared-lib"]);
     await catalog.refresh(); // wait for the kicked-off refresh
     // After refresh completes, reads see the new snapshot
-    expect(catalog.list().map((p) => p.id)).toEqual(["new-only"]);
+    expect(catalog.list().map((p) => p.id)).toEqual(["example/new-only"]);
   });
 
   it("uses If-None-Match to short-circuit refresh when the bundle is unchanged", async () => {

@@ -17,11 +17,16 @@ The handler in `src/handler.ts`:
    `problem` + `projectIds`) at the boundary.
 2. Fetches the evidence archive (tar.gz) from S3 via `runtime.clients.s3`.
 3. **Extracts it safely** to a fresh temp dir (`src/evidence.ts`): 64 MiB archive cap, 2000-entry
-   cap, 8 MiB per-file cap; rejects absolute paths, `..` traversal, symlinks, hardlinks; requires
-   `manifest.md` at the archive root. The temp dir is always removed in `finally`.
+   cap, 8 MiB per-file cap, 256 MiB total-extracted cap; rejects absolute paths, `..` traversal,
+   symlinks, hardlinks; requires `manifest.md` at the archive root. The temp dir is always
+   removed in `finally`.
 4. Resolves optional `projectIds` against the catalog (`triage-it` consumer view) and syncs
    working copies — or proceeds **evidence-only** when absent.
 5. Runs the `triage` skill (`skills/triage/SKILL.md`) over the evidence (+ code, when mounted).
+   The evidence dir rides along as the **last** working-copy mount — the coding-agent
+   subprocess only gets file access to mounted directories, so in `code+evidence` runs the
+   project working copy is the spawn cwd and the evidence is an `--add-dir`; evidence-only
+   runs spawn directly inside the evidence dir.
 6. Delivers the terminal reply to `envelope.replyTo` via SQS and emits lifecycle events
    (`triage-it.triage.received` / `.completed` / `.failed`) on EventBridge.
 
@@ -43,7 +48,9 @@ npm install
 npm run typecheck
 npm run build
 npm test
-npm run check      # typecheck + build + test
+npm run check             # typecheck + build + test
+npm run test:integration  # LocalStack-backed end-to-end suite (needs LocalStack on :4566)
+npm run check:full        # check + test:integration
 ```
 
 ## Layout
@@ -58,4 +65,5 @@ src/
   request-schema.ts # TriageRequest + boundary validation
   lambda.ts         # AWS Lambda entry module
 test/               # vitest specs (incl. crafted hostile-archive fixtures)
+test-integration/   # LocalStack end-to-end suite (real S3/SQS/DDB/SSM/EventBridge)
 ```

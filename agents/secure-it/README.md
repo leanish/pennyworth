@@ -1,11 +1,12 @@
 # `@leanish/secure-it`
 
 Scheduler-driven, **write-capable** Layer-3 agent. On a recurring tick it
-fans out one worker per explicitly opted-in project; each worker scans the
-project's open GitHub security/dependency alerts, opens (or updates) one
-**draft PR per actionable alert**, and schedules a delayed **revisit**
-that flips the PR to ready-for-review when CI is green — or adapts, rolls
-back, or defers when it isn't. Built on `@leanish/runtime`.
+fans out one worker per explicitly opted-in project; each worker runs a
+full dependency-freshness + CVE pass and opens (or updates) **one batched
+draft PR per project** (branch `secure-it/dependency-refresh`), then
+schedules a delayed **revisit** that flips the PR to ready-for-review
+when CI is green — or adapts, rolls back, or defers when it isn't. Built
+on `@leanish/runtime`.
 
 It **never merges**, **never force-pushes**, and only touches projects
 with the explicit opt-in flag (see below).
@@ -27,7 +28,7 @@ scheduler tick (stage=init)
 breakdown (stage=breakdown, self)
   → re-resolve project + re-check opt-in (idempotent skip)
   → syncWorkingCopies([project])
-  → runSkill("secure-it")     # scans alerts, opens/updates draft PRs via gh
+  → runSkill("secure-it")     # freshness + CVE pass → one batched draft PR via gh
   → publishDelayed(revisit, afterSeconds=3600, revisitCount=0) per PR
 
 revisit (stage=revisit, self)
@@ -67,9 +68,10 @@ src/
   lambda.ts                     # AWS Lambda entry (env contract in the module docstring)
   index.ts                      # public re-exports
 skills/
-  secure-it/SKILL.md            # breakdown-stage skill: scan alerts → draft PRs
+  secure-it/SKILL.md            # breakdown-stage skill: freshness + CVE pass → batched draft PR
   secure-it-revisit/SKILL.md    # revisit-stage skill: flip / adapt / rollback / defer
 test/                           # vitest specs (hermetic; fake runner + in-memory adapters)
+test-integration/               # LocalStack-backed end-to-end specs (real S3/SQS/DDB/Scheduler)
 ```
 
 ## Scripts
@@ -79,7 +81,9 @@ npm install
 npm run typecheck
 npm run build
 npm test
-npm run check      # typecheck + build + test
+npm run check             # typecheck + build + test
+npm run test:integration  # LocalStack-backed (docker compose up -d localstack)
+npm run check:full        # check + test:integration
 ```
 
 ## Tests
@@ -90,6 +94,17 @@ schemas) and swap in test adapters from `@leanish/runtime/testing`:
 `FakeCodingAgentRunner`, `InMemoryCatalog`, `InMemoryWorkspace`, and
 `createLocalSelfPublisher` (captures `publish` / `publishDelayed` calls,
 including `afterSeconds`).
+
+The integration suite (`test-integration/`) drives the real Lambda entry
+(`createSecureItLambdaHandler`) against LocalStack: the catalog is read
+from real S3, init fan-out lands on a real SQS queue, idempotency claims
+hit real DynamoDB, working copies come from a real `git clone`, and
+revisits round-trip real EventBridge Scheduler one-shots. Only the
+coding agent is faked (`FakeCodingAgentRunner` — no live CLI, no GitHub
+writes). LocalStack Community's Scheduler is CRUD-only, so the delayed
+leg simulates the fire by delivering the schedule's `Target.Input` to
+the queue — byte-for-byte what the real SQS target does (see the
+runtime's `test-integration/self-publish.test.ts` for the rationale).
 
 ## See also
 

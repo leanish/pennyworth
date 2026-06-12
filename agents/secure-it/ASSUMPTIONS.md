@@ -36,15 +36,18 @@ run inside the coding-agent subprocess via `gh` using the inherited
 `github` need is declared so the deployment provisions the token into the
 Lambda env (subprocesses inherit it automatically).
 
-## 4. Deploy wiring deferred
+## 4. Deploy wiring (provisioned by infra; Dockerfile still deferred)
 
-The infra registry entry exists (`infra/src/registry.ts`), but the rest
-of the deploy story is deferred: the recurring cron tick (EventBridge
-Scheduler → input queue), the per-agent schedule group + the IAM role the
-Scheduler assumes for one-shot revisit schedules, provisioning of the
-`SELF_QUEUE_URL` / `SELF_QUEUE_ARN` / `SCHEDULE_GROUP_NAME` /
-`SCHEDULER_ROLE_ARN` env vars, and the Dockerfile. `src/lambda.ts`
-documents the env contract those pieces must satisfy.
+The infra package now provisions the full scheduler story: the registry
+entry (`infra/src/registry.ts`, `tickSchedule: "rate(1 day)"`), the
+recurring stage=init tick (wire shape
+`{"stage":"init","payload":{},"metadata":{"sourceTrigger":"scheduler"}}`),
+the per-agent schedule group + the IAM role the Scheduler assumes for
+one-shot revisit schedules, and the `SELF_QUEUE_URL` / `SELF_QUEUE_ARN` /
+`SCHEDULE_GROUP_NAME` / `SCHEDULER_ROLE_ARN` env vars
+(`infra/src/agent-stack.ts`). `src/lambda.ts` documents the env contract
+those pieces satisfy. Still deferred: the Dockerfile / image build for
+the Lambda container.
 
 ## 5. Other decisions
 

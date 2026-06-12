@@ -13,23 +13,25 @@
     run, one delayed `revisit` (1h) per PR the skill opened/updated;
   - `revisit` — `secure-it-revisit` skill run (no working copy),
     reschedule with bumped `revisitCount` when requested, hard cap of 2.
-- The two entry-point skills (`skills/*/SKILL.md`): draft-PR-per-alert
-  scan and the flip / adapt / rollback / defer follow-up. All GitHub work
-  via `gh` + inherited `GITHUB_TOKEN`.
+- The two entry-point skills (`skills/*/SKILL.md`): the batched
+  dependency-refresh + CVE pass (one draft PR per project) and the
+  flip / adapt / rollback / defer follow-up. All GitHub work via `gh` +
+  inherited `GITHUB_TOKEN`.
 - AWS Lambda entry (`src/lambda.ts`): phase-2 descriptor load, S3
   catalog, Dynamo idempotency, AWS self-publisher (SQS + EventBridge
   Scheduler one-shots), SQS shim without a consumer registry.
-- Deploy registration in `infra/src/registry.ts`.
-- Hermetic vitest coverage of all of the above.
+- Deploy registration + scheduler wiring in the infra package
+  (`infra/src/registry.ts` entry with the `rate(1 day)` tick,
+  per-agent schedule group + Scheduler delivery role, and the
+  `SELF_QUEUE_URL` / `SELF_QUEUE_ARN` / `SCHEDULE_GROUP_NAME` /
+  `SCHEDULER_ROLE_ARN` env vars — see `infra/src/agent-stack.ts`).
+- Hermetic vitest coverage of all of the above, plus a LocalStack-backed
+  integration suite (`test-integration/`) covering the S3 catalog read,
+  the init → breakdown → revisit chain over real SQS/Scheduler, DDB
+  idempotency, and opt-in enforcement.
 
 ## Deferred
 
-- **Cron tick provisioning** — the recurring EventBridge Scheduler rule
-  that drops the `init` message onto the input queue.
-- **Scheduler IAM + schedule group** — the per-agent group and the role
-  the Scheduler assumes to SendMessage one-shot revisit messages, plus
-  wiring the `SELF_QUEUE_URL` / `SELF_QUEUE_ARN` / `SCHEDULE_GROUP_NAME` /
-  `SCHEDULER_ROLE_ARN` env vars into the agent stack.
 - **Dockerfile / image build** for the Lambda container.
 - **Webhook-driven revisit** — a CI-completion push source for the same
   `revisit` stage (faster than the 1h timer; the scheduled message stays

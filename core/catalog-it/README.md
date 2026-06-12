@@ -65,6 +65,8 @@ npm run check           # typecheck + build + test — the phase-1 acceptance ga
 - `pull` — download the deployed bundle, sync local project YAMLs, and write the `.catalogit-state.json` baseline.
 - `add` / `discover` — draft new project entries (a single `owner/repo`, or a GitHub owner's repos). **Both require the `gh` CLI and a coding agent (`codex` or `claude`) on `PATH`.**
 
+`publish` and `pull` honor `AWS_ENDPOINT_URL` for custom S3 endpoints (LocalStack, MinIO) and switch to path-style addressing automatically. Note the AWS SDK prefers an ambient `AWS_PROFILE` over `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` — unset it (`env -u AWS_PROFILE catalogit publish …`) when running against LocalStack with dummy credentials.
+
 ## Test scaffolding
 
 catalogit is the lowest layer in the suite (no agent-runtime dependency).

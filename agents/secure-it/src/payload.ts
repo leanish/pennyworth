@@ -22,9 +22,9 @@ export interface BreakdownPayload extends AgentPayloadBase {
 export interface RevisitPayload extends AgentPayloadBase {
   /** Repo full name; matches the catalog project id. */
   readonly repo: string;
-  /** PR branch name, e.g. "secure-it/GHSA-xxxx-package". */
+  /** PR branch name, e.g. "secure-it/dependency-refresh". */
   readonly branch: string;
-  /** Stable per-alert identifier the PR addresses (e.g. a GHSA id). */
+  /** Stable identifier the PR addresses (the batched pass uses "dependency-refresh"; a GHSA/CVE id otherwise). */
   readonly alertRef: string;
   /** How many revisits this PR already received. Capped at 2 by the handler. */
   readonly revisitCount: number;

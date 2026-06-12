@@ -83,6 +83,35 @@ describe("catalogit S3 round-trip", () => {
     expect(atcScope.map((p) => p.id).sort()).toEqual(["leanish/agent-atc", "leanish/shared-lib"]);
   });
 
+  it("refresh() treats an unchanged remote as a no-op and picks up a re-publish", async () => {
+    await publishCatalog({ bucket, projects, client });
+
+    const refreshErrors: unknown[] = [];
+    const catalog = await S3Catalog.load({
+      bucket,
+      client,
+      snapshotTtlMs: Infinity,
+      onRefreshError: (err) => refreshErrors.push(err),
+    });
+    expect(catalog.get("leanish/agent-atc")?.description).toBe("ATC repo");
+
+    // Unchanged remote: the conditional GET (IfNoneMatch) must resolve as
+    // "not modified", not as a refresh failure — the snapshot survives.
+    await catalog.refresh();
+    expect(refreshErrors).toEqual([]);
+    expect(catalog.get("leanish/agent-atc")?.description).toBe("ATC repo");
+
+    // Changed remote: the next refresh swaps the snapshot atomically.
+    await publishCatalog({
+      bucket,
+      projects: [{ ...projects[0]!, description: "ATC repo v2" }, projects[1]!],
+      client,
+    });
+    await catalog.refresh();
+    expect(refreshErrors).toEqual([]);
+    expect(catalog.get("leanish/agent-atc")?.description).toBe("ATC repo v2");
+  });
+
   it("re-publishing changes the ETag", async () => {
     const first = await publishCatalog({ bucket, projects, client });
     const second = await publishCatalog({

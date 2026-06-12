@@ -230,6 +230,17 @@ describe("secure-it breakdown stage", () => {
       handleSecureItMessage(message("breakdown", {} as never, "self"), runtime),
     ).rejects.toThrow(/projectId/);
   });
+
+  it("fails loudly (and schedules nothing) when the skill output violates the outputSchema", async () => {
+    const { runtime, runner, queue } = await buildScaffold([OPTED_IN]);
+    // Missing the required `pullRequests` array — must fail the REAL
+    // outputSchema validation inside runSkill, not be acted upon.
+    runner.register("secure-it", () => fencedJson({ summary: "broken", alerts: [] }));
+    await expect(
+      handleSecureItMessage(message("breakdown", { projectId: OPTED_IN.id }, "self"), runtime),
+    ).rejects.toThrow(/outputSchema/);
+    expect(queue).toHaveLength(0); // no revisit scheduled off garbage
+  });
 });
 
 describe("secure-it revisit stage", () => {
@@ -300,5 +311,37 @@ describe("secure-it revisit stage", () => {
         runtime,
       ),
     ).rejects.toThrow(/revisit payload/);
+  });
+
+  it("fails loudly when the skill outcome is outside the contract enum — never reschedules off garbage", async () => {
+    const { runtime, runner, queue } = await buildScaffold([OPTED_IN]);
+    runner.register("secure-it-revisit", () =>
+      fencedJson({ outcome: "merged", ciConclusion: "success" }),
+    );
+    await expect(
+      handleSecureItMessage(
+        message("revisit", { ...REVISIT_PAYLOAD, revisitCount: 0 }, "self"),
+        runtime,
+      ),
+    ).rejects.toThrow(/outputSchema/);
+    expect(queue).toHaveLength(0);
+  });
+
+  it("rejects a zero/negative scheduleRevisit delay at the schema boundary (no at(past) schedule)", async () => {
+    const { runtime, runner, queue } = await buildScaffold([OPTED_IN]);
+    runner.register("secure-it-revisit", () =>
+      fencedJson({
+        outcome: "deferred",
+        ciConclusion: "pending",
+        scheduleRevisit: { afterSeconds: 0 },
+      }),
+    );
+    await expect(
+      handleSecureItMessage(
+        message("revisit", { ...REVISIT_PAYLOAD, revisitCount: 0 }, "self"),
+        runtime,
+      ),
+    ).rejects.toThrow(/outputSchema/);
+    expect(queue).toHaveLength(0);
   });
 });

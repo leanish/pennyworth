@@ -33,6 +33,22 @@ export function idToFilename(id: string): string {
 }
 
 /**
+ * Returns `true` when `id` is already in canonical `owner/slug` form: a
+ * structural `/` with both segments matching their lowercase patterns.
+ *
+ * `mapRepoToId` only ever produces canonical ids; this is the read-side
+ * check for records that arrived by other means (hand-edited YAML, older
+ * tooling, files renamed on a case-insensitive filesystem). A mixed-case
+ * id would silently break the filename⇄id invariant — `add` lowercases,
+ * so a `Acme_widget.yaml` / `id: acme/widget` pair can never round-trip.
+ */
+export function isCanonicalId(id: string): boolean {
+  const slash = id.indexOf("/");
+  if (slash === -1) return false;
+  return OWNER_RE.test(id.slice(0, slash)) && SLUG_RE.test(id.slice(slash + 1));
+}
+
+/**
  * Maps a GitHub `owner` + `repo` to a {@link MapResult}.
  *
  * Both segments are lowercased before pattern validation. Returns an

@@ -1,4 +1,4 @@
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runAdd, type AddDeps, type AddOptions } from "../../src/add.js";
 import { writeProjectYaml, projectFileExists } from "../../src/project-writer.js";
 import { FilesystemCatalog } from "../../src/filesystem-catalog.js";
+import { validateCatalog } from "../../src/validate.js";
 import type { RunProcess, RunResult } from "../../src/coding-agent.js";
 import type { RunGh } from "../../src/github.js";
 import type { RunGit } from "../../src/inspection-clone.js";
@@ -138,6 +139,28 @@ describe("runAdd", () => {
     const catalog = await FilesystemCatalog.load({ catalogRoot });
     const project = catalog.get("leanish/foo");
     expect(project?.description).toBeUndefined();
+  });
+
+  it("mixed-case add input yields a lowercase id AND filename that validate cleanly", async () => {
+    // Regression: id and filename must normalize together — a mixed-case
+    // filename with a lowercased record id fails the catalog's own
+    // filename⇄id validation.
+    const result = await runAdd(
+      makeOpts({ catalogRoot, id: "Acme/Widget-Lib" }),
+      makeDeps(),
+    );
+
+    expect(result).toEqual({ status: "added", exitCode: 0 });
+    expect(await readdir(join(catalogRoot, "projects"))).toEqual(["acme_widget-lib.yaml"]);
+
+    const validation = await validateCatalog({ catalogRoot });
+    expect(validation.issues).toEqual([]);
+
+    const catalog = await FilesystemCatalog.load({ catalogRoot });
+    expect(catalog.get("acme/widget-lib")?.id).toBe("acme/widget-lib");
+    expect(catalog.get("acme/widget-lib")?.source.url).toBe(
+      "https://github.com/acme/widget-lib.git",
+    );
   });
 
   it("routes error output through the injected stderr sink (not a global)", async () => {

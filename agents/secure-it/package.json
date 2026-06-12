@@ -33,15 +33,21 @@
     "build": "npm run clean && tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "typecheck": "tsc -b --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "check": "npm run typecheck && npm run build && npm test"
+    "check": "npm run typecheck && npm run build && npm test",
+    "check:full": "npm run check && npm run test:integration"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1053.0",
     "@aws-sdk/client-s3": "^3.1053.0",
     "@leanish/runtime": "file:../../core/runtime"
   },
+  "devDependencies-comment": "Scheduler + SQS + catalog-it ride in via @leanish/runtime at runtime; declared explicitly only for integration-test code that constructs SDK clients / publishes catalogs directly.",
   "devDependencies": {
+    "@aws-sdk/client-scheduler": "^3.1053.0",
+    "@aws-sdk/client-sqs": "^3.1053.0",
+    "@leanish/catalog-it": "file:../../core/catalog-it",
     "@types/node": "^24.12.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.7"

@@ -20,10 +20,12 @@ contract yet. Revisit each before promoting the agent past its current phase.
    runs (no per-finding PRs, no second PR while one is open). Granularity may be revisited if
    batched PRs prove too large to review.
 
-4. **Deploy wiring is deferred.** The package ships the Lambda entry (`src/lambda.ts`) and an
-   `infra/src/registry.ts` registration, but no Dockerfile, no provisioning of the scheduler cron /
-   queue / schedule group, and no image pipeline. `DOCUMENT_IT_IMAGE_TAG` selects the image when the
-   deploy lands.
+4. **Container image pipeline is deferred.** The infra package now provisions the deploy wiring
+   from the `infra/src/registry.ts` registration (input queue + DLQ, the recurring `rate(1 day)`
+   stage=init tick, the per-agent schedule group + Scheduler delivery role, and the `SELF_*` /
+   `SCHEDULE_*` Lambda env contract `src/lambda.ts` reads). What is still missing is the package's
+   Dockerfile and the image build/publish pipeline; `DOCUMENT_IT_IMAGE_TAG` selects the image when
+   that lands.
 
 5. **The strict opt-in filter is duplicated in the handler.** `forConsumer("document-it")` is
    default-on (only an explicit `enabled: false` excludes), which is too permissive for a

@@ -31,8 +31,10 @@
     "build": "npm run clean && tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "typecheck": "tsc -b --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "check": "npm run typecheck && npm run build && npm test"
+    "check": "npm run typecheck && npm run build && npm test",
+    "check:full": "npm run check && npm run test:integration"
   },
   "dependencies-comment": "AWS SDK clients are constructed directly only in src/lambda.ts (cold-start wiring) and src/sender.ts (SQS SendMessage); everything else is injectable.",
   "dependencies": {

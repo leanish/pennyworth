@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { catalogitCli } from "../../src/index.js";
@@ -398,6 +398,69 @@ describe("publish subcommand", () => {
 });
 
 // ---------------------------------------------------------------------------
+// pull — CLI wiring over pullCatalog via the injected-client seam
+// ---------------------------------------------------------------------------
+
+function fakeS3ClientBundle(bundleJson: string, etag: string): S3Client {
+  const client = new S3Client({ region: "us-east-1" });
+  vi.spyOn(client, "send").mockImplementation(async (cmd) => {
+    if (cmd instanceof GetObjectCommand) {
+      return { Body: { transformToString: async () => bundleJson }, ETag: etag };
+    }
+    throw new Error("unexpected command");
+  });
+  return client;
+}
+
+describe("pull subcommand", () => {
+  it("pull --bucket: writes bundle projects + state file via the injected client", async () => {
+    const catalogRoot = await mkdtemp(join(tmpdir(), "catalogit-pull-test-"));
+    const bundle = JSON.stringify({
+      version: "1",
+      projects: [
+        {
+          id: "leanish/atc",
+          source: { url: "https://github.com/leanish/atc.git", branch: "main" },
+        },
+      ],
+    });
+    const stdout = new PassThrough();
+    const read = capture(stdout);
+    const s3Client = fakeS3ClientBundle(bundle, '"pull-etag"');
+
+    const code = await catalogitCli(
+      ["pull", "--bucket", "my-bucket", "--no-prune", "--catalog-root", catalogRoot],
+      { stdout, stderr: new PassThrough(), s3Client },
+    );
+
+    expect(code).toBe(0);
+    expect(read()).toContain("pull: 1 written, 0 overwritten");
+    const yaml = await readFile(join(catalogRoot, "projects", "leanish_atc.yaml"), "utf8");
+    expect(yaml).toContain("id: leanish/atc");
+    const state = JSON.parse(
+      await readFile(join(catalogRoot, ".catalogit-state.json"), "utf8"),
+    ) as { etag: string };
+    expect(state.etag).toBe('"pull-etag"');
+  });
+
+  it("pull --prune --no-prune: exit 2 before any S3 contact", async () => {
+    const catalogRoot = await mkdtemp(join(tmpdir(), "catalogit-pull-test-"));
+    const stderr = new PassThrough();
+    const read = capture(stderr);
+    const s3Client = fakeS3ClientBundle("{}", '"unused"');
+
+    const code = await catalogitCli(
+      ["pull", "--bucket", "b", "--prune", "--no-prune", "--catalog-root", catalogRoot],
+      { stdout: new PassThrough(), stderr, s3Client },
+    );
+
+    expect(code).toBe(2);
+    expect(read()).toContain("--prune and --no-prune are mutually exclusive");
+    expect(vi.mocked(s3Client.send)).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // buildAddOptionsFromFlags — pure option builder (no subprocess, no TTY)
 // ---------------------------------------------------------------------------
 
@@ -519,6 +582,15 @@ describe("runProcess", () => {
       { input: "hi" },
     );
     expect(result).toEqual({ code: 0, stdout: "hi", stderr: "" });
+  });
+
+  it("forwards env to the child when provided (the git seam disables credential prompts)", async () => {
+    const result = await runProcess(
+      "node",
+      ["-e", "process.stdout.write(process.env.CATALOGIT_TEST_MARKER ?? 'missing');"],
+      { env: { ...process.env, CATALOGIT_TEST_MARKER: "forwarded" } },
+    );
+    expect(result).toEqual({ code: 0, stdout: "forwarded", stderr: "" });
   });
 
   it("kills the child and reports code 124 when timeoutMs elapses", async () => {

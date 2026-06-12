@@ -73,7 +73,12 @@ export type SecureItCiConclusion = "success" | "failure" | "pending" | "none";
 export interface SecureItRevisitOutput {
   readonly outcome: SecureItRevisitOutcome;
   readonly ciConclusion: SecureItCiConclusion;
-  /** Present when the skill wants another check; the handler bumps the count. */
+  /**
+   * Present when the skill wants another check; the handler bumps the
+   * count. `afterSeconds` must be >= 1 (the SKILL.md outputSchema
+   * enforces `minimum: 1`, so a zero/negative delay fails output
+   * validation instead of producing an `at(...)` schedule in the past).
+   */
   readonly scheduleRevisit?: { readonly afterSeconds: number };
 }
 

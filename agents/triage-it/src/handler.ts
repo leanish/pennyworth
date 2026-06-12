@@ -26,6 +26,14 @@ interface TriageSkillInput {
   readonly codeScope: TriageCodeScope;
 }
 
+/**
+ * `projectId` of the synthetic working-copy mount that grants the
+ * coding-agent subprocess access to the extracted evidence dir. The `:`
+ * keeps it outside the catalog's `<org>/<repo>` id space, so it can never
+ * shadow a real project.
+ */
+export const EVIDENCE_MOUNT_ID = "triage-it:evidence";
+
 /** Output of the `triage` skill — matches `skills/triage/SKILL.md` outputSchema. */
 interface TriageSkillOutput {
   readonly diagnosis: string;
@@ -46,8 +54,12 @@ interface TriageSkillOutput {
  *      an invalid archive; the extractor enforces size / count / path /
  *      entry-type caps and requires `manifest.md` at the root)
  *   6. Resolve code scope: explicit `projectIds` → catalog lookup + sync
- *      (`code+evidence`); absent → no working copies (`evidence-only`)
- *   7. `runSkill({ entrypoint: "triage", … })`
+ *      (`code+evidence`); absent → no project working copies (`evidence-only`)
+ *   7. `runSkill({ entrypoint: "triage", … })` — the evidence dir rides
+ *      along as the **last** working-copy mount (see `evidenceMount`): the
+ *      coding-agent sandbox only grants file access to mounted directories
+ *      (spawn cwd + `--add-dir`, both runners), so without it the skill
+ *      could not read the evidence at all
  *   8. Emit `completed`, deliver the terminal reply to `envelope.replyTo`.
  *
  * The evidence temp dir is removed in `finally` once the skill run is over
@@ -143,10 +155,24 @@ export async function handleTriageMessage(
       codeScope,
       ...(request.problem !== undefined ? { problem: request.problem } : {}),
     };
+    // The coding-agent subprocess can only read mounted directories (the
+    // first working copy becomes the spawn cwd; the rest ride in via
+    // `--add-dir`). The evidence dir is not a git working copy, but it
+    // must be mounted or the skill could not read the evidence at all.
+    // Last position keeps the first *project* working copy as the spawn
+    // cwd in code+evidence mode; evidence-only runs spawn directly inside
+    // the evidence dir. branch/headSha are git-sync metadata with no
+    // meaning for this synthetic mount — runners only consume `path`.
+    const evidenceMount: WorkingCopy = {
+      projectId: EVIDENCE_MOUNT_ID,
+      path: evidence.evidenceDir,
+      branch: "",
+      headSha: "",
+    };
     const skillResult = await runtime.runSkill<TriageSkillInput, TriageSkillOutput>({
       entrypoint: "triage",
       input: skillInput,
-      workingCopies,
+      workingCopies: [...workingCopies, evidenceMount],
       ...execution,
     });
 

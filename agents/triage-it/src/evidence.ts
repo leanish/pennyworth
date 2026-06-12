@@ -17,6 +17,8 @@ import type { ReadEntry } from "tar";
  *   - archive size cap (compressed bytes, checked before any parsing)
  *   - entry count cap
  *   - per-entry size cap (from the tar header, checked before extraction)
+ *   - total extracted-bytes cap (sum of file-entry sizes — bounds the
+ *     decompression-bomb blast radius on Lambda's small /tmp mount)
  *   - no absolute paths, no `..` traversal, no `\` separators, no NUL
  *   - only regular files and directories — symlinks, hardlinks, devices,
  *     FIFOs and every other entry type are rejected
@@ -36,12 +38,20 @@ export interface EvidenceLimits {
   readonly maxEntryCount: number;
   /** Max size of a single file entry, in bytes (from the tar header). */
   readonly maxEntryBytes: number;
+  /**
+   * Max total extracted size in bytes (sum of file-entry sizes from the
+   * tar headers). Without it, an archive within the per-entry and count
+   * caps could still expand to entryCount x entryBytes (16 GiB at the
+   * defaults) and exhaust the extraction volume.
+   */
+  readonly maxTotalBytes: number;
 }
 
 export const EVIDENCE_LIMITS: EvidenceLimits = {
   maxArchiveBytes: 64 * 1024 * 1024,
   maxEntryCount: 2000,
   maxEntryBytes: 8 * 1024 * 1024,
+  maxTotalBytes: 256 * 1024 * 1024,
 };
 
 export const MANIFEST_NAME = "manifest.md";
@@ -103,17 +113,24 @@ export async function extractEvidenceArchive(
 
     validateEntries(archivePath, limits);
 
+    // Defense in depth: validateEntries already vetted every entry; the
+    // filter re-applies the same checks (including the running total-size
+    // cap) so a divergence between the two passes can only ever *skip* an
+    // entry, never write an unsafe one. (The `Stats` arm of the filter
+    // union belongs to tar's *create* direction; extraction always passes
+    // a `ReadEntry`.)
+    let extractedBytes = 0;
     tar.x({
       file: archivePath,
       cwd: evidenceDir,
       sync: true,
-      // Defense in depth: validateEntries already vetted every entry; the
-      // filter re-applies the same checks so a divergence between the two
-      // passes can only ever *skip* an entry, never write an unsafe one.
-      // (The `Stats` arm of the filter union belongs to tar's *create*
-      // direction; extraction always passes a `ReadEntry`.)
-      filter: (_path: string, entry: ReadEntry | Stats) =>
-        isReadEntry(entry) && entryViolation(entry, limits) === undefined,
+      filter: (_path: string, entry: ReadEntry | Stats) => {
+        if (!isReadEntry(entry) || entryViolation(entry, limits) !== undefined) {
+          return false;
+        }
+        extractedBytes += entry.size ?? 0;
+        return extractedBytes <= limits.maxTotalBytes;
+      },
     });
 
     // The list pass saw a manifest entry; confirm it landed on disk.
@@ -143,6 +160,7 @@ export async function extractEvidenceArchive(
  */
 function validateEntries(archivePath: string, limits: EvidenceLimits): void {
   let count = 0;
+  let totalBytes = 0;
   let manifestSeen = false;
   tar.t({
     file: archivePath,
@@ -157,6 +175,12 @@ function validateEntries(archivePath: string, limits: EvidenceLimits): void {
       const violation = entryViolation(entry, limits);
       if (violation !== undefined) {
         throw new InvalidEvidenceArchiveError(violation);
+      }
+      totalBytes += entry.size ?? 0;
+      if (totalBytes > limits.maxTotalBytes) {
+        throw new InvalidEvidenceArchiveError(
+          `entries total more than ${limits.maxTotalBytes} bytes`,
+        );
       }
       if (entry.type === "File" && normalizeEntryPath(entry.path) === MANIFEST_NAME) {
         manifestSeen = true;
