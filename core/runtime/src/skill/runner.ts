@@ -1,3 +1,4 @@
+import type { SecretEntry } from "../logger/redactor.js";
 import type { Logger } from "../types/logger.js";
 import type { WorkingCopy } from "../types/working-copy.js";
 import type { LoadedSkill } from "./skill.js";
@@ -22,6 +23,18 @@ export interface SkillInvocation {
   readonly workingCopies: ReadonlyArray<WorkingCopy>;
   readonly model?: string;
   readonly effort?: string;
+  /**
+   * Per-invocation env vars merged onto the subprocess (after the runner's
+   * own configured env base). Populated by `runSkill` from the
+   * `TargetCredentialsResolver` when the agent declares the
+   * `target-credentials` need; absent otherwise.
+   */
+  readonly env?: Readonly<Record<string, string>>;
+  /**
+   * Secret values among `env`, redacted from captured stdout/stderr (and
+   * error tails) before anything leaves the subprocess boundary.
+   */
+  readonly secrets?: ReadonlyArray<SecretEntry>;
   /**
    * Structured logger threaded through from the runtime. Runners use it
    * to surface debug breadcrumbs (e.g. effort-flag plumbing the underlying

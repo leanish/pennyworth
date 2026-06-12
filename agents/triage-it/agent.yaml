@@ -22,3 +22,4 @@ needs:
   - s3                # Evidence-archive fetch (the collector's tar.gz blob)
   - sqs               # AWS-mode terminal reply delivery to envelope.replyTo
   - eventbridge       # triage-it emits its own lifecycle events (consumer contract)
+  - target-credentials

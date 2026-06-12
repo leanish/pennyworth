@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 
+import { NOOP_REDACTOR, Redactor, type SecretEntry } from "../logger/redactor.js";
 import type { SkillInvocationResult } from "./runner.js";
 import { tail } from "./tail.js";
 
@@ -7,12 +8,56 @@ export interface SpawnCaptureOptions {
   readonly bin: string;
   readonly args: ReadonlyArray<string>;
   readonly cwd: string;
-  /** Extra env merged on top of `process.env` (e.g. `CODEX_HOME`). */
+  /** Extra env merged on top of the scrubbed `process.env` (e.g. `CODEX_HOME`). */
   readonly env: Readonly<Record<string, string>>;
   readonly timeoutMs: number;
   readonly captureCapBytes: number;
   /** Prefix for timeout / non-zero-exit error messages, e.g. `"ClaudeCodeRunner"`. */
   readonly label: string;
+  /**
+   * Secret values substring-replaced with `<redacted:NAME>` in the captured
+   * stdout / stderr (including error tails) before anything is returned or
+   * thrown. Exact-string matching via `Redactor` — no heuristics.
+   */
+  readonly secrets?: ReadonlyArray<SecretEntry>;
+}
+
+/**
+ * AWS credential / credential-source env vars stripped from the
+ * `process.env` base before the coding-agent subprocess is spawned. The
+ * execution role's permissions (e.g. `ssm:GetParameter` over every
+ * project's credentials once `target-credentials` is granted) must not be
+ * ambiently available to the model subprocess — it gets exactly the env
+ * the runtime resolved for it, nothing more.
+ *
+ * The scrub applies to the inherited base only: an operator who genuinely
+ * needs to hand AWS credentials to the subprocess (e.g. a Bedrock-auth
+ * CLI) re-adds them deliberately via the runner's `options.env`, which
+ * merges after the scrub. Catalog data can never re-add them — the
+ * credentials schema bans the `AWS_` prefix outright.
+ */
+export const SCRUBBED_AWS_ENV_VARS: ReadonlyArray<string> = [
+  "AWS_ACCESS_KEY_ID",
+  "AWS_SECRET_ACCESS_KEY",
+  "AWS_SESSION_TOKEN",
+  "AWS_PROFILE",
+  "AWS_WEB_IDENTITY_TOKEN_FILE",
+  "AWS_ROLE_ARN",
+  "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI",
+  "AWS_CONTAINER_CREDENTIALS_FULL_URI",
+  "AWS_CONTAINER_AUTHORIZATION_TOKEN",
+  "AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE",
+  "AWS_SHARED_CREDENTIALS_FILE",
+  "AWS_CONFIG_FILE",
+];
+
+/** `process.env` minus the AWS credential vars (see `SCRUBBED_AWS_ENV_VARS`). */
+export function scrubbedProcessEnv(): Record<string, string | undefined> {
+  const env: Record<string, string | undefined> = { ...process.env };
+  for (const name of SCRUBBED_AWS_ENV_VARS) {
+    delete env[name];
+  }
+  return env;
 }
 
 /**
@@ -32,10 +77,14 @@ export interface SpawnCaptureOptions {
  * treats the exit code as data and has no timeout / capture cap.
  */
 export function spawnCapture(options: SpawnCaptureOptions): Promise<SkillInvocationResult> {
+  const redactor =
+    options.secrets !== undefined && options.secrets.length > 0
+      ? new Redactor(options.secrets)
+      : NOOP_REDACTOR;
   return new Promise((resolve, reject) => {
     const child = spawn(options.bin, [...options.args], {
       cwd: options.cwd,
-      env: { ...process.env, ...options.env },
+      env: { ...scrubbedProcessEnv(), ...options.env },
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -81,14 +130,14 @@ export function spawnCapture(options: SpawnCaptureOptions): Promise<SkillInvocat
       if (code !== 0) {
         reject(
           new Error(
-            `${options.label}: '${options.bin}' exited with code ${code}; stderr tail: ${tail(stderr)}`,
+            `${options.label}: '${options.bin}' exited with code ${code}; stderr tail: ${redactor.redact(tail(stderr))}`,
           ),
         );
         return;
       }
       resolve({
-        responseText: stdout,
-        ...(stderr.length > 0 ? { stderrTail: tail(stderr) } : {}),
+        responseText: redactor.redact(stdout),
+        ...(stderr.length > 0 ? { stderrTail: redactor.redact(tail(stderr)) } : {}),
       });
     });
   });

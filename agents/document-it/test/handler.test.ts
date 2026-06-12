@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildRuntime,
+  createTargetCredentialsResolver,
   defaultRuntimeSkillsDir,
   loadDescriptorFromFile,
 } from "@leanish/runtime";
@@ -139,15 +140,22 @@ async function buildTestRuntime(projects: ReadonlyArray<Project>): Promise<{
   runner.register("verify-docs", () => ({
     responseText: ["```json", JSON.stringify(CANNED_OUTPUT), "```"].join("\n"),
   }));
+  const catalog = new InMemoryCatalog(projects);
   const runtime = await buildRuntime({
     descriptor,
-    catalog: new InMemoryCatalog(projects),
+    catalog,
     workspace: new InMemoryWorkspace(),
     runners: new Map([["claude-code", runner]]),
     clients: {},
     logger,
     selfPublisher: createLocalSelfPublisher(queue),
     skillsDirs: [AGENT_SKILLS_DIR, defaultRuntimeSkillsDir()],
+    targetCredentials: createTargetCredentialsResolver({
+      catalog,
+      mode: "local",
+      region: "us-east-1",
+      logger,
+    }),
   });
   return { runtime, queue, logger, runner };
 }

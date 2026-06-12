@@ -134,6 +134,19 @@ describe("agent stacks", () => {
     t.resourceCountIs("AWS::Scheduler::ScheduleGroup", 1);
     t.resourceCountIs("AWS::Scheduler::Schedule", 0);
   });
+
+  it("grants the target-credentials SSM convention path + KMS decrypt to every coding-agent stack", () => {
+    // Region/account are tokens in this env-agnostic synth, so assert on
+    // the serialized template rather than exact resource ARNs. bump-it is
+    // the regression canary for the decrypt grant: it has no consumer
+    // registry, so the only kms:Decrypt can come from the
+    // target-credentials branch.
+    for (const registration of AGENTS) {
+      const serialized = JSON.stringify(template(registration.id).toJSON());
+      expect(serialized).toContain("parameter/leanish/projects/");
+      expect(serialized).toContain("kms:Decrypt");
+    }
+  });
 });
 
 describe("normalizer stack", () => {

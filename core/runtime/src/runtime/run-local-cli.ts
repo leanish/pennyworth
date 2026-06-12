@@ -21,6 +21,7 @@ import { ClaudeCodeRunner } from "../skill/claude-code-runner.js";
 import { CodexRunner } from "../skill/codex-runner.js";
 import { FakeCodingAgentRunner } from "../skill/fake-runner.js";
 import type { CodingAgentRunner } from "../skill/runner.js";
+import { createTargetCredentialsResolver } from "../target-credentials/resolver.js";
 import type { AgentDefinition } from "../types/agent.js";
 import type { Logger } from "../types/logger.js";
 import type { RuntimeMessage } from "../types/runtime-message.js";
@@ -208,11 +209,12 @@ async function runLocalCommand(args: ParsedArgs, ctx: RunLocalContext): Promise<
   const catalog = await buildCatalog(args.catalogRoot);
   const workspace = buildWorkspace(args.workspaceRoot);
   const runners = buildRunners(args.fakeRunner);
+  const region = process.env["AWS_REGION"] ?? "us-east-1";
   const clients = wireClients({
     mode: "local",
     needs: descriptor.needs,
     env: process.env,
-    region: process.env["AWS_REGION"] ?? "us-east-1",
+    region,
     logger,
   });
 
@@ -224,6 +226,16 @@ async function runLocalCommand(args: ParsedArgs, ctx: RunLocalContext): Promise<
     clients,
     logger,
     skillsDirs: resolvedSkillsDirs,
+    ...(descriptor.needs.includes("target-credentials")
+      ? {
+          targetCredentials: createTargetCredentialsResolver({
+            catalog,
+            mode: "local",
+            region,
+            logger,
+          }),
+        }
+      : {}),
   });
 
   const reply = await runLocal({ agent, descriptor, runtime, message });

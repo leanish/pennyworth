@@ -59,6 +59,42 @@ export default defineAgent({
 
 The `runtime` object's full surface is `src/types/runtime.ts`. Errors are in `src/errors.ts`.
 
+## Target-project credentials
+
+Agents that declare the `target-credentials` need get per-target-project credentials resolved at
+each `runSkill` and injected into the coding-agent subprocess env — what a private project's
+build/test steps need (private package registries, internal APIs). Projects opt in via the
+runtime-owned `extensions.credentials` catalog namespace:
+
+```yaml
+extensions:
+  credentials:
+    - provider: codeartifact          # derived — minted from IAM at run time, no stored secret
+      domain: acme
+      domainOwner: "123456789012"
+      region: us-east-1
+      env: CODEARTIFACT_AUTH_TOKEN
+      endpoints:                      # optional, only if the build needs the URL too
+        - repository: java
+          format: maven
+          env: CODEARTIFACT_REPO_ENDPOINT
+    - provider: ssm                   # stored — SecureString under the project's convention path
+      parameter: /leanish/projects/acme/app/credentials/NPM_TOKEN
+      env: NPM_TOKEN
+```
+
+`ssm` is the universal stored provider (any registry/API whose auth is a static token);
+`codeartifact` is the derived optimization (12 h tokens, warm-container reuse, read-only by IAM
+construction). The schema (`src/target-credentials/schema.ts`) validates fail-loud: env-name
+rules (no `AWS_` prefix, no needs-registry collisions) and the SSM convention path pinned to the
+declaring project's id verbatim. Entry shims wire `createTargetCredentialsResolver(...)` via
+`BuildRuntimeOptions.targetCredentials`; declared-but-unwired throws at first `runSkill`.
+
+Related hardening: the runners always scrub AWS credential env vars from the subprocess's
+inherited base (`SCRUBBED_AWS_ENV_VARS` in `src/skill/spawn-capture.ts`) and redact resolved
+secret values from captured output. See `docs/assumptions.md` A-CORE-7..9 for the boundaries
+(env-var-only delivery, no clone-time credentials, TTL/KMS conventions).
+
 ## Layout
 
 ```
@@ -76,6 +112,7 @@ src/
   skill/              # SchemaValidator, SkillLoader, renderInput, extractTerminalJson, runSkill, FakeCodingAgentRunner
   aws-mode/           # SQS Lambda entry shim + runtime-message body parsing + shared client config
   self-publish/       # ADR-0011 publish/publishDelayed adapters (AWS + local) + canonical serialisation
+  target-credentials/ # extensions.credentials schema + resolver + codeartifact/ssm providers
   runtime/            # buildRuntime + runLocal + run-local CLI
   index.ts            # public exports
 

@@ -4,6 +4,7 @@ import { jiraNeed } from "./jira.js";
 import { s3Need } from "./s3.js";
 import type { NeedSpec } from "./spec.js";
 import { sqsNeed } from "./sqs.js";
+import { targetCredentialsNeed } from "./target-credentials.js";
 
 /**
  * The closed registry of supported `needs:` values. Per ADR-0010, both the
@@ -21,6 +22,7 @@ export const needSpecs: ReadonlyMap<string, NeedSpec> = new Map<string, NeedSpec
   [s3Need.name, s3Need as NeedSpec],
   [githubNeed.name, githubNeed as NeedSpec],
   [jiraNeed.name, jiraNeed as NeedSpec],
+  [targetCredentialsNeed.name, targetCredentialsNeed as NeedSpec],
 ]);
 
 export function getNeedSpec(name: string): NeedSpec | undefined {

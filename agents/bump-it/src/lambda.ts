@@ -12,6 +12,7 @@ import {
   ConsoleLogger,
   createAwsSelfPublisher,
   createSqsLambdaShim,
+  createTargetCredentialsResolver,
   defaultRuntimeSkillsDir,
   DynamoIdempotencyStore,
   loadDescriptorFromFile,
@@ -178,6 +179,16 @@ export async function createBumpItLambdaHandler(
     logger,
     skillsDirs: [agentSkillsDir, defaultRuntimeSkillsDir()],
     selfPublisher,
+    ...(descriptor.needs.includes("target-credentials")
+      ? {
+          targetCredentials: createTargetCredentialsResolver({
+            catalog,
+            mode: "aws",
+            region,
+            logger,
+          }),
+        }
+      : {}),
   });
 
   // No consumerRegistry: the only trigger is `scheduler`, so every queue

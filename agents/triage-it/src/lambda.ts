@@ -10,6 +10,7 @@ import {
   CodexRunner,
   ConsoleLogger,
   createSqsLambdaShim,
+  createTargetCredentialsResolver,
   defaultRuntimeSkillsDir,
   DynamoConsumerRegistry,
   DynamoIdempotencyStore,
@@ -176,6 +177,16 @@ export async function createTriageItLambdaHandler(
     clients,
     logger,
     skillsDirs: [agentSkillsDir, defaultRuntimeSkillsDir()],
+    ...(descriptor.needs.includes("target-credentials")
+      ? {
+          targetCredentials: createTargetCredentialsResolver({
+            catalog,
+            mode: "aws",
+            region,
+            logger,
+          }),
+        }
+      : {}),
   });
 
   return createSqsLambdaShim({

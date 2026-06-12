@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildRuntime,
   ConsoleLogger,
+  createTargetCredentialsResolver,
   defaultRuntimeSkillsDir,
   loadDescriptorFromFile,
   type Runtime,
@@ -64,15 +65,22 @@ async function buildScaffold(projects: ReadonlyArray<Project>): Promise<{
   const descriptor = await loadDescriptorFromFile(DESCRIPTOR_PATH, { phase: "phase-2" });
   const runner = new FakeCodingAgentRunner("claude-code");
   const queue: LocalSelfPublishEntry[] = [];
+  const catalog = new InMemoryCatalog(projects);
   const runtime = await buildRuntime({
     descriptor,
-    catalog: new InMemoryCatalog(projects),
+    catalog,
     workspace: new InMemoryWorkspace(),
     runners: new Map([["claude-code", runner]]),
     clients: {},
     logger: QUIET_LOGGER,
     skillsDirs: [AGENT_SKILLS_DIR, defaultRuntimeSkillsDir()],
     selfPublisher: createLocalSelfPublisher(queue),
+    targetCredentials: createTargetCredentialsResolver({
+      catalog,
+      mode: "local",
+      region: "us-east-1",
+      logger: QUIET_LOGGER,
+    }),
   });
   return { runtime, runner, queue };
 }

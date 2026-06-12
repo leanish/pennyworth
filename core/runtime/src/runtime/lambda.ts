@@ -92,6 +92,14 @@ export {
 // Structured logger constructor.
 export { ConsoleLogger, type ConsoleLoggerOptions } from "../logger/console-logger.js";
 
+// Target-project credentials resolver — the Lambda entry wires this when
+// the agent declares the `target-credentials` need.
+export {
+  createTargetCredentialsResolver,
+  type TargetCredentialsResolver,
+  type TargetCredentialsResolverOptions,
+} from "../target-credentials/resolver.js";
+
 // Self-publish adapter (phase-2, ADR-0011) — backs `runtime.publish` /
 // `runtime.publishDelayed`; the Lambda entry wires this when the agent
 // declares fan-out / revisit stages.

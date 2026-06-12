@@ -13,6 +13,7 @@ import { runSkill } from "../skill/run-skill.js";
 import { SkillLoader } from "../skill/skill-loader.js";
 import { validateSkillsCompatibility } from "../skill/validate-compat.js";
 import type { CodingAgentRunner } from "../skill/runner.js";
+import type { TargetCredentialsResolver } from "../target-credentials/resolver.js";
 import type { AgentDescriptor } from "../types/descriptor.js";
 import type { Clients } from "../types/clients.js";
 import type { Logger } from "../types/logger.js";
@@ -80,6 +81,15 @@ export interface BuildRuntimeOptions {
    * calling either method throws `SelfPublishNotConfiguredError`.
    */
   readonly selfPublisher?: SelfPublisher;
+  /**
+   * Optional. Resolves per-target-project credentials (`extensions.
+   * credentials`) at each `runSkill` — required whenever the descriptor
+   * declares the `target-credentials` need (a `runSkill` on a runtime
+   * built without one then throws `TargetCredentialsError`,
+   * "not-configured"). Entry shims pass
+   * `createTargetCredentialsResolver(...)`.
+   */
+  readonly targetCredentials?: TargetCredentialsResolver;
 }
 
 export async function buildRuntime(options: BuildRuntimeOptions): Promise<Runtime> {
@@ -131,6 +141,9 @@ export async function buildRuntime(options: BuildRuntimeOptions): Promise<Runtim
           runnerFor,
           validator,
           logger: baseLogger,
+          ...(options.targetCredentials !== undefined
+            ? { targetCredentials: options.targetCredentials }
+            : {}),
         },
         args,
       );

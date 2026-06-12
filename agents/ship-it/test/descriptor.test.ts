@@ -38,6 +38,6 @@ describe("agent-ship-it/agent.yaml", () => {
       "validate-it",
     ]);
     expect(descriptor.skills.support).toEqual(["karpathy-guidelines"]);
-    expect(descriptor.needs).toEqual(["github", "jira"]);
+    expect(descriptor.needs).toEqual(["github", "jira", "target-credentials"]);
   });
 });

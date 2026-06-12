@@ -27,6 +27,25 @@ the core/cross-cutting set.
   custom shims; wiring a drain loop into `run-local-cli` (high configurable depth cap) is a follow-up.
 - **A-CORE-6 — `jira` need is a placeholder client.** Like `github`, the typed client is a marker
   (`{kind: "jira"}`); skills do the real Jira work in the subprocess with resolved credentials.
+- **A-CORE-7 — Target-project credentials are env-var-only (v1).** The `target-credentials` need
+  resolves a project's `extensions.credentials` (CodeArtifact derived tokens, SSM stored secrets)
+  into subprocess env vars. No tool-config-file materialization (`~/.npmrc`, `~/.m2/settings.xml`)
+  — target builds are expected to reference env vars. Clone-time credentials for private repos are
+  explicitly NOT covered (the workspace clones before any skill runs); that's a future
+  `github-app` provider.
+- **A-CORE-8 — Coding-agent subprocesses don't inherit the role's AWS credentials.** The runners
+  scrub the AWS credential env vars from the inherited base (`SCRUBBED_AWS_ENV_VARS`) so the model
+  subprocess can't ambiently exercise the Lambda role (e.g. read other projects' SSM secrets once
+  `target-credentials` is granted). Deliberate re-add via the runner's `options.env` is the
+  operator escape hatch (e.g. a Bedrock-auth CLI); catalog data can never re-add them (the
+  credentials schema bans the `AWS_` prefix). Residual risk stays documented: a prompt-injected
+  agent echoing its *injected* env is mitigated by least exposure, read-only tokens, output
+  redaction, and the human gate — not eliminated.
+- **A-CORE-9 — CodeArtifact tokens ride the 12 h default TTL.** No `durationSeconds` override; the
+  warm-container cache reuses a minted token while `expiration − 10 min` is ahead. Cross-account
+  domains additionally require the domain's resource policy to allow the suite account, and
+  project SecureStrings are assumed encrypted with the suite's shared KMS key (operator
+  convention) — both are deploy-time prerequisites outside this repo.
 
 ## Cross-cutting
 

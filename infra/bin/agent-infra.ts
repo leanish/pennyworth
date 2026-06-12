@@ -5,8 +5,18 @@ import { AgentStack } from "../src/agent-stack.js";
 import { NormalizerStack } from "../src/normalizer-stack.js";
 import { AGENTS, SHIP_IT_NORMALIZER } from "../src/registry.js";
 import { SharedStack } from "../src/shared-stack.js";
+import {
+  parseTargetCredentialsContext,
+  TARGET_CREDENTIALS_CONTEXT_KEY,
+} from "../src/target-credentials-config.js";
 
 const app = new App();
+
+// CodeArtifact grant scope for the `target-credentials` need — org-specific
+// ARNs come from deploy context, never from this repo.
+const targetCredentials = parseTargetCredentialsContext(
+  app.node.tryGetContext(TARGET_CREDENTIALS_CONTEXT_KEY),
+);
 
 // Env-agnostic when CDK_DEFAULT_ACCOUNT is unset (e.g. `cdk synth` with no
 // creds); pinned to account+region for `deploy`. Cross-stack refs require both
@@ -33,6 +43,7 @@ for (const registration of AGENTS) {
     descriptor,
     shared,
     reservedConcurrency: 10, // D5 phase-1 default; raise per agent as needed
+    targetCredentials,
   });
   agentStacks.set(registration.id, stack);
 }

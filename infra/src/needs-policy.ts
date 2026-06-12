@@ -1,6 +1,11 @@
 import * as iam from "aws-cdk-lib/aws-iam";
 import { getNeedSpec } from "@leanish/runtime";
 
+import {
+  NO_TARGET_CREDENTIALS_CONFIG,
+  type TargetCredentialsInfraConfig,
+} from "./target-credentials-config.js";
+
 export interface NeedPolicyContext {
   readonly need: string;
   /** The agent's descriptor `identifier` (scopes per-agent resource names). */
@@ -9,6 +14,8 @@ export interface NeedPolicyContext {
   readonly account: string;
   /** ARN of the suite EventBridge bus (for the `eventbridge` need). */
   readonly eventBusArn: string;
+  /** CodeArtifact grant scope (for the `target-credentials` need); empty default = SSM-only. */
+  readonly targetCredentials?: TargetCredentialsInfraConfig;
 }
 
 /**
@@ -51,9 +58,64 @@ export function needPolicyStatements(ctx: NeedPolicyContext): iam.PolicyStatemen
       // the consumer-side contract pins one.
       return [new iam.PolicyStatement({ actions, resources: ["arn:aws:s3:::*/*"] })];
 
+    case "target-credentials":
+      // The registry's `iamActions` are distributed across scoped statements
+      // here rather than granted as one block (the need spans two providers
+      // with different resources). KMS decrypt for the SecureStrings is
+      // granted at the agent stack (the key construct lives there).
+      return targetCredentialsStatements(ctx);
+
     default:
       // A registered need with IAM actions but no bespoke scoping rule yet —
       // grant account-wide and revisit when the need is actually wired.
       return [new iam.PolicyStatement({ actions, resources: ["*"] })];
   }
+}
+
+/**
+ * `target-credentials` grants (per the target-credentials design):
+ *
+ *   - SSM stored secrets: one static wildcard over the convention path
+ *     `/leanish/projects/<project-id>/credentials/<NAME>`. The runtime's
+ *     schema validation pins every catalog entry to its own project's
+ *     prefix, which is what makes the static wildcard safe — adding a
+ *     project never touches IAM.
+ *   - CodeArtifact derived tokens: only for deploy-configured domain /
+ *     repository ARNs (`TargetCredentialsInfraConfig`); read-only by
+ *     construction — no publish actions anywhere. `sts:GetServiceBearerToken`
+ *     supports no resource scoping, so it is conditioned to the
+ *     CodeArtifact service instead.
+ */
+function targetCredentialsStatements(ctx: NeedPolicyContext): iam.PolicyStatement[] {
+  const config = ctx.targetCredentials ?? NO_TARGET_CREDENTIALS_CONFIG;
+  const statements = [
+    new iam.PolicyStatement({
+      actions: ["ssm:GetParameter"],
+      resources: [
+        `arn:aws:ssm:${ctx.region}:${ctx.account}:parameter/leanish/projects/*/credentials/*`,
+      ],
+    }),
+  ];
+  if (config.codeartifactDomainArns.length > 0) {
+    statements.push(
+      new iam.PolicyStatement({
+        actions: ["codeartifact:GetAuthorizationToken"],
+        resources: [...config.codeartifactDomainArns],
+      }),
+      new iam.PolicyStatement({
+        actions: ["sts:GetServiceBearerToken"],
+        resources: ["*"],
+        conditions: { StringEquals: { "sts:AWSServiceName": "codeartifact.amazonaws.com" } },
+      }),
+    );
+  }
+  if (config.codeartifactRepositoryArns.length > 0) {
+    statements.push(
+      new iam.PolicyStatement({
+        actions: ["codeartifact:GetRepositoryEndpoint", "codeartifact:ReadFromRepository"],
+        resources: [...config.codeartifactRepositoryArns],
+      }),
+    );
+  }
+  return statements;
 }

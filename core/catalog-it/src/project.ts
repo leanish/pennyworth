@@ -4,6 +4,12 @@
  * is free-form prose; `extensions` is the opt-in / per-consumer-config
  * bag (each Layer-3 agent reads its own namespace).
  *
+ * One reserved namespace: `extensions.credentials` is read by the
+ * **runtime** (per-target-project credentials injected into coding-agent
+ * runs), not by any agent. catalogit keeps it opaque like every other
+ * extension; the schema + validation live with the owner, in
+ * `@leanish/runtime`'s `target-credentials` module.
+ *
  * See `data-format.md` §Spine reference.
  */
 export interface Project {

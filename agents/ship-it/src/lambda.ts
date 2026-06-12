@@ -13,6 +13,7 @@ import {
   ConsoleLogger,
   createAwsSelfPublisher,
   createSqsLambdaShim,
+  createTargetCredentialsResolver,
   defaultRuntimeSkillsDir,
   DynamoConsumerRegistry,
   DynamoIdempotencyStore,
@@ -183,6 +184,16 @@ export async function createShipItLambdaHandler(
     logger,
     selfPublisher,
     skillsDirs: [agentSkillsDir, defaultRuntimeSkillsDir()],
+    ...(descriptor.needs.includes("target-credentials")
+      ? {
+          targetCredentials: createTargetCredentialsResolver({
+            catalog,
+            mode: "aws",
+            region,
+            logger,
+          }),
+        }
+      : {}),
   });
 
   return createSqsLambdaShim({

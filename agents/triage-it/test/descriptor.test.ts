@@ -18,7 +18,7 @@ describe("triage-it agent.yaml", () => {
     expect(descriptor.model).toBe("claude-sonnet-4-6");
     expect(descriptor.skills.entrypoints).toEqual(["triage"]);
     expect(descriptor.skills.support).toEqual(["karpathy-guidelines"]);
-    expect(descriptor.needs).toEqual(["s3", "sqs", "eventbridge"]);
+    expect(descriptor.needs).toEqual(["s3", "sqs", "eventbridge", "target-credentials"]);
 
     expect(descriptor.triggers).toEqual([
       {

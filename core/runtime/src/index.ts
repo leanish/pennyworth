@@ -55,6 +55,7 @@ export type {
   SyncOutcome,
   SyncReportEntry,
   SyncResult,
+  TargetCredentialsClient,
   Trigger,
   WorkingCopy,
 } from "./types/index.js";
@@ -171,6 +172,21 @@ export {
   isEnabledForConsumer,
 } from "@leanish/catalog-it";
 
+// Target-project credentials (the `target-credentials` need) — entry shims
+// construct the resolver and pass it via `BuildRuntimeOptions.targetCredentials`.
+export {
+  createTargetCredentialsResolver,
+  parseCredentialsExtension,
+  CREDENTIALS_EXTENSION_KEY,
+  TargetCredentialsResolver,
+  type CodeArtifactCredentialEntry,
+  type CodeArtifactEndpoint,
+  type CredentialEntry,
+  type ResolvedTargetCredentials,
+  type SsmCredentialEntry,
+  type TargetCredentialsResolverOptions,
+} from "./target-credentials/index.js";
+
 // Needs registry — used by AWS-mode entry shim and the run-local CLI to
 // wire `runtime.clients` from the descriptor's `needs:`.
 export {
@@ -197,12 +213,14 @@ export {
   RouterNotConfiguredError,
   RuntimeError,
   SelfPublishNotConfiguredError,
+  TargetCredentialsError,
   UnhandledStageError,
   type DescriptorIssue,
   type DescriptorIssueCategory,
   type EntrypointInvocationCapture,
   type EntrypointInvocationReason,
   type SchemaErrorItem,
+  type TargetCredentialsErrorReason,
 } from "./errors.js";
 
 // Self-publish (phase-2, ADR-0011) — the adapter behind `runtime.publish`

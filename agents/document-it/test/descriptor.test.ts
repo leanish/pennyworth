@@ -30,7 +30,7 @@ describe("agent-document-it/agent.yaml", () => {
     expect(descriptor.model).toBe("claude-sonnet-4-6");
     expect(descriptor.skills.entrypoints).toEqual(["verify-docs"]);
     expect(descriptor.skills.support).toEqual(["karpathy-guidelines"]);
-    expect(descriptor.needs).toEqual(["github"]);
+    expect(descriptor.needs).toEqual(["github", "target-credentials"]);
   });
 
   it("is rejected by the default (phase-1) parser — scheduler triggers are phase-2", async () => {
