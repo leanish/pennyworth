@@ -20,3 +20,4 @@ skills:
 
 needs:
   - github
+  - target-credentials

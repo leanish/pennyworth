@@ -86,10 +86,13 @@ export class ClaudeCodeRunner implements CodingAgentRunner {
         bin: this.#bin,
         args,
         cwd: mount.cwd,
-        env: this.#env,
+        // Per-invocation env (target-project credentials) wins over the
+        // runner's configured base.
+        env: { ...this.#env, ...invocation.env },
         timeoutMs: this.#timeoutMs,
         captureCapBytes: this.#captureCapBytes,
         label: "ClaudeCodeRunner",
+        ...(invocation.secrets !== undefined ? { secrets: invocation.secrets } : {}),
       });
     } finally {
       await staged.cleanup();

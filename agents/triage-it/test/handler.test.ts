@@ -12,6 +12,7 @@ import type {
   S3Client,
   SqsClient,
 } from "@leanish/runtime";
+import { ConsoleLogger, createTargetCredentialsResolver } from "@leanish/runtime";
 import {
   buildRuntime,
   defaultRuntimeSkillsDir,
@@ -108,13 +109,20 @@ async function buildHarness(
     },
   ]);
 
+  const catalog = new InMemoryCatalog([PROJECT]);
   const runtime = await buildRuntime({
     descriptor,
-    catalog: new InMemoryCatalog([PROJECT]),
+    catalog,
     workspace: new InMemoryWorkspace(),
     runners: new Map([["claude-code", runner]]),
     clients: { s3, sqs: overrides.sqsClient ?? sqs, eventbridge: events },
     skillsDirs: [join(packageRoot, "skills"), defaultRuntimeSkillsDir()],
+    targetCredentials: createTargetCredentialsResolver({
+      catalog,
+      mode: "local",
+      region: "us-east-1",
+      logger: new ConsoleLogger({ minLevel: "error" }),
+    }),
   });
 
   return { runtime, events, sqs, runner, observed };

@@ -23,3 +23,4 @@ needs:
   - eventbridge       # ATC emits its own lifecycle events (consumer contract)
   - sqs               # AWS-mode terminal reply delivery to envelope.replyTo
   - s3                # Attachment blob fetcher (per queue-api.md §kind: "ask" attachments)
+  - target-credentials

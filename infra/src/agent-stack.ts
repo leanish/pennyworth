@@ -14,6 +14,7 @@ import type { Construct } from "constructs";
 import { needPolicyStatements } from "./needs-policy.js";
 import type { AgentRegistration } from "./registry.js";
 import type { SharedStack } from "./shared-stack.js";
+import type { TargetCredentialsInfraConfig } from "./target-credentials-config.js";
 
 export interface AgentStackProps extends StackProps {
   readonly registration: AgentRegistration;
@@ -21,6 +22,11 @@ export interface AgentStackProps extends StackProps {
   readonly shared: SharedStack;
   /** Phase-1 reserved-concurrency default (D5); raise per agent as needed. */
   readonly reservedConcurrency?: number;
+  /**
+   * CodeArtifact grant scope for the `target-credentials` need (from the
+   * `targetCredentials` CDK context). Empty/absent = SSM-only grants.
+   */
+  readonly targetCredentials?: TargetCredentialsInfraConfig;
 }
 
 // The ADR-0006 timeout interlock — these three are load-bearing and MUST hold.
@@ -156,9 +162,19 @@ export class AgentStack extends Stack {
         region: this.region,
         account: this.account,
         eventBusArn: shared.eventBus.eventBusArn,
+        ...(props.targetCredentials !== undefined
+          ? { targetCredentials: props.targetCredentials }
+          : {}),
       })) {
         fn.addToRolePolicy(statement);
       }
+    }
+    if (descriptor.needs.includes("target-credentials")) {
+      // Stored project credentials are SecureStrings under the suite's
+      // shared KMS key; the decrypt grant must not depend on the
+      // consumer-registry branch above (scheduler-only agents like bump-it
+      // have no consumer registry but still resolve project secrets).
+      shared.secretsKey.grantDecrypt(fn);
     }
 
     // --- Self-publish grants (ADR-0011): runtime.publish sends to the

@@ -28,3 +28,4 @@ skills:
 needs:
   - github  # branch/PR/CI work in the coding-agent subprocess (gh + inherited GITHUB_TOKEN)
   - jira    # best-effort ticket comment-back from the coding-agent subprocess
+  - target-credentials

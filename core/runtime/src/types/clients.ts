@@ -25,6 +25,17 @@ export interface SlackClient {
   readonly kind: "slack";
 }
 
+/**
+ * Marker client for the `target-credentials` need. Declaring the need is
+ * what matters (it opts the agent into per-target-project credential
+ * resolution at `runSkill` and drives the IAM grants); handlers never call
+ * this client — the machinery lives in the runtime's
+ * `TargetCredentialsResolver`.
+ */
+export interface TargetCredentialsClient {
+  readonly kind: "target-credentials";
+}
+
 export interface EventBridgeClient {
   putEvents(args: PutEventsRequest): Promise<PutEventsResult>;
 }
@@ -86,4 +97,5 @@ export interface Clients {
   readonly eventbridge?: EventBridgeClient;
   readonly sqs?: SqsClient;
   readonly s3?: S3Client;
+  readonly "target-credentials"?: TargetCredentialsClient;
 }

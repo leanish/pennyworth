@@ -120,6 +120,35 @@ describe("ClaudeCodeRunner (against a stub binary)", () => {
     expect(record).toContain(`--add-dir ${wc3}`);
   });
 
+  it("merges per-invocation env over the runner's configured base", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "claude-env-"));
+    const envBin = join(dir, "claude");
+    await writeFile(
+      envBin,
+      `#!/bin/sh
+cat <<EOF
+BASE=[$BASE_VAR] OVERLAP=[$OVERLAP_VAR] CRED=[$CRED_VAR]
+\\\`\\\`\\\`json
+{"answer": "ok"}
+\\\`\\\`\\\`
+EOF
+`,
+    );
+    await chmod(envBin, 0o755);
+    const runner = new ClaudeCodeRunner({
+      bin: envBin,
+      env: { BASE_VAR: "from-runner", OVERLAP_VAR: "from-runner" },
+    });
+    const result = await runner.run({
+      entrypoint: askSkill,
+      supportSkills: [],
+      renderedArguments: "x: 1",
+      workingCopies: [],
+      env: { OVERLAP_VAR: "from-invocation", CRED_VAR: "tok" },
+    });
+    expect(result.responseText).toContain("BASE=[from-runner] OVERLAP=[from-invocation] CRED=[tok]");
+  });
+
   it("passes --effort through to the CLI (verbatim for low/medium/high/xhigh)", async () => {
     const recordFile = join(await mkdtemp(join(tmpdir(), "claude-effort-")), "record.txt");
     const recBin = await makeRecordingBin(recordFile);

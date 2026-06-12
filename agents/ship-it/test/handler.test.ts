@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   buildRuntime,
+  createTargetCredentialsResolver,
   defaultRuntimeSkillsDir,
   loadDescriptorFromFile,
   wireClients,
@@ -92,9 +93,10 @@ async function buildHarness(
     runner.register("code-it-revisit", () => fenced(args.revisitOutput));
   }
   const published: LocalSelfPublishEntry[] = [];
+  const catalog = new InMemoryCatalog(args.projects ?? [ENABLED_PROJECT]);
   const runtime = await buildRuntime({
     descriptor,
-    catalog: new InMemoryCatalog(args.projects ?? [ENABLED_PROJECT]),
+    catalog,
     workspace: new InMemoryWorkspace(),
     runners: new Map([["claude-code", runner]]),
     clients: wireClients({
@@ -107,6 +109,12 @@ async function buildHarness(
     logger: noopLogger,
     selfPublisher: createLocalSelfPublisher(published),
     skillsDirs: [join(PKG_ROOT, "skills"), defaultRuntimeSkillsDir()],
+    targetCredentials: createTargetCredentialsResolver({
+      catalog,
+      mode: "local",
+      region: "us-east-1",
+      logger: noopLogger,
+    }),
   });
   return { runtime, runner, published };
 }

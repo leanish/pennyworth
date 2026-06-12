@@ -201,6 +201,37 @@ export class MissingNeedError extends RuntimeError {
 }
 
 /**
+ * Per-target-project credential resolution failed (the `target-credentials`
+ * need). The `reason` is load-bearing:
+ *
+ *   - `not-configured` — the descriptor declares the need but no
+ *     `TargetCredentialsResolver` was wired into `buildRuntime(...)`.
+ *     Deploy-time misconfiguration; fail loudly rather than running the
+ *     coding agent without the credentials its target build expects.
+ *   - `invalid-config` — a project's `extensions.credentials` block failed
+ *     schema validation (unknown provider/field, bad env name, parameter
+ *     outside the convention path, …).
+ *   - `env-conflict` — two working copies resolved the same env var to
+ *     different values. The message names the env var and project ids,
+ *     never the values.
+ *   - `resolve-failed` — a provider call (CodeArtifact / SSM) failed.
+ */
+export type TargetCredentialsErrorReason =
+  | "not-configured"
+  | "invalid-config"
+  | "env-conflict"
+  | "resolve-failed";
+
+export class TargetCredentialsError extends RuntimeError {
+  constructor(
+    readonly reason: TargetCredentialsErrorReason,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/**
  * `runtime.routeProjects(...)` was called but no router was wired into
  * `buildRuntime(...)`. This is a deploy-time misconfiguration, not a
  * runtime-data error — handlers should map this to `config-error` (not

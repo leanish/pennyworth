@@ -119,15 +119,17 @@ export class CodexRunner implements CodingAgentRunner {
       args.push(prompt);
 
       // Codex discovers staged skills via CODEX_HOME, so it rides on top of
-      // the runner's configured env.
+      // the runner's configured env (+ per-invocation target credentials);
+      // CODEX_HOME stays last — nothing may shadow the staging dir.
       return await spawnCapture({
         bin: this.#bin,
         args,
         cwd: mount.cwd,
-        env: { ...this.#env, CODEX_HOME: staged.dir },
+        env: { ...this.#env, ...invocation.env, CODEX_HOME: staged.dir },
         timeoutMs: this.#timeoutMs,
         captureCapBytes: this.#captureCapBytes,
         label: "CodexRunner",
+        ...(invocation.secrets !== undefined ? { secrets: invocation.secrets } : {}),
       });
     } finally {
       await staged.cleanup();

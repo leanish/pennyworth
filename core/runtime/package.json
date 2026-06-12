@@ -48,6 +48,7 @@
     "check:full": "npm run check && npm run test:integration"
   },
   "dependencies": {
+    "@aws-sdk/client-codeartifact": "^3.1053.0",
     "@aws-sdk/client-dynamodb": "^3.1053.0",
     "@aws-sdk/client-eventbridge": "^3.1053.0",
     "@aws-sdk/client-scheduler": "^3.1053.0",
