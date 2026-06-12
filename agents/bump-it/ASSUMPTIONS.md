@@ -1,4 +1,4 @@
-# ASSUMPTIONS — agent-secure-it
+# ASSUMPTIONS — agent-bump-it
 
 Decisions taken while implementing the agent, recorded so reviewers and
 future contributors don't have to reverse-engineer them from the code.
@@ -9,7 +9,7 @@ Originally implemented as one draft PR per security alert (per the early skill c
 owner settled the recorded drift the other way: the skill now runs a **full dependency-freshness +
 CVE pass** — direct deps, the Gradle wrapper, GitHub-workflow action pins, Dependabot PRs folded
 in, resolved-graph verification, CVE floors with `because(CVE-…)` reasons — batched into **one
-draft PR per project** on the stable branch `secure-it/dependency-refresh` (matching the 1-pager's
+draft PR per project** on the stable branch `bump-it/dependency-refresh` (matching the 1-pager's
 "single proposed change" and the owner's own dependency-upgrade workflow). The output schema is
 unchanged: `alerts[]` carries per-advisory outcomes, `pullRequests[]` typically holds the single
 batched entry (`alertRef: "dependency-refresh"`), and the handler's per-PR revisit scheduling now

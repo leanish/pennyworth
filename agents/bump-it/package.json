@@ -1,8 +1,8 @@
 {
-  "name": "@leanish/secure-it",
+  "name": "@leanish/bump-it",
   "version": "0.0.0",
   "private": true,
-  "description": "agent-secure-it — scheduler-driven Layer-3 agent that fixes GitHub security alerts via draft PRs and shepherds them through CI. Built on @leanish/runtime.",
+  "description": "agent-bump-it — scheduler-driven Layer-3 agent that fixes GitHub security alerts via draft PRs and shepherds them through CI. Built on @leanish/runtime.",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {

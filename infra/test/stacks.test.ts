@@ -62,7 +62,7 @@ describe("agent stacks", () => {
   });
 
   it("materializes the recurring stage=init tick for the scheduler-trigger agents", () => {
-    for (const id of ["secure-it", "document-it"]) {
+    for (const id of ["bump-it", "document-it"]) {
       const t = template(id);
       t.hasResourceProperties("AWS::Scheduler::ScheduleGroup", {
         Name: `leanish-agent-${id}`,
@@ -84,7 +84,7 @@ describe("agent stacks", () => {
   });
 
   it("wires the self-publish env + grants for every multi-stage agent", () => {
-    for (const id of ["ship-it", "secure-it", "document-it"]) {
+    for (const id of ["ship-it", "bump-it", "document-it"]) {
       const t = template(id);
       t.hasResourceProperties("AWS::Lambda::Function", {
         FunctionName: `leanish-${id}`,

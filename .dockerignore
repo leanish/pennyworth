@@ -26,6 +26,6 @@ agents/ask-the-code/Dockerfile
 docker-compose.yml
 README.md
 docs/
-agents/secure-it/
+agents/bump-it/
 infra/
 tooling/

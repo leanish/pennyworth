@@ -53,7 +53,7 @@ import { createSigningKeyResolver } from "./signing-key-resolver.js";
  *   SCHEDULER_ROLE_ARN            — role Scheduler assumes to SendMessage to the queue.
  *
  * The four self-publish names are the fleet's generic set (the same
- * contract secure-it / document-it read); infra emits them for every agent.
+ * contract bump-it / document-it read); infra emits them for every agent.
  *
  * Optional env vars:
  *

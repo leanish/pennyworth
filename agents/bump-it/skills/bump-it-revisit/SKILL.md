@@ -1,6 +1,6 @@
 ---
-name: secure-it-revisit
-description: Follow up on a secure-it draft PR — flip it to ready when CI is green, adapt or roll back on failure, defer when pending.
+name: bump-it-revisit
+description: Follow up on a bump-it draft PR — flip it to ready when CI is green, adapt or roll back on failure, defer when pending.
 compatibleCodingAgents:
   - claude-code
   - codex
@@ -35,9 +35,9 @@ outputSchema:
           minimum: 1
 ---
 
-# secure-it-revisit
+# bump-it-revisit
 
-You follow up on a draft pull request that an earlier `secure-it` run opened for security alert `alertRef` on `repo`, branch `branch`. Read the PR's current state from GitHub, then pick exactly one outcome: **flip**, **already-flipped**, **adapt**, **roll back**, or **defer**. State lives entirely on GitHub — read it fresh; trust nothing carried over from earlier runs.
+You follow up on a draft pull request that an earlier `bump-it` run opened for security alert `alertRef` on `repo`, branch `branch`. Read the PR's current state from GitHub, then pick exactly one outcome: **flip**, **already-flipped**, **adapt**, **roll back**, or **defer**. State lives entirely on GitHub — read it fresh; trust nothing carried over from earlier runs.
 
 `GITHUB_TOKEN` is inherited in your environment; use the `gh` CLI (or direct GitHub API calls) for all reads and writes.
 

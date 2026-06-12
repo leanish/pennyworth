@@ -28,11 +28,11 @@ import {
 import agent from "./agent.js";
 
 /**
- * secure-it's AWS Lambda entry module. The exported `handler` is the
+ * bump-it's AWS Lambda entry module. The exported `handler` is the
  * function registered with the Lambda runtime; the AWS event source
  * mapping for the input SQS queue routes records to it.
  *
- * Simpler than ATC's entry by design: secure-it declares a `scheduler`
+ * Simpler than ATC's entry by design: bump-it declares a `scheduler`
  * trigger only, so there is no consumer registry, no envelope signing
  * keys, and no terminal reply channel. What it adds over ATC is the
  * self-publisher — `runtime.publish` / `runtime.publishDelayed` back the
@@ -64,12 +64,12 @@ import agent from "./agent.js";
  *   CATALOG_KEY            — defaults to `catalog.json`.
  *   CATALOG_TTL_MS         — background-refresh window for the cached catalog
  *                            snapshot; defaults to 5 minutes.
- *   WORKSPACE_ROOT         — defaults to `/tmp/secure-it-workspaces`.
+ *   WORKSPACE_ROOT         — defaults to `/tmp/bump-it-workspaces`.
  *   AGENT_CONFIG_PATH      — override the path to agent.yaml; defaults to the
  *                            bundled `<pkg>/agent.yaml` resolved relative to
  *                            this module.
  */
-export interface CreateSecureItLambdaOptions {
+export interface CreateBumpItLambdaOptions {
   /** Override per-runner config (timeouts, captureCap, etc.). Optional. */
   readonly claudeCodeOptions?: ClaudeCodeRunnerOptions;
   readonly codexOptions?: CodexRunnerOptions;
@@ -83,15 +83,15 @@ export interface CreateSecureItLambdaOptions {
 }
 
 /** Lambda handler signature — input is an SQS batch, output is the partial-batch response. */
-export type SecureItLambdaHandler = (event: SqsEvent) => Promise<SqsBatchResponse>;
+export type BumpItLambdaHandler = (event: SqsEvent) => Promise<SqsBatchResponse>;
 
 /**
  * Construct the Lambda handler. Production code uses the cached
- * `secureItLambdaHandler` export below; this factory is the testable seam.
+ * `bumpItLambdaHandler` export below; this factory is the testable seam.
  */
-export async function createSecureItLambdaHandler(
-  options: CreateSecureItLambdaOptions = {},
-): Promise<SecureItLambdaHandler> {
+export async function createBumpItLambdaHandler(
+  options: CreateBumpItLambdaOptions = {},
+): Promise<BumpItLambdaHandler> {
   const region = process.env["AWS_REGION"] ?? "us-east-1";
   const idempotencyTable = requireEnv("IDEMPOTENCY_TABLE_NAME");
   const catalogBucket = requireEnv("CATALOG_BUCKET");
@@ -101,7 +101,7 @@ export async function createSecureItLambdaHandler(
   const schedulerRoleArn = requireEnv("SCHEDULER_ROLE_ARN");
   const catalogKey = process.env["CATALOG_KEY"] ?? "catalog.json";
   const catalogTtlMs = parseOptionalInt("CATALOG_TTL_MS");
-  const workspaceRoot = process.env["WORKSPACE_ROOT"] ?? "/tmp/secure-it-workspaces";
+  const workspaceRoot = process.env["WORKSPACE_ROOT"] ?? "/tmp/bump-it-workspaces";
 
   const agentConfigPath = process.env["AGENT_CONFIG_PATH"] ?? defaultAgentYamlPath();
   // Phase-2 parser: the descriptor's `scheduler` trigger is rejected by
@@ -196,14 +196,14 @@ export async function createSecureItLambdaHandler(
  * Lazy cold-start handler. The first invocation awaits the init Promise;
  * subsequent invocations short-circuit through the cached handler.
  *
- *   export const handler = secureItLambdaHandler;
+ *   export const handler = bumpItLambdaHandler;
  *
  * is the canonical Lambda registration in the infra package.
  */
-let cachedHandlerPromise: Promise<SecureItLambdaHandler> | undefined;
+let cachedHandlerPromise: Promise<BumpItLambdaHandler> | undefined;
 
-export const secureItLambdaHandler: SecureItLambdaHandler = async (event) => {
-  cachedHandlerPromise ??= createSecureItLambdaHandler();
+export const bumpItLambdaHandler: BumpItLambdaHandler = async (event) => {
+  cachedHandlerPromise ??= createBumpItLambdaHandler();
   const h = await cachedHandlerPromise;
   return h(event);
 };

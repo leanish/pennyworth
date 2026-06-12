@@ -1,9 +1,9 @@
 import type { Project, ProjectSource, Runtime, RuntimeMessage } from "@leanish/runtime";
 
-import type { BreakdownPayload, RevisitPayload, SecureItPayload } from "./payload.js";
+import type { BreakdownPayload, RevisitPayload, BumpItPayload } from "./payload.js";
 
-/** The consumer id secure-it uses for catalog reads and the opt-in extension key. */
-export const CONSUMER_ID = "secure-it";
+/** The consumer id bump-it uses for catalog reads and the opt-in extension key. */
+export const CONSUMER_ID = "bump-it";
 
 /** Delay between opening a draft PR and the first CI check (revisit). */
 const FIRST_REVISIT_DELAY_SECONDS = 3600;
@@ -15,27 +15,27 @@ const FIRST_REVISIT_DELAY_SECONDS = 3600;
  */
 const REVISIT_CAP = 2;
 
-/** Input contract of the `secure-it` entry-point skill (see its SKILL.md). */
-export interface SecureItInput {
+/** Input contract of the `bump-it` entry-point skill (see its SKILL.md). */
+export interface BumpItInput {
   readonly project: {
     readonly id: string;
     readonly source: ProjectSource;
   };
 }
 
-export type SecureItAlertOutcome =
+export type BumpItAlertOutcome =
   | "pr-opened"
   | "pr-updated"
   | "already-fixed"
   | "unsupported"
   | "no-safe-fix";
 
-export interface SecureItAlert {
+export interface BumpItAlert {
   readonly alertRef: string;
-  readonly outcome: SecureItAlertOutcome;
+  readonly outcome: BumpItAlertOutcome;
 }
 
-export interface SecureItPullRequest {
+export interface BumpItPullRequest {
   readonly alertRef: string;
   readonly url: string;
   readonly branch: string;
@@ -43,36 +43,36 @@ export interface SecureItPullRequest {
   readonly title: string;
 }
 
-/** Output contract of the `secure-it` entry-point skill. */
-export interface SecureItOutput {
+/** Output contract of the `bump-it` entry-point skill. */
+export interface BumpItOutput {
   readonly summary: string;
   /** Audit log — one entry per alert processed, all outcomes. */
-  readonly alerts: ReadonlyArray<SecureItAlert>;
+  readonly alerts: ReadonlyArray<BumpItAlert>;
   /** One entry per PR opened or updated; drives revisit scheduling. */
-  readonly pullRequests: ReadonlyArray<SecureItPullRequest>;
+  readonly pullRequests: ReadonlyArray<BumpItPullRequest>;
 }
 
-/** Input contract of the `secure-it-revisit` entry-point skill. */
-export interface SecureItRevisitInput {
+/** Input contract of the `bump-it-revisit` entry-point skill. */
+export interface BumpItRevisitInput {
   readonly repo: string;
   readonly branch: string;
   readonly alertRef: string;
   readonly revisitCount: number;
 }
 
-export type SecureItRevisitOutcome =
+export type BumpItRevisitOutcome =
   | "flipped"
   | "already-flipped"
   | "adapted"
   | "rolled-back"
   | "deferred";
 
-export type SecureItCiConclusion = "success" | "failure" | "pending" | "none";
+export type BumpItCiConclusion = "success" | "failure" | "pending" | "none";
 
-/** Output contract of the `secure-it-revisit` entry-point skill. */
-export interface SecureItRevisitOutput {
-  readonly outcome: SecureItRevisitOutcome;
-  readonly ciConclusion: SecureItCiConclusion;
+/** Output contract of the `bump-it-revisit` entry-point skill. */
+export interface BumpItRevisitOutput {
+  readonly outcome: BumpItRevisitOutcome;
+  readonly ciConclusion: BumpItCiConclusion;
   /**
    * Present when the skill wants another check; the handler bumps the
    * count. `afterSeconds` must be >= 1 (the SKILL.md outputSchema
@@ -83,7 +83,7 @@ export interface SecureItRevisitOutput {
 }
 
 /**
- * Per-stage dispatch for secure-it. `stage` is the discriminator (the SQS
+ * Per-stage dispatch for bump-it. `stage` is the discriminator (the SQS
  * shim already rejected stages outside the descriptor's `stages:` list):
  *
  *   - `init` (sourceTrigger scheduler|self) — list catalog candidates,
@@ -91,9 +91,9 @@ export interface SecureItRevisitOutput {
  *     message per project via `runtime.publish`.
  *   - `breakdown` (sourceTrigger self) — re-resolve + re-check opt-in
  *     (idempotent skip when the project vanished or opted out between
- *     init and breakdown), sync the working copy, run the `secure-it`
+ *     init and breakdown), sync the working copy, run the `bump-it`
  *     skill, then schedule one delayed `revisit` per PR it opened/updated.
- *   - `revisit` (sourceTrigger self) — run the `secure-it-revisit` skill
+ *   - `revisit` (sourceTrigger self) — run the `bump-it-revisit` skill
  *     against the PR reference carried in the payload; reschedule with a
  *     bumped `revisitCount` when the skill asks for it and the cap allows.
  *
@@ -102,8 +102,8 @@ export interface SecureItRevisitOutput {
  * handler only orchestrates catalog reads, working-copy sync, skill runs,
  * and self-publishing.
  */
-export async function handleSecureItMessage(
-  message: RuntimeMessage<SecureItPayload>,
+export async function handleBumpItMessage(
+  message: RuntimeMessage<BumpItPayload>,
   runtime: Runtime,
 ): Promise<void> {
   switch (message.stage) {
@@ -119,7 +119,7 @@ export async function handleSecureItMessage(
 /**
  * Explicit opt-in check for a write-capable agent: catalog membership
  * (the default-on `forConsumer` view) is necessary but not sufficient.
- * Only the literal boolean `extensions["secure-it"].enabled === true`
+ * Only the literal boolean `extensions["bump-it"].enabled === true`
  * makes a project eligible — absence, `false`, and non-boolean truthy
  * values are all out.
  */
@@ -132,7 +132,7 @@ export function isExplicitlyOptedIn(project: Project): boolean {
 async function handleInit(runtime: Runtime): Promise<void> {
   const candidates = runtime.catalog.forConsumer(CONSUMER_ID).list();
   const eligible = candidates.filter(isExplicitlyOptedIn);
-  runtime.logger.info("secure-it: init fan-out", {
+  runtime.logger.info("bump-it: init fan-out", {
     catalogCandidates: candidates.length,
     eligible: eligible.length,
   });
@@ -146,19 +146,19 @@ async function handleBreakdown(payload: BreakdownPayload, runtime: Runtime): Pro
   if (project === undefined || !isExplicitlyOptedIn(project)) {
     // Idempotent skip — the project disappeared or opted out between the
     // init fan-out and this delivery. Not an error; just don't act.
-    runtime.logger.info("secure-it: skipping breakdown — project missing or not opted in", {
+    runtime.logger.info("bump-it: skipping breakdown — project missing or not opted in", {
       projectId: payload.projectId,
     });
     return;
   }
 
   const sync = await runtime.syncWorkingCopies([project]);
-  const output = await runtime.runSkill<SecureItInput, SecureItOutput>({
-    entrypoint: "secure-it",
+  const output = await runtime.runSkill<BumpItInput, BumpItOutput>({
+    entrypoint: "bump-it",
     input: { project: { id: project.id, source: project.source } },
     workingCopies: sync.workingCopies,
   });
-  runtime.logger.info("secure-it: breakdown complete", {
+  runtime.logger.info("bump-it: breakdown complete", {
     projectId: project.id,
     alerts: output.alerts.length,
     pullRequests: output.pullRequests.length,
@@ -179,8 +179,8 @@ async function handleBreakdown(payload: BreakdownPayload, runtime: Runtime): Pro
 }
 
 async function handleRevisit(payload: RevisitPayload, runtime: Runtime): Promise<void> {
-  const output = await runtime.runSkill<SecureItRevisitInput, SecureItRevisitOutput>({
-    entrypoint: "secure-it-revisit",
+  const output = await runtime.runSkill<BumpItRevisitInput, BumpItRevisitOutput>({
+    entrypoint: "bump-it-revisit",
     input: {
       repo: payload.repo,
       branch: payload.branch,
@@ -191,7 +191,7 @@ async function handleRevisit(payload: RevisitPayload, runtime: Runtime): Promise
     // so no working copy is mounted for revisit.
     workingCopies: [],
   });
-  runtime.logger.info("secure-it: revisit complete", {
+  runtime.logger.info("bump-it: revisit complete", {
     repo: payload.repo,
     alertRef: payload.alertRef,
     outcome: output.outcome,
@@ -201,7 +201,7 @@ async function handleRevisit(payload: RevisitPayload, runtime: Runtime): Promise
 
   if (output.scheduleRevisit === undefined) return;
   if (payload.revisitCount >= REVISIT_CAP) {
-    runtime.logger.info("secure-it: revisit cap reached — not rescheduling", {
+    runtime.logger.info("bump-it: revisit cap reached — not rescheduling", {
       repo: payload.repo,
       alertRef: payload.alertRef,
       revisitCount: payload.revisitCount,
@@ -226,15 +226,15 @@ async function handleRevisit(payload: RevisitPayload, runtime: Runtime): Promise
 // trusting the cast. A malformed message fails loudly (SQS retry → DLQ)
 // rather than acting on garbage.
 
-function asBreakdownPayload(payload: SecureItPayload): BreakdownPayload {
+function asBreakdownPayload(payload: BumpItPayload): BreakdownPayload {
   const candidate = payload as Partial<BreakdownPayload>;
   if (typeof candidate.projectId !== "string" || candidate.projectId.length === 0) {
-    throw new Error("secure-it: breakdown payload requires a non-empty string 'projectId'");
+    throw new Error("bump-it: breakdown payload requires a non-empty string 'projectId'");
   }
   return candidate as BreakdownPayload;
 }
 
-function asRevisitPayload(payload: SecureItPayload): RevisitPayload {
+function asRevisitPayload(payload: BumpItPayload): RevisitPayload {
   const candidate = payload as Partial<RevisitPayload>;
   const stringsOk =
     isNonEmptyString(candidate.repo) &&
@@ -246,7 +246,7 @@ function asRevisitPayload(payload: SecureItPayload): RevisitPayload {
     candidate.revisitCount >= 0;
   if (!stringsOk || !countOk) {
     throw new Error(
-      "secure-it: revisit payload requires non-empty strings 'repo', 'branch', 'alertRef' " +
+      "bump-it: revisit payload requires non-empty strings 'repo', 'branch', 'alertRef' " +
         "and a non-negative integer 'revisitCount'",
     );
   }

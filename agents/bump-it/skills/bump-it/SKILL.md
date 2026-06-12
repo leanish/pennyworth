@@ -1,5 +1,5 @@
 ---
-name: secure-it
+name: bump-it
 description: Full dependency-freshness + CVE pass over one project — deps, Gradle wrapper, workflow actions, Docker image pins, doc version references — folded into ONE draft upgrade PR.
 compatibleCodingAgents:
   - claude-code
@@ -57,12 +57,12 @@ outputSchema:
             type: string
 ---
 
-# secure-it — dependency freshness + CVE triage, one draft PR per project
+# bump-it — dependency freshness + CVE triage, one draft PR per project
 
 You are running a full dependency-freshness and CVE pass over the project mounted in the working
 copy (`<project.id>`). Triage with REAL repo state first; prefer CLI over browsing unless a primary
 source is needed to verify a version or advisory. The result is **one batched draft PR** carrying
-every safe upgrade — never one PR per dependency. A separate follow-up run (`secure-it-revisit`)
+every safe upgrade — never one PR per dependency. A separate follow-up run (`bump-it-revisit`)
 handles CI results later — you never wait for CI.
 
 ## Workflow
@@ -94,7 +94,7 @@ handles CI results later — you never wait for CI.
    Verify interesting findings against primary sources (Maven Central / Gradle Plugin Portal /
    official action releases / Gradle releases) — not search snippets.
 
-5. **Apply the upgrades on one branch**: `secure-it/dependency-refresh`.
+5. **Apply the upgrades on one branch**: `bump-it/dependency-refresh`.
    - Wrapper bumps: `./gradlew wrapper --gradle-version <target>` then `./gradlew wrapper` again;
      revert unrelated generated churn before committing.
    - Workflow actions: update the `uses:` pins deliberately.
@@ -119,13 +119,13 @@ handles CI results later — you never wait for CI.
    - Remove stale CVE floors whose fallback resolution is already outside the affected range.
 
 8. **Open or update the draft PR**:
-   - branch `secure-it/dependency-refresh`, **draft** PR against the default branch, label
-     `leanish:agent:secure-it`, marker footer `<!-- leanish:agent=secure-it; alertRef=dependency-refresh -->`;
+   - branch `bump-it/dependency-refresh`, **draft** PR against the default branch, label
+     `leanish:agent:bump-it`, marker footer `<!-- leanish:agent=bump-it; alertRef=dependency-refresh -->`;
    - PR body: what was upgraded (deps / wrapper / actions / image pins / docs), what was
      deliberately skipped and why,
      the CVE findings with their resolution state, and which Dependabot PRs it folds in
      (mention them with `Closes #<n>` ONLY when the fold is exact);
-   - idempotent re-runs: if an open `secure-it/dependency-refresh` PR exists, UPDATE that branch
+   - idempotent re-runs: if an open `bump-it/dependency-refresh` PR exists, UPDATE that branch
      (regular pushes) instead of opening a duplicate;
    - never wait for CI in-process; never merge; never force-push; never push to the default branch.
 
@@ -142,5 +142,5 @@ End your response with a single fenced JSON block as the final non-whitespace co
 output schema:
 
 ```json
-{ "summary": "…", "alerts": [ { "alertRef": "CVE-2026-12345", "outcome": "pr-opened" } ], "pullRequests": [ { "alertRef": "dependency-refresh", "url": "…", "branch": "secure-it/dependency-refresh", "number": 7, "title": "…" } ] }
+{ "summary": "…", "alerts": [ { "alertRef": "CVE-2026-12345", "outcome": "pr-opened" } ], "pullRequests": [ { "alertRef": "dependency-refresh", "url": "…", "branch": "bump-it/dependency-refresh", "number": 7, "title": "…" } ] }
 ```

@@ -1,4 +1,4 @@
-# AGENTS.md — agent-secure-it
+# AGENTS.md — agent-bump-it
 
 Working rules for any agent editing this package. Key carry-overs from the shared agent guidelines:
 
@@ -9,8 +9,8 @@ Working rules for any agent editing this package. Key carry-overs from the share
 ## Vocabulary
 - **American English everywhere.** Anchored on `catalog`.
 - **Stage / sourceTrigger** are orthogonal. Don't conflate.
-- **Skill naming**: `secure-it` is the breakdown-stage skill (bare agent name); `secure-it-revisit` is the revisit-stage skill (`<agent>-<stage>` convention).
-- **Branch convention** for opened PRs: `secure-it/<alertRef>` (the batched pass uses the stable `secure-it/dependency-refresh`). The prefix is the routing key for a future webhook-driven revisit source.
+- **Skill naming**: `bump-it` is the breakdown-stage skill (bare agent name); `bump-it-revisit` is the revisit-stage skill (`<agent>-<stage>` convention).
+- **Branch convention** for opened PRs: `bump-it/<alertRef>` (the batched pass uses the stable `bump-it/dependency-refresh`). The prefix is the routing key for a future webhook-driven revisit source.
 
 ## Code
 - Node 24 ESM, TypeScript strict.

@@ -15,8 +15,8 @@ describe("S3Catalog.parseBundle", () => {
             description: "ATC repo",
           },
           {
-            id: "leanish/agent-secureit",
-            source: { url: "https://github.com/leanish/agent-secureit.git" }, // branch default
+            id: "leanish/agent-bumpit",
+            source: { url: "https://github.com/leanish/agent-bumpit.git" }, // branch default
             extensions: {},
           },
         ],

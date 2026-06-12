@@ -15,20 +15,20 @@ const REVIEWIT: Project = {
   extensions: {},
 };
 
-const SECUREIT: Project = {
-  id: "leanish/agent-secureit",
-  source: { url: "https://github.com/leanish/agent-secureit.git", branch: "main" },
-  extensions: { secureit: { enabled: true }, atc: { enabled: false } },
+const BUMPIT: Project = {
+  id: "leanish/agent-bumpit",
+  source: { url: "https://github.com/leanish/agent-bumpit.git", branch: "main" },
+  extensions: { bumpit: { enabled: true }, atc: { enabled: false } },
 };
 
 describe("bundleCatalog", () => {
   it("emits version: '1' and projects sorted by id ascending", () => {
-    const body = bundleCatalog([REVIEWIT, ATC, SECUREIT]);
+    const body = bundleCatalog([REVIEWIT, ATC, BUMPIT]);
     const parsed = JSON.parse(body);
     expect(parsed.version).toBe("1");
     expect(parsed.projects.map((p: { id: string }) => p.id)).toEqual([
       "leanish/agent-atc",
-      "leanish/agent-secureit",
+      "leanish/agent-bumpit",
       "leanish/reviewit",
     ]);
   });
@@ -62,9 +62,9 @@ describe("bundleCatalog", () => {
   });
 
   it("sorts extension keys ascending for stability", () => {
-    const body = bundleCatalog([SECUREIT]);
+    const body = bundleCatalog([BUMPIT]);
     const parsed = JSON.parse(body);
-    expect(Object.keys(parsed.projects[0].extensions)).toEqual(["atc", "secureit"]);
+    expect(Object.keys(parsed.projects[0].extensions)).toEqual(["atc", "bumpit"]);
   });
 
   it("recursively sorts nested object keys inside each extension namespace", () => {
@@ -105,8 +105,8 @@ describe("bundleCatalog", () => {
   });
 
   it("byte-identical input → byte-identical output (stable)", () => {
-    const a = bundleCatalog([ATC, REVIEWIT, SECUREIT]);
-    const b = bundleCatalog([SECUREIT, ATC, REVIEWIT]); // different input order
+    const a = bundleCatalog([ATC, REVIEWIT, BUMPIT]);
+    const b = bundleCatalog([BUMPIT, ATC, REVIEWIT]); // different input order
     expect(a).toBe(b);
   });
 });

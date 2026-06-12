@@ -7,20 +7,20 @@ import { defaultRuntimeSkillsDir } from "@leanish/runtime";
 import { SkillLoader } from "@leanish/runtime/testing";
 
 /**
- * Sanity-check that secure-it's two entry-point skills live in this
+ * Sanity-check that bump-it's two entry-point skills live in this
  * package and load cleanly via the runtime's `SkillLoader` (frontmatter
  * parses, schemas pass the runtime's schema-subset gate). The shared
  * support skill (`karpathy-guidelines`) is inherited from the runtime's
  * bundled skills/ via the multi-dir fallback, mirroring the production
  * search order.
  */
-describe("agent-secure-it skills", () => {
+describe("agent-bump-it skills", () => {
   const agentSkillsDir = join(dirname(fileURLToPath(import.meta.url)), "..", "skills");
 
-  it("secure-it loads as a valid entry-point skill", async () => {
+  it("bump-it loads as a valid entry-point skill", async () => {
     const loader = new SkillLoader({ skillsDirs: [agentSkillsDir] });
-    const skill = await loader.loadEntrypoint("secure-it");
-    expect(skill.name).toBe("secure-it");
+    const skill = await loader.loadEntrypoint("bump-it");
+    expect(skill.name).toBe("bump-it");
     expect(skill.compatibleCodingAgents).toEqual(["claude-code", "codex"]);
     expect(skill.inputSchema).toMatchObject({ type: "object", required: ["project"] });
     expect(skill.outputSchema).toMatchObject({
@@ -30,10 +30,10 @@ describe("agent-secure-it skills", () => {
     expect(skill.body.length).toBeGreaterThan(0);
   });
 
-  it("secure-it-revisit loads as a valid entry-point skill", async () => {
+  it("bump-it-revisit loads as a valid entry-point skill", async () => {
     const loader = new SkillLoader({ skillsDirs: [agentSkillsDir] });
-    const skill = await loader.loadEntrypoint("secure-it-revisit");
-    expect(skill.name).toBe("secure-it-revisit");
+    const skill = await loader.loadEntrypoint("bump-it-revisit");
+    expect(skill.name).toBe("bump-it-revisit");
     expect(skill.compatibleCodingAgents).toEqual(["claude-code", "codex"]);
     expect(skill.inputSchema).toMatchObject({
       type: "object",

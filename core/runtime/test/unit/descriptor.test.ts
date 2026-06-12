@@ -68,7 +68,7 @@ skills:
 
   it("rejects scheduler trigger in phase-1", () => {
     const yaml = `
-identifier: secureit
+identifier: bumpit
 compute: lambda
 triggers:
   - type: scheduler
@@ -78,7 +78,7 @@ stages: [init]
 codingAgent: claude-code
 model: m
 skills:
-  entrypoints: [secureit]
+  entrypoints: [bumpit]
 `;
     expect(() => parseDescriptor(yaml, { phase: "phase-1" })).toThrowError(
       DescriptorValidationError,
@@ -87,7 +87,7 @@ skills:
 
   it("accepts scheduler trigger when running in phase-2", () => {
     const yaml = `
-identifier: secureit
+identifier: bumpit
 compute: lambda
 triggers:
   - type: scheduler
@@ -97,7 +97,7 @@ stages: [init, breakdown, revisit]
 codingAgent: claude-code
 model: m
 skills:
-  entrypoints: [secureit, secureit-revisit]
+  entrypoints: [bumpit, bumpit-revisit]
 `;
     const descriptor = parseDescriptor(yaml, { phase: "phase-2" });
     expect(descriptor.triggers[0]).toMatchObject({ type: "scheduler" });

@@ -36,7 +36,7 @@ export interface AwsSelfPublisherOptions {
   readonly queueUrl: string;
   /** Same queue as ARN (Scheduler targets take ARNs). */
   readonly queueArn: string;
-  /** Per-agent EventBridge Scheduler group, e.g. `leanish-agent-secure-it`. */
+  /** Per-agent EventBridge Scheduler group, e.g. `leanish-agent-bump-it`. */
   readonly scheduleGroupName: string;
   /** Role Scheduler assumes to SendMessage to the queue (provisioned by infra). */
   readonly schedulerRoleArn: string;

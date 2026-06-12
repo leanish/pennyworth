@@ -7,7 +7,7 @@ ask-the-code (abbreviated "ATC" below) — Layer-3 agent for codebase Q&A. Built
 **Sibling repos** (suite-0004 — one agent / library / one repo / one deployable):
 
 - `../../core/runtime/` — the substrate this depends on.
-- `../secure-it/` — a fellow Layer-3 agent (phase-2).
+- `../bump-it/` — a fellow Layer-3 agent (phase-2).
 
 ## Status
 

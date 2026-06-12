@@ -43,13 +43,13 @@ describe("catalogit S3 round-trip", () => {
       id: "leanish/agent-atc",
       source: { url: "https://github.com/leanish/agent-atc.git", branch: "main" },
       description: "ATC repo",
-      extensions: { atc: { enabled: true }, secureit: { enabled: false } },
+      extensions: { atc: { enabled: true }, bumpit: { enabled: false } },
     },
     {
       id: "leanish/shared-lib",
       source: { url: "https://github.com/leanish/shared-lib.git", branch: "main" },
       description: "Shared library",
-      extensions: { atc: { enabled: true }, secureit: { enabled: true } },
+      extensions: { atc: { enabled: true }, bumpit: { enabled: true } },
     },
   ];
 
@@ -74,9 +74,9 @@ describe("catalogit S3 round-trip", () => {
 
     const catalog = await S3Catalog.load({ bucket, client });
 
-    // secureit: only `leanish/shared-lib` has `enabled: true`; `leanish/agent-atc` opted out
-    const secureitScope = await catalog.forConsumer("secureit").list();
-    expect(secureitScope.map((p) => p.id)).toEqual(["leanish/shared-lib"]);
+    // bumpit: only `leanish/shared-lib` has `enabled: true`; `leanish/agent-atc` opted out
+    const bumpitScope = await catalog.forConsumer("bumpit").list();
+    expect(bumpitScope.map((p) => p.id)).toEqual(["leanish/shared-lib"]);
 
     // atc: both opted in
     const atcScope = await catalog.forConsumer("atc").list();

@@ -10,13 +10,13 @@ import * as lambdaModule from "../src/lambda.js";
  * The verify→claim→dispatch path itself is covered by the runtime's
  * sqs-lambda-shim tests; the stage logic by `handler.test.ts`.
  */
-describe("agent-secure-it lambda module", () => {
+describe("agent-bump-it lambda module", () => {
   it("exposes the canonical Lambda surface", () => {
-    expect(typeof lambdaModule.secureItLambdaHandler).toBe("function");
-    expect(typeof lambdaModule.createSecureItLambdaHandler).toBe("function");
+    expect(typeof lambdaModule.bumpItLambdaHandler).toBe("function");
+    expect(typeof lambdaModule.createBumpItLambdaHandler).toBe("function");
   });
 
-  it("createSecureItLambdaHandler fails fast when required env vars are missing", async () => {
+  it("createBumpItLambdaHandler fails fast when required env vars are missing", async () => {
     const requiredVars = [
       "IDEMPOTENCY_TABLE_NAME",
       "CATALOG_BUCKET",
@@ -32,7 +32,7 @@ describe("agent-secure-it lambda module", () => {
     }
     try {
       // The first missing var (checked in declaration order) is reported.
-      await expect(lambdaModule.createSecureItLambdaHandler()).rejects.toThrowError(
+      await expect(lambdaModule.createBumpItLambdaHandler()).rejects.toThrowError(
         /IDEMPOTENCY_TABLE_NAME/,
       );
     } finally {

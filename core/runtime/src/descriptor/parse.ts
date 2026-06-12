@@ -21,7 +21,7 @@ import { STAGES, type Stage } from "../types/stage.js";
 /**
  * Phase selector controls which trigger types are accepted.
  *   - phase 1: `consumer` only (ATC).
- *   - phase 2: `consumer` + `scheduler` (adds secureit / publishDelayed).
+ *   - phase 2: `consumer` + `scheduler` (adds bumpit / publishDelayed).
  *   - phase 3+: also accepts webhook + alert triggers.
  */
 export type DescriptorPhase = "phase-1" | "phase-2" | "phase-3";

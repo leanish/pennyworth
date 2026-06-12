@@ -8,7 +8,7 @@ Catalog read-side library for the leanish agent suite. Defines the canonical `Pr
 
 - `../runtime/` — consumes catalogit; re-exports the canonical types for downstream agents.
 - `../../agents/ask-the-code/` — uses catalog access via `runtime.catalog` (ATC Q&A backend).
-- `../../agents/secure-it/` — same.
+- `../../agents/bump-it/` — same.
 
 ## Public API
 

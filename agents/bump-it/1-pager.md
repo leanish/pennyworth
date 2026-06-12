@@ -1,6 +1,6 @@
-# Secure-it — One-Pager
+# Bump-it — One-Pager
 
-*For approval. A plain-language summary of the Secure-it assistant.*
+*For approval. A plain-language summary of the Bump-it assistant.*
 
 ## What it is
 
@@ -36,7 +36,7 @@ common source of risk when it falls behind.
 
 - **Lower security risk** — components stay current, closing known weaknesses sooner.
 - **Audit-ready** — annual security audits routinely ask whether there is a defined, repeatable
-  process for keeping systems secure and patched. Secure-it is part of that process: automated, consistent,
+  process for keeping systems secure and patched. Bump-it is part of that process: automated, consistent,
   and documented, with **fast reaction times** when a new fix or version is released — far quicker
   than manual upkeep that competes with other priorities.
 - **Less manual toil** — engineers review a prepared, tested change instead of doing the upkeep by hand.
