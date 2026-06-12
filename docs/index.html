@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>leanish — a butler for your codebase</title>
+<meta name="description" content="A suite of focused, human-gated AI agents on one shared runtime. AI does the toil; you make every call." />
+<link rel="stylesheet" href="assets/site.css" />
+</head>
+<body>
+
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="./"><b>leanish</b> · agent suite</a>
+  <a class="lnk on" href="./">Home</a>
+  <a class="lnk" href="overview.html">Overview</a>
+  <a class="lnk" href="architecture.html">Architecture</a>
+  <a class="lnk" href="fleet.html">Fleet</a>
+  <a class="lnk" href="future.html">Future</a>
+  <a class="lnk" href="presentation/">Presentation</a>
+  <a class="lnk" href="https://github.com/leanish/pennyworth">GitHub</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <p class="eyebrow">an attainable — almost obvious — idea</p>
+  <h1>Focus on the <span class="grad">product</span>,<br>not the plumbing.</h1>
+  <p class="lede">A small crew of focused AI specialists handles the toil around your code — questions, dependencies, docs, triage — and tees the rest up for your review. <b style="color:var(--fg)">You keep the judgment calls; they take the legwork.</b> Built from boring cloud pieces you already know — which is what makes it so doable.</p>
+  <div class="btns">
+    <a class="btn primary" href="presentation/">▶ Watch the 12-slide presentation</a>
+    <a class="btn" href="overview.html">Read the docs</a>
+    <a class="btn" href="https://github.com/leanish/pennyworth">Star it on GitHub</a>
+  </div>
+</div></header>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">the problem</p>
+  <h2>Engineering runs on <span class="grad">toil</span>.</h2>
+  <div class="grid g2">
+    <ul class="clean" style="margin:0">
+      <li>Answering “how does this part work?” for the hundredth time.</li>
+      <li>Chasing dependency updates until something falls behind and bites.</li>
+    </ul>
+    <ul class="clean" style="margin:0">
+      <li>Docs that quietly drift away from what the code actually does.</li>
+      <li>Re-triaging the same kinds of problems across systems.</li>
+    </ul>
+  </div>
+  <p class="kicker">What if a small fleet of AI specialists handled the toil — and <span class="grad">you stayed in control?</span></p>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">the idea</p>
+  <h2>One shared runtime. Many focused agents.<br><span class="grad">Each does one job.</span></h2>
+  <div class="grid g3">
+    <div class="card"><span class="accentbar"></span><h3>Not autonomous</h3><p>Every agent only <b style="color:var(--cyan)">reads</b>, <b style="color:var(--violet)">advises</b>, or <b style="color:var(--amber)">proposes</b>. A person approves anything that goes live.</p></div>
+    <div class="card"><span class="accentbar"></span><h3>One foundation</h3><p>The shared runtime does the mechanical work in plain, <b style="color:var(--green)">deterministic</b> code — no AI for the plumbing. The coding agent runs only where judgment is needed.</p></div>
+    <div class="card"><span class="accentbar"></span><h3>Cloud-native</h3><p>Hosted as managed AWS services on a shared catalog of your projects — the same access controls, monitoring, and reliability as the rest of your stack.</p></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">meet the fleet</p>
+  <h2>A handful of specialists, <span class="grad">one suite</span>.</h2>
+  <div class="grid g3">
+    <a class="card link" href="fleet.html#ask-the-code"><span class="accentbar"></span><span class="tag t-read">reads</span><h3 style="margin-top:10px">Ask-the-code</h3><p class="slo">“What the code does, not what the docs claim.”</p><p>Plain-language answers grounded in the actual source.</p></a>
+    <a class="card link" href="fleet.html#triage-it"><span class="accentbar"></span><span class="tag t-adv">advises</span><h3 style="margin-top:10px">Triage-it</h3><p class="slo">“From a problem to a diagnosis.”</p><p>Correlates code + config + stats → next steps. Mutates nothing.</p></a>
+    <a class="card link" href="fleet.html#secure-it"><span class="accentbar"></span><span class="tag t-prop">proposes</span><h3 style="margin-top:10px">Secure-it</h3><p class="slo">“Staying current is staying secure.”</p><p>One batched dependency-refresh draft PR per project, revisited until CI is green.</p></a>
+    <a class="card link" href="fleet.html#document-it"><span class="accentbar"></span><span class="tag t-prop">proposes</span><h3 style="margin-top:10px">Document-it</h3><p class="slo">“Keeps the docs honest.”</p><p>Checks docs against the code and proposes the fixes.</p></a>
+    <a class="card link" href="fleet.html#ship-it"><span class="accentbar"></span><span class="tag t-prop">proposes</span><h3 style="margin-top:10px">Ship-it</h3><p class="slo">“A person at every gate.”</p><p>Shepherds a ticket through its lifecycle — always handing back to a human.</p></a>
+    <a class="card link" href="fleet.html#monitor-it"><span class="accentbar"></span><span class="tag t-adv">advises</span><h3 style="margin-top:10px">Monitor-it</h3><p class="slo">“Alerts → next step.”</p><p>Turns an incoming alert into a triaged recommendation. <span class="dim">(future)</span></p></a>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">how it works</p>
+  <h2>From a trigger to a <span class="grad">recommendation</span>.</h2>
+  <div class="diagram">
+    <div class="row">
+      <div class="node"><span class="nt">Trigger</span><span class="ns">webhook · schedule · a question</span></div>
+      <span class="arrow">→</span>
+      <div class="node gate"><span class="nt">Gate (the filter)</span><span class="ns">no match → nothing runs</span></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="nt">Queue</span><span class="ns">one job, once</span></div>
+      <span class="arrow">→</span>
+      <div class="node core"><span class="nt">Coding agent</span><span class="ns">Claude / Codex does the work</span></div>
+      <span class="arrow">→</span>
+      <div class="node human"><span class="nt">A human</span><span class="ns">makes the call</span></div>
+    </div>
+  </div>
+  <p class="muted" style="margin-top:18px;font-size:15px">The gate is the cost trick: irrelevant events never start an agent. Everything consequential lands on a person. The full mechanics — envelopes, idempotency, skills — are on the <a href="architecture.html">architecture page</a>.</p>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">where it stands</p>
+  <h2>Real progress — and <span class="grad">honest</span> about the rest.</h2>
+  <div class="status">
+    <div class="strow"><span class="pill poc">Built</span><span class="what">The catalog, the runtime, and <b>all five agents</b> (+ ship-it’s webhook gate) — green test suites in dev: unit everywhere, LocalStack integration on the core seams.</span></div>
+    <div class="strow"><span class="pill scaff">Validating</span><span class="what">Deploy wiring — every stack synthesizes and is assertion-tested; container images &amp; secret-backed config still landing.</span></div>
+    <div class="strow"><span class="pill design">Designed</span><span class="what"><b>Monitor-it</b> — specced, not yet built. Ship-it’s later steps are implemented but <b>dark</b>, flipped live one at a time.</span></div>
+  </div>
+  <p class="muted" style="margin-top:18px;font-size:15px">The full open-items list, separated into validating / blockers / possibilities, lives on the <a href="future.html">future page</a>.</p>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">go deeper</p>
+  <h2>The docs.</h2>
+  <div class="grid g2">
+    <a class="card link" href="overview.html"><span class="accentbar"></span><h3>Overview</h3><p>What it solves, how it works, and the five things it optimizes for — human judgment, cost, trust, operability, extensibility.</p></a>
+    <a class="card link" href="architecture.html"><span class="accentbar"></span><h3>Architecture</h3><p>Four layers, a message’s life (signed vs self/scheduler paths), idempotency, skills, and how it all runs on a laptop.</p></a>
+    <a class="card link" href="fleet.html"><span class="accentbar"></span><h3>The fleet</h3><p>Per-agent tour: mission, trigger, safety posture, and the honest ship-it rollout table.</p></a>
+    <a class="card link" href="future.html"><span class="accentbar"></span><h3>Future</h3><p>Validating now, known blockers to a first deploy, committed direction, and the explicitly speculative ideas.</p></a>
+  </div>
+  <p class="muted" style="margin-top:20px;font-size:15px">Engineering records (kept on GitHub): <a href="https://github.com/leanish/pennyworth/blob/main/docs/assumptions.md">implementation assumptions</a> · <a href="https://github.com/leanish/pennyworth/blob/main/docs/consolidation-history.md">monorepo consolidation audit</a> · <a href="https://github.com/leanish/pennyworth/blob/main/docs/PHASE-1-ACCEPTANCE.md">phase-1 acceptance (historical)</a>. Package-level depth lives next to the code — every package has a README.</p>
+</div></section>
+
+<footer class="pfoot"><div class="wrap">
+  <span class="dim" style="font-family:var(--mono);font-size:13px"><b style="color:var(--fg)">pennyworth</b> — the leanish agent suite · <a href="https://github.com/leanish/pennyworth">github.com/leanish/pennyworth</a></span>
+  <a class="next" href="overview.html">Start with the overview →</a>
+</div></footer>
+
+</body>
+</html>

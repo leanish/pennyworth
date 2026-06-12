@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Architecture — leanish</title>
+<meta name="description" content="Four layers, a message's life, and the mechanics that make the suite safe to say yes to." />
+<link rel="stylesheet" href="assets/site.css" />
+</head>
+<body>
+
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="./"><b>leanish</b> · agent suite</a>
+  <a class="lnk" href="./">Home</a>
+  <a class="lnk" href="overview.html">Overview</a>
+  <a class="lnk on" href="architecture.html">Architecture</a>
+  <a class="lnk" href="fleet.html">Fleet</a>
+  <a class="lnk" href="future.html">Future</a>
+  <a class="lnk" href="presentation/">Presentation</a>
+  <a class="lnk" href="https://github.com/leanish/pennyworth">GitHub</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <p class="eyebrow">architecture</p>
+  <h1>Four clean <span class="grad">layers</span>.</h1>
+  <p class="lede">How the suite is put together and why. This page stays at the system level — each package README documents its own internals.</p>
+</div></header>
+
+<section class="block"><div class="wrap">
+  <h2>The layers.</h2>
+  <div class="diagram">
+    <div class="row"><div class="node accent"><span class="nt">Catalog</span><span class="ns">your projects + per-agent opt-ins</span></div></div>
+    <div class="lbl">↓ read by</div>
+    <div class="row"><div class="node core" style="min-width:320px"><span class="nt">Runtime</span><span class="ns">shared deterministic plumbing · queues · envelopes · idempotency · working copies · skills · coding-agent execution</span></div></div>
+    <div class="lbl">↓ powers the fleet</div>
+    <div class="row fleetbar">
+      <a class="chip" href="fleet.html#ask-the-code">Ask-the-code</a><a class="chip" href="fleet.html#secure-it">Secure-it</a><a class="chip" href="fleet.html#document-it">Document-it</a>
+      <a class="chip" href="fleet.html#triage-it">Triage-it</a><a class="chip" href="fleet.html#ship-it">Ship-it</a><a class="chip" href="fleet.html#normalizer">+ webhook gate</a>
+    </div>
+    <div class="lbl">↓ deployed by</div>
+    <div class="row"><div class="node"><span class="nt">Infra (CDK)</span><span class="ns">provisions each agent from its descriptor: compute, permissions, triggers</span></div></div>
+  </div>
+  <div class="grid g2" style="margin-top:28px">
+    <div class="card"><span class="accentbar"></span><h3>Catalog <span class="dim">· core/catalog-it</span></h3><p>The canonical <code>Project</code> shape, a curation CLI, and read-side implementations (filesystem locally, S3 bundle when deployed, in-memory in tests). Write-capable agents additionally gate on <code>extensions["&lt;agent-id&gt;"].enabled === true</code> — catalog membership alone never grants write access. <a href="https://github.com/leanish/pennyworth/blob/main/core/catalog-it/README.md">README →</a></p></div>
+    <div class="card"><span class="accentbar"></span><h3>Runtime <span class="dim">· core/runtime</span></h3><p>Everything mechanical, in plain TypeScript: the SQS Lambda shim, envelope verification, idempotency, stage dispatch, skill staging, working-copy sync, typed clients for declared needs, self-publishing, logging with correlation + secret redaction. <a href="https://github.com/leanish/pennyworth/blob/main/core/runtime/README.md">README →</a></p></div>
+    <div class="card"><span class="accentbar"></span><h3>Agents <span class="dim">· agents/*</span></h3><p>One thin, independently deployable specialist per job: a descriptor (<code>agent.yaml</code>), per-stage handlers, and its entry-point skills. Agents never call each other. <a href="fleet.html">The fleet →</a></p></div>
+    <div class="card"><span class="accentbar"></span><h3>Infra <span class="dim">· infra/</span></h3><p>CDK reads every registered descriptor and provisions what it implies: queue + DLQ pair, scheduler group/tick for scheduled agents, Lambda + IAM scoped to declared needs, the webhook gate’s Function URL stack. Application repos carry zero IaC. <a href="https://github.com/leanish/pennyworth/blob/main/infra/README.md">README →</a></p></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">a message’s life</p>
+  <h2>Two doors in, <span class="grad">one disciplined path</span> through.</h2>
+  <div class="grid g2">
+    <div class="card"><span class="accentbar"></span><h3>Signed consumer envelopes</h3><p>A question from a person, a normalized webhook event: HMAC over canonical JSON, key resolved per consumer, sender registered in a DynamoDB <b>consumer registry</b> with the message kinds it may send.</p></div>
+    <div class="card"><span class="accentbar"></span><h3>Self / scheduler messages</h3><p>An agent’s own follow-up stages and the recurring tick are <b>unsigned</b> — the input queue is IAM-private to the agent and its scheduler role. A guard rejects unsigned bodies on agents that also accept consumer traffic unless trust is explicitly acknowledged.</p></div>
+  </div>
+  <div class="diagram" style="margin-top:30px">
+    <div class="row">
+      <div class="node"><span class="nt">Consumer / Scheduler</span><span class="ns">sends a message</span></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="nt">SQS</span><span class="ns">queue + DLQ</span></div>
+      <span class="arrow">→</span>
+      <div class="node core"><span class="nt">Lambda shim</span><span class="ns">the runtime’s front door</span></div>
+    </div>
+    <div class="lbl">↓ branch by message kind</div>
+    <div class="row">
+      <div class="node accent"><span class="nt">signed envelope?</span><span class="ns">verify vs consumer registry + SSM key</span></div>
+      <div class="node gate"><span class="nt">self / scheduler?</span><span class="ns">parse + trust guard (no envelope)</span></div>
+    </div>
+    <div class="lbl">↓ then, for every message</div>
+    <div class="row">
+      <div class="node"><span class="nt">Idempotency claim</span><span class="ns">DynamoDB conditional write</span></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="nt">Dispatch by stage</span><span class="ns">agent handler</span></div>
+      <span class="arrow">→</span>
+      <div class="node core"><span class="nt">Skill run</span><span class="ns">coding agent subprocess · staged working copy · declared needs</span></div>
+    </div>
+    <div class="lbl">↓ output is schema-validated, then</div>
+    <div class="row">
+      <div class="node"><span class="nt">Reply / self-publish</span><span class="ns">next stage, terminal reply, lifecycle events</span></div>
+      <span class="arrow">→</span>
+      <div class="node human"><span class="nt">A human</span><span class="ns">draft PR · comment · answer — a person decides</span></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">the mechanics</p>
+  <h2>Briefly, the <span class="grad">clever-but-boring</span> parts.</h2>
+  <div class="grid g2">
+    <div class="card"><span class="accentbar"></span><h3>Idempotency</h3><p>A conditional claim in DynamoDB: <b>completed</b>, <b>live in-flight</b>, or <b>expired/reclaimable in-flight</b> (an ownership deadline decides liveness). SQS is at-least-once, so duplicates are expected: completed duplicates acknowledge without re-running the skill; still-in-flight duplicates return to the queue for retry; expired claims can be reclaimed by the next delivery.</p></div>
+    <div class="card"><span class="accentbar"></span><h3>Stages &amp; delayed self-publish</h3><p>Multi-step agents (secure-it’s <code>init → breakdown → revisit</code>) self-publish their next stage: <code>publish</code> goes straight to the agent’s own queue; <code>publishDelayed</code> creates a one-shot EventBridge Scheduler schedule whose name derives from <code>{agent, stage, payload}</code> — re-publishing the same logical work dedupes onto the first schedule.</p></div>
+    <div class="card"><span class="accentbar"></span><h3>Skills</h3><p>The unit of agent behavior: a focused instruction set with declared input/output schemas. The runtime stages the agent’s skills (with runtime-bundled fallbacks), mounts the synced working copy, runs the coding agent as a subprocess, and validates output against the schema. Tests swap in a fake runner — no live model needed.</p></div>
+    <div class="card"><span class="accentbar"></span><h3>Needs</h3><p>An agent declares what it touches (<code>github</code>, <code>sqs</code>, <code>s3</code>, …); the runtime wires typed clients and infra derives IAM from the same declaration. Undeclared access fails loudly.</p></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">running it locally</p>
+  <h2>The production seams, <span class="grad">on a laptop</span>.</h2>
+  <div class="grid g3">
+    <div class="card"><span class="accentbar"></span><h3><code>run-local</code> CLI</h3><p>Feeds one message through the real dispatch/skill path with a filesystem catalog and a local working copy; <code>--fake-runner</code> for plumbing smoke tests, the real runner for end-to-end proofs. <span class="dim">Known gap: it processes the one message it’s given — no fan-out drain yet.</span></p></div>
+    <div class="card"><span class="accentbar"></span><h3>LocalStack suites</h3><p>Every core package and agent ships <code>test:integration</code> against real AWS SDK calls routed to LocalStack. The harness fails loudly when LocalStack is unreachable. <span class="dim">Honest limitation: LocalStack Community’s Scheduler is CRUD-only (schedules never fire), so the suite verifies the full CreateSchedule contract and simulates the fire byte-for-byte.</span></p></div>
+    <div class="card"><span class="accentbar"></span><h3>Lambda rehearsal</h3><p>ask-the-code builds its real container image and exercises it through the AWS Runtime Interface Emulator against LocalStack — the closest-to-production path that runs locally.</p></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">design decisions</p>
+  <h2>Worth knowing.</h2>
+  <div class="grid g2">
+    <div class="card"><h3>No central brain</h3><p>Coordination happens where humans already coordinate — the ticket and the PR. Agents stay independently adoptable and independently failable.</p></div>
+    <div class="card"><h3>Deterministic plumbing, judgment at the edge</h3><p>The runtime never asks a model to do something code can do. That’s the cost story, the predictability story, and the testability story at once.</p></div>
+    <div class="card"><h3>Descriptor-driven everything</h3><p><code>agent.yaml</code> is the single declaration: the runtime validates against it, infra provisions from it, and registry⇄descriptor consistency is enforced by tests.</p></div>
+    <div class="card"><h3>Fail loud, never silently degrade</h3><p>Unreachable LocalStack throws; undeclared needs throw; unverifiable envelopes are rejected with a reason taxonomy; the integration gate never silently skips.</p></div>
+  </div>
+  <p class="muted" style="margin-top:20px;font-size:15px">Cross-cutting implementation decisions (and their rationale) are recorded in the <a href="https://github.com/leanish/pennyworth/blob/main/docs/assumptions.md">assumptions record</a>; per-agent decisions live in each agent’s <code>ASSUMPTIONS.md</code>.</p>
+</div></section>
+
+<footer class="pfoot"><div class="wrap">
+  <a href="overview.html">← Overview</a>
+  <a class="next" href="fleet.html">Next: The fleet →</a>
+</div></footer>
+
+</body>
+</html>

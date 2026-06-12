@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The fleet — leanish</title>
+<meta name="description" content="One specialist per job: the leanish agents, their postures, and the honest rollout state." />
+<link rel="stylesheet" href="assets/site.css" />
+</head>
+<body>
+
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="./"><b>leanish</b> · agent suite</a>
+  <a class="lnk" href="./">Home</a>
+  <a class="lnk" href="overview.html">Overview</a>
+  <a class="lnk" href="architecture.html">Architecture</a>
+  <a class="lnk on" href="fleet.html">Fleet</a>
+  <a class="lnk" href="future.html">Future</a>
+  <a class="lnk" href="presentation/">Presentation</a>
+  <a class="lnk" href="https://github.com/leanish/pennyworth">GitHub</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <p class="eyebrow">the fleet</p>
+  <h1>One specialist <span class="grad">per job</span>.</h1>
+  <p class="lede">Each agent is its own deployable on the shared runtime; none calls another. Postures: <span class="tag t-read">reads</span> touches nothing · <span class="tag t-adv">advises</span> recommends, mutates nothing · <span class="tag t-prop">proposes</span> draft PRs/comments only — never merges, approves, deploys, or transitions final state.</p>
+</div></header>
+
+<section class="block" id="ask-the-code"><div class="wrap">
+  <span class="tag t-read">reads</span>
+  <h2 style="margin-top:12px">ask-the-code — <span class="grad">“what the code does, not what the docs claim”</span></h2>
+  <p style="max-width:72ch">The read-only Q&amp;A agent and the suite’s pathfinder: it stood up the shared foundation and carries the richest test ladder (unit → LocalStack integration → real-container Lambda rehearsal). Answers arrive as terminal replies on the consumer’s reply queue, grounded in the actual source.</p>
+  <p><a href="https://github.com/leanish/pennyworth/blob/main/agents/ask-the-code/README.md">Package README →</a></p>
+</div></section>
+
+<section class="block" id="triage-it"><div class="wrap">
+  <span class="tag t-adv">advises</span>
+  <h2 style="margin-top:12px">triage-it — <span class="grad">“from a problem to a diagnosis”</span></h2>
+  <p style="max-width:72ch">Advisory only: given a problem statement plus a curated evidence bundle (configuration, stats, code excerpts), it returns a diagnosis with suggested next steps. It mutates nothing and triggers nothing downstream — the requester decides what happens with the diagnosis.</p>
+  <p><a href="https://github.com/leanish/pennyworth/blob/main/agents/triage-it/README.md">Package README →</a></p>
+</div></section>
+
+<section class="block" id="secure-it"><div class="wrap">
+  <span class="tag t-prop">proposes</span>
+  <h2 style="margin-top:12px">secure-it — <span class="grad">“staying current is staying secure”</span></h2>
+  <p style="max-width:72ch">Scheduler-driven and strictly <b>opt-in</b> (<code>extensions["secure-it"].enabled === true</code> per project). A tick fans out one worker per opted-in project; each runs a full dependency-freshness + CVE pass and opens (or updates) <b>one batched draft PR per project</b> (branch <code>secure-it/dependency-refresh</code>, per-advisory outcomes tracked in the output), then schedules delayed <b>revisits</b> that flip the PR to ready-for-review when CI is green — or adapt, roll back, or defer (capped, so the loop terminates). Never merges, never force-pushes.</p>
+  <p><a href="https://github.com/leanish/pennyworth/blob/main/agents/secure-it/README.md">Package README →</a></p>
+</div></section>
+
+<section class="block" id="document-it"><div class="wrap">
+  <span class="tag t-prop">proposes</span>
+  <h2 style="margin-top:12px">document-it — <span class="grad">“keeps the docs honest”</span></h2>
+  <p style="max-width:72ch">Scheduler-driven, opt-in, same shape as secure-it. Each audit checks in-repo docs (README, <code>docs/</code>, behavioral comments) against the code, classifies drift (<b>stale / wrong / missing</b>, with confidence), and batches corrections into one draft PR per project on a stable branch.</p>
+  <p><a href="https://github.com/leanish/pennyworth/blob/main/agents/document-it/README.md">Package README →</a></p>
+</div></section>
+
+<section class="block" id="ship-it"><div class="wrap">
+  <span class="tag t-prop">proposes</span>
+  <h2 style="margin-top:12px">ship-it — <span class="grad">“a person at every gate”</span></h2>
+  <p style="max-width:72ch">Shepherds a ticket through its lifecycle by running the step that matches the ticket’s workflow state. The step registry rolls out <b>one boolean at a time</b> — everything ships dark first, proves itself, then flips:</p>
+  <table class="nice" style="max-width:640px">
+    <tr><th>Step</th><th>Status</th></tr>
+    <tr><td>groom-it <span class="dim">· shape a raw ticket</span></td><td><b style="color:var(--green)">released</b></td></tr>
+    <tr><td>code-it <span class="dim">· implement → draft PR</span></td><td>implemented, <b style="color:var(--amber)">dark</b></td></tr>
+    <tr><td>review-it <span class="dim">· independent AI review</span></td><td>implemented, <b style="color:var(--amber)">dark</b></td></tr>
+    <tr><td>spec-it <span class="dim">· iterate the spec</span></td><td>implemented, <b style="color:var(--amber)">dark</b></td></tr>
+    <tr><td>validate-it <span class="dim">· did the deployed change work?</span></td><td>implemented, <b style="color:var(--amber)">dark</b></td></tr>
+    <tr><td>mock-it-up <span class="dim">· design mockups</span></td><td class="dim">future</td></tr>
+  </table>
+  <p style="margin-top:18px"><a href="https://github.com/leanish/pennyworth/blob/main/agents/ship-it/README.md">Package README →</a></p>
+</div></section>
+
+<section class="block" id="normalizer"><div class="wrap">
+  <span class="tag t-gate">gate</span>
+  <h2 style="margin-top:12px">ship-it-normalizer — <span class="grad">the webhook gate</span></h2>
+  <p style="max-width:72ch">Not an agent but the fleet’s front door for tickets: a single Function-URL Lambda that verifies Jira/GitHub webhook signatures, filters out everything irrelevant (the cost trick — non-matching events never start an agent), normalizes the rest into signed <code>ship-it-event</code> envelopes, and sends them to ship-it’s queue. To the suite it is just another registered consumer.</p>
+  <p><a href="https://github.com/leanish/pennyworth/blob/main/agents/ship-it-normalizer/README.md">Package README →</a></p>
+</div></section>
+
+<section class="block" id="monitor-it"><div class="wrap">
+  <span class="tag t-adv">advises</span> <span class="tag" style="color:var(--dim)">future</span>
+  <h2 style="margin-top:12px">monitor-it — <span class="grad">“alerts → next step”</span></h2>
+  <p style="max-width:72ch">Designed, not yet built: turns an incoming alert into a triaged recommendation. Listed here so the fleet table in your head matches the <a href="presentation/#4">presentation</a>.</p>
+</div></section>
+
+<footer class="pfoot"><div class="wrap">
+  <a href="architecture.html">← Architecture</a>
+  <a class="next" href="future.html">Next: Future →</a>
+</div></footer>
+
+</body>
+</html>
