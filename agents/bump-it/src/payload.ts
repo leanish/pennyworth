@@ -1,7 +1,7 @@
 import type { AgentPayloadBase } from "@leanish/runtime";
 
 /**
- * Per-stage payload shapes for secure-it. The discriminator is the
+ * Per-stage payload shapes for bump-it. The discriminator is the
  * runtime's `stage` (init / breakdown / revisit), not a field inside the
  * payload — the handler narrows by `message.stage` and validates the
  * payload at that boundary (see `handler.ts`).
@@ -22,7 +22,7 @@ export interface BreakdownPayload extends AgentPayloadBase {
 export interface RevisitPayload extends AgentPayloadBase {
   /** Repo full name; matches the catalog project id. */
   readonly repo: string;
-  /** PR branch name, e.g. "secure-it/dependency-refresh". */
+  /** PR branch name, e.g. "bump-it/dependency-refresh". */
   readonly branch: string;
   /** Stable identifier the PR addresses (the batched pass uses "dependency-refresh"; a GHSA/CVE id otherwise). */
   readonly alertRef: string;
@@ -30,4 +30,4 @@ export interface RevisitPayload extends AgentPayloadBase {
   readonly revisitCount: number;
 }
 
-export type SecureItPayload = InitPayload | BreakdownPayload | RevisitPayload;
+export type BumpItPayload = InitPayload | BreakdownPayload | RevisitPayload;

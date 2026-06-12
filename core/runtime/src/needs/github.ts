@@ -4,8 +4,8 @@ import type { NeedSpec } from "./spec.js";
 
 /**
  * `github` need. Placeholder spec — phase-1 ATC doesn't need it; phase-2
- * `agent-secureit` does. The real `Octokit`-backed implementation lands
- * when secureit's handler comes online.
+ * `agent-bumpit` does. The real `Octokit`-backed implementation lands
+ * when bumpit's handler comes online.
  */
 export const githubNeed: NeedSpec<GitHubClient> = {
   name: "github",

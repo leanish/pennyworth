@@ -14,13 +14,13 @@ import {
 const ATC_PROJECT: Project = {
   id: "leanish/atc",
   source: { url: "https://github.com/leanish/atc.git", branch: "main" },
-  extensions: { atc: { enabled: true }, secureit: { enabled: false } },
+  extensions: { atc: { enabled: true }, bumpit: { enabled: false } },
 };
 
 const REVIEWIT_PROJECT: Project = {
   id: "leanish/reviewit",
   source: { url: "https://github.com/leanish/reviewit.git", branch: "main" },
-  extensions: { reviewit: { enabled: true } }, // no `secureit` entry → default-on
+  extensions: { reviewit: { enabled: true } }, // no `bumpit` entry → default-on
 };
 
 describe("InMemoryCatalog", () => {
@@ -34,14 +34,14 @@ describe("InMemoryCatalog", () => {
   });
 
   it("forConsumer applies default-on semantics", () => {
-    expect(catalog.forConsumer("secureit").list().map((p) => p.id)).toEqual([
+    expect(catalog.forConsumer("bumpit").list().map((p) => p.id)).toEqual([
       "leanish/reviewit",
     ]);
   });
 
   it("isEnabledForConsumer treats missing extensions as enabled", () => {
-    expect(isEnabledForConsumer(REVIEWIT_PROJECT, "secureit")).toBe(true);
-    expect(isEnabledForConsumer(ATC_PROJECT, "secureit")).toBe(false);
+    expect(isEnabledForConsumer(REVIEWIT_PROJECT, "bumpit")).toBe(true);
+    expect(isEnabledForConsumer(ATC_PROJECT, "bumpit")).toBe(false);
   });
 });
 

@@ -1,5 +1,5 @@
 /**
- * `@leanish/secure-it` — scheduler-driven Layer-3 agent that fixes open
+ * `@leanish/bump-it` — scheduler-driven Layer-3 agent that fixes open
  * GitHub security/dependency alerts via draft PRs and shepherds them
  * through CI (flip / adapt / rollback / defer).
  *
@@ -18,21 +18,21 @@ export type {
   BreakdownPayload,
   InitPayload,
   RevisitPayload,
-  SecureItPayload,
+  BumpItPayload,
 } from "./payload.js";
 export {
   CONSUMER_ID,
-  handleSecureItMessage,
+  handleBumpItMessage,
   isExplicitlyOptedIn,
 } from "./handler.js";
 export type {
-  SecureItAlert,
-  SecureItAlertOutcome,
-  SecureItCiConclusion,
-  SecureItInput,
-  SecureItOutput,
-  SecureItPullRequest,
-  SecureItRevisitInput,
-  SecureItRevisitOutcome,
-  SecureItRevisitOutput,
+  BumpItAlert,
+  BumpItAlertOutcome,
+  BumpItCiConclusion,
+  BumpItInput,
+  BumpItOutput,
+  BumpItPullRequest,
+  BumpItRevisitInput,
+  BumpItRevisitOutcome,
+  BumpItRevisitOutput,
 } from "./handler.js";

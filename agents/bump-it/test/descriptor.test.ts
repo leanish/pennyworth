@@ -13,22 +13,22 @@ const DESCRIPTOR_PATH = join(HERE, "..", "agent.yaml");
  * rejects by default (`DEFAULT_PHASE = "phase-1"`). Entry shims (the
  * Lambda module, run-local) must parse it with `{ phase: "phase-2" }`.
  */
-describe("agent-secure-it/agent.yaml", () => {
+describe("agent-bump-it/agent.yaml", () => {
   it("parses cleanly against the phase-2 parser with the locked contract", async () => {
     const descriptor = await loadDescriptorFromFile(DESCRIPTOR_PATH, { phase: "phase-2" });
-    expect(descriptor.identifier).toBe("secure-it");
+    expect(descriptor.identifier).toBe("bump-it");
     expect(descriptor.compute).toBe("lambda");
     expect(descriptor.stages).toEqual(["init", "breakdown", "revisit"]);
     expect(descriptor.triggers).toEqual([
       {
         type: "scheduler",
-        queueArnRef: "secure-it-requests",
-        dlqArnRef: "secure-it-requests-dlq",
+        queueArnRef: "bump-it-requests",
+        dlqArnRef: "bump-it-requests-dlq",
       },
     ]);
     expect(descriptor.codingAgent).toBe("claude-code");
     expect(descriptor.model).toBe("claude-sonnet-4-6");
-    expect(descriptor.skills.entrypoints).toEqual(["secure-it", "secure-it-revisit"]);
+    expect(descriptor.skills.entrypoints).toEqual(["bump-it", "bump-it-revisit"]);
     expect(descriptor.skills.support).toEqual(["karpathy-guidelines"]);
     expect(descriptor.needs).toEqual(["github"]);
   });

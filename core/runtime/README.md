@@ -5,7 +5,7 @@ The shared runtime library every Layer-3 agent in the leanish suite depends on. 
 **Specs**: the design contract is maintained separately (single source of truth).
 
 **Siblings in this monorepo** (each its own deployable per suite-0004): the agents under
-[`../../agents/`](../../agents) (ask-the-code, secure-it, document-it, triage-it, ship-it + its
+[`../../agents/`](../../agents) (ask-the-code, bump-it, document-it, triage-it, ship-it + its
 webhook normalizer) all build on this runtime; [`../catalog-it`](../catalog-it/README.md) is the
 catalog read-side library the runtime consumes; [`../../infra`](../../infra/README.md) provisions
 any agent built on the runtime.

@@ -49,7 +49,7 @@ describe("AWS self-publish against LocalStack", () => {
 
   const QUIET_LOGGER = new ConsoleLogger({ minLevel: "error" });
 
-  /** Phase-2 style scheduler-driven agent (mirrors secure-it's shape). */
+  /** Phase-2 style scheduler-driven agent (mirrors bump-it's shape). */
   const DESCRIPTOR: AgentDescriptor = {
     identifier: "self-publish-it",
     compute: "lambda",

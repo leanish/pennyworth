@@ -12,11 +12,11 @@ describe("InMemoryEventBus", () => {
       ],
     });
     await bus.putEvents({
-      entries: [{ source: "secureit", detailType: "secureit.scan.started", detail: {} }],
+      entries: [{ source: "bumpit", detailType: "bumpit.scan.started", detail: {} }],
     });
     expect(bus.entries).toHaveLength(3);
     expect(bus.entries[0]?.detailType).toBe("atc.ask.received");
-    expect(bus.entries[2]?.source).toBe("secureit");
+    expect(bus.entries[2]?.source).toBe("bumpit");
   });
 
   it("returns failedCount=0 (no failure injection)", async () => {

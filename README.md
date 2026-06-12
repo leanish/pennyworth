@@ -21,7 +21,7 @@ makes every call** ([overview](https://leanish.github.io/pennyworth/overview.htm
 |---|---|---|
 | [ask-the-code](agents/ask-the-code/README.md) | reads | Plain-language answers grounded in the actual source. |
 | [triage-it](agents/triage-it/README.md) | advises | Evidence in, diagnosis + next steps out; mutates nothing. |
-| [secure-it](agents/secure-it/README.md) | proposes | Dependency/security upkeep: one batched draft PR per project, revisited until CI is green. |
+| [bump-it](agents/bump-it/README.md) | proposes | Dependency/security upkeep: one batched draft PR per project, revisited until CI is green. |
 | [document-it](agents/document-it/README.md) | proposes | Audits docs against code; batches fixes into one draft PR. |
 | [ship-it](agents/ship-it/README.md) | proposes | Runs the right `-it` skill for a ticket's state — a person at every gate. |
 | [ship-it-normalizer](agents/ship-it-normalizer/README.md) | *gate* | Verifies, filters, and signs inbound webhooks so only relevant events start an agent. |

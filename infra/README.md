@@ -20,7 +20,7 @@ src/normalizer-stack.ts  # ship-it webhook gate: Function URL Lambda → ship-it
 src/needs-policy.ts      # declared need → IAM statements (reads the needs registry)
 ```
 
-Scheduler-trigger agents (secure-it, document-it) get a recurring EventBridge Scheduler
+Scheduler-trigger agents (bump-it, document-it) get a recurring EventBridge Scheduler
 tick (`tickSchedule` in `src/registry.ts`); multi-stage agents additionally get the
 self-publish wiring (`SELF_QUEUE_URL`/`SCHEDULE_GROUP_NAME`/… env, per-agent schedule
 group, the Scheduler delivery role). The ship-it normalizer's webhook secrets and Jira

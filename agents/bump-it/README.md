@@ -1,9 +1,9 @@
-# `@leanish/secure-it`
+# `@leanish/bump-it`
 
 Scheduler-driven, **write-capable** Layer-3 agent. On a recurring tick it
 fans out one worker per explicitly opted-in project; each worker runs a
 full dependency-freshness + CVE pass and opens (or updates) **one batched
-draft PR per project** (branch `secure-it/dependency-refresh`), then
+draft PR per project** (branch `bump-it/dependency-refresh`), then
 schedules a delayed **revisit** that flips the PR to ready-for-review
 when CI is green — or adapts, rolls back, or defers when it isn't. Built
 on `@leanish/runtime`.
@@ -21,18 +21,18 @@ with the explicit opt-in flag (see below).
 
 ```
 scheduler tick (stage=init)
-  → list catalog candidates via forConsumer("secure-it")
-  → keep only extensions["secure-it"].enabled === true   (strict opt-in)
+  → list catalog candidates via forConsumer("bump-it")
+  → keep only extensions["bump-it"].enabled === true   (strict opt-in)
   → runtime.publish one breakdown message per project
 
 breakdown (stage=breakdown, self)
   → re-resolve project + re-check opt-in (idempotent skip)
   → syncWorkingCopies([project])
-  → runSkill("secure-it")     # freshness + CVE pass → one batched draft PR via gh
+  → runSkill("bump-it")     # freshness + CVE pass → one batched draft PR via gh
   → publishDelayed(revisit, afterSeconds=3600, revisitCount=0) per PR
 
 revisit (stage=revisit, self)
-  → runSkill("secure-it-revisit", workingCopies=[])   # reads PR + CI via gh
+  → runSkill("bump-it-revisit", workingCopies=[])   # reads PR + CI via gh
   → flipped / already-flipped → done
   → adapted / deferred + scheduleRevisit → publishDelayed with bumped count
   → cap (2 revisits per PR) enforced by the handler — the loop terminates
@@ -44,12 +44,12 @@ reads, working-copy sync, skill runs, and self-publishing.
 
 ## Eligibility — explicit opt-in
 
-secure-it is write-capable, so catalog membership is **not** enough. A
+bump-it is write-capable, so catalog membership is **not** enough. A
 project is eligible only when its catalog record carries the literal
 
 ```yaml
 extensions:
-  secure-it:
+  bump-it:
     enabled: true
 ```
 
@@ -68,8 +68,8 @@ src/
   lambda.ts                     # AWS Lambda entry (env contract in the module docstring)
   index.ts                      # public re-exports
 skills/
-  secure-it/SKILL.md            # breakdown-stage skill: freshness + CVE pass → batched draft PR
-  secure-it-revisit/SKILL.md    # revisit-stage skill: flip / adapt / rollback / defer
+  bump-it/SKILL.md            # breakdown-stage skill: freshness + CVE pass → batched draft PR
+  bump-it-revisit/SKILL.md    # revisit-stage skill: flip / adapt / rollback / defer
 test/                           # vitest specs (hermetic; fake runner + in-memory adapters)
 test-integration/               # LocalStack-backed end-to-end specs (real S3/SQS/DDB/Scheduler)
 ```
@@ -96,7 +96,7 @@ schemas) and swap in test adapters from `@leanish/runtime/testing`:
 including `afterSeconds`).
 
 The integration suite (`test-integration/`) drives the real Lambda entry
-(`createSecureItLambdaHandler`) against LocalStack: the catalog is read
+(`createBumpItLambdaHandler`) against LocalStack: the catalog is read
 from real S3, init fan-out lands on a real SQS queue, idempotency claims
 hit real DynamoDB, working copies come from a real `git clone`, and
 revisits round-trip real EventBridge Scheduler one-shots. Only the

@@ -12,15 +12,15 @@ import { publishCatalog, type Project } from "@leanish/catalog-it";
 import type { SelfMessageBody } from "@leanish/runtime";
 import { FakeCodingAgentRunner, LocalStackHarness } from "@leanish/runtime/testing";
 
-import { createSecureItLambdaHandler, type SecureItLambdaHandler } from "../src/lambda.js";
+import { createBumpItLambdaHandler, type BumpItLambdaHandler } from "../src/lambda.js";
 
 const execFileAsync = promisify(execFile);
 
 /**
- * Every env var the secure-it Lambda entry reads. Tests snapshot/restore
+ * Every env var the bump-it Lambda entry reads. Tests snapshot/restore
  * these around the suite so per-test stacks can set them freely.
  */
-export const SECURE_IT_ENV_VARS = [
+export const BUMP_IT_ENV_VARS = [
   "IDEMPOTENCY_TABLE_NAME",
   "CATALOG_BUCKET",
   "CATALOG_KEY",
@@ -40,11 +40,11 @@ export const SECURE_IT_ENV_VARS = [
  * — without depending on network access to github.com.
  */
 export async function seedLocalGitRepo(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "secure-it-e2e-repo-"));
+  const dir = await mkdtemp(join(tmpdir(), "bump-it-e2e-repo-"));
   const git = (...args: string[]) => execFileAsync("git", ["-C", dir, ...args]);
   await execFileAsync("git", ["init", "-b", "main", dir]);
-  await git("config", "user.email", "secure-it-e2e@example.invalid");
-  await git("config", "user.name", "secure-it e2e fixture");
+  await git("config", "user.email", "bump-it-e2e@example.invalid");
+  await git("config", "user.name", "bump-it e2e fixture");
   await writeFile(
     join(dir, "build.gradle"),
     'plugins { id "java" }\ndependencies { }\n',
@@ -55,8 +55,8 @@ export async function seedLocalGitRepo(): Promise<string> {
   return pathToFileURL(dir).href;
 }
 
-export interface SecureItStack {
-  readonly handler: SecureItLambdaHandler;
+export interface BumpItStack {
+  readonly handler: BumpItLambdaHandler;
   readonly fakeRunner: FakeCodingAgentRunner;
   readonly queueUrl: string;
   readonly queueArn: string;
@@ -66,9 +66,9 @@ export interface SecureItStack {
 }
 
 /**
- * Provision one fresh secure-it stack on LocalStack: idempotency table,
+ * Provision one fresh bump-it stack on LocalStack: idempotency table,
  * input (self) queue, schedule group, catalog bucket with the given
- * projects published, the env contract `createSecureItLambdaHandler`
+ * projects published, the env contract `createBumpItLambdaHandler`
  * reads, and the handler itself wired to a strict
  * `FakeCodingAgentRunner` (register per-entrypoint responses on
  * `fakeRunner` before driving messages).
@@ -77,14 +77,14 @@ export interface SecureItStack {
  * against the same bucket after a catalog republish models the realistic
  * "breakdown lands on a later cold start that reads the current catalog".
  */
-export async function provisionSecureItStack(
+export async function provisionBumpItStack(
   stack: LocalStackHarness,
   projects: ReadonlyArray<Project>,
-): Promise<SecureItStack> {
-  const idempotencyTable = await stack.createIdempotencyTable("secure-it-idem");
-  const { queueUrl, queueArn } = await stack.createQueue("secure-it-input");
-  const scheduleGroup = await stack.createScheduleGroup("secure-it-sched");
-  const bucket = await stack.createBucket("secure-it-catalog");
+): Promise<BumpItStack> {
+  const idempotencyTable = await stack.createIdempotencyTable("bump-it-idem");
+  const { queueUrl, queueArn } = await stack.createQueue("bump-it-input");
+  const scheduleGroup = await stack.createScheduleGroup("bump-it-sched");
+  const bucket = await stack.createBucket("bump-it-catalog");
   await publishCatalog({ bucket, key: "catalog.json", projects: [...projects], client: stack.s3Client() });
 
   process.env["IDEMPOTENCY_TABLE_NAME"] = idempotencyTable;
@@ -92,11 +92,11 @@ export async function provisionSecureItStack(
   process.env["SELF_QUEUE_URL"] = queueUrl;
   process.env["SELF_QUEUE_ARN"] = queueArn;
   process.env["SCHEDULE_GROUP_NAME"] = scheduleGroup;
-  process.env["SCHEDULER_ROLE_ARN"] = "arn:aws:iam::000000000000:role/secure-it-scheduler-send";
-  process.env["WORKSPACE_ROOT"] = await mkdtemp(join(tmpdir(), "secure-it-e2e-ws-"));
+  process.env["SCHEDULER_ROLE_ARN"] = "arn:aws:iam::000000000000:role/bump-it-scheduler-send";
+  process.env["WORKSPACE_ROOT"] = await mkdtemp(join(tmpdir(), "bump-it-e2e-ws-"));
 
   const fakeRunner = new FakeCodingAgentRunner("claude-code");
-  const handler = await createSecureItLambdaHandler({
+  const handler = await createBumpItLambdaHandler({
     runners: new Map([["claude-code", fakeRunner]]),
   });
 
@@ -104,16 +104,16 @@ export async function provisionSecureItStack(
 }
 
 /**
- * Build another handler against the env the last `provisionSecureItStack`
+ * Build another handler against the env the last `provisionBumpItStack`
  * call left in place — models a fresh Lambda cold start (new container,
  * same provisioned resources) reading the CURRENT catalog from S3.
  */
 export async function coldStartHandler(): Promise<{
-  handler: SecureItLambdaHandler;
+  handler: BumpItLambdaHandler;
   fakeRunner: FakeCodingAgentRunner;
 }> {
   const fakeRunner = new FakeCodingAgentRunner("claude-code");
-  const handler = await createSecureItLambdaHandler({
+  const handler = await createBumpItLambdaHandler({
     runners: new Map([["claude-code", fakeRunner]]),
   });
   return { handler, fakeRunner };

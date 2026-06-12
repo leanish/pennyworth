@@ -9,7 +9,7 @@
 #     `@openai/codex`) installed globally so they're on `$PATH` for the
 #     `spawn(...)` calls in `ClaudeCodeRunner` / `CodexRunner` (~410 MB).
 #
-# Per-agent Dockerfiles (`agents/ask-the-code/Dockerfile`, `agents/secure-it/Dockerfile`,
+# Per-agent Dockerfiles (`agents/ask-the-code/Dockerfile`, `agents/bump-it/Dockerfile`,
 # …) `FROM` this image and add only their own `dist/`, `agent.yaml`, and
 # production `node_modules` on top — ~20 LoC each, ~17 MB on top of the
 # shared base.

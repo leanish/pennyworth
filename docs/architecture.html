@@ -34,7 +34,7 @@
     <div class="row"><div class="node core" style="min-width:320px"><span class="nt">Runtime</span><span class="ns">shared deterministic plumbing · queues · envelopes · idempotency · working copies · skills · coding-agent execution</span></div></div>
     <div class="lbl">↓ powers the fleet</div>
     <div class="row fleetbar">
-      <a class="chip" href="fleet.html#ask-the-code">Ask-the-code</a><a class="chip" href="fleet.html#secure-it">Secure-it</a><a class="chip" href="fleet.html#document-it">Document-it</a>
+      <a class="chip" href="fleet.html#ask-the-code">Ask-the-code</a><a class="chip" href="fleet.html#bump-it">Bump-it</a><a class="chip" href="fleet.html#document-it">Document-it</a>
       <a class="chip" href="fleet.html#triage-it">Triage-it</a><a class="chip" href="fleet.html#ship-it">Ship-it</a><a class="chip" href="fleet.html#normalizer">+ webhook gate</a>
     </div>
     <div class="lbl">↓ deployed by</div>
@@ -90,7 +90,7 @@
   <h2>Briefly, the <span class="grad">clever-but-boring</span> parts.</h2>
   <div class="grid g2">
     <div class="card"><span class="accentbar"></span><h3>Idempotency</h3><p>A conditional claim in DynamoDB: <b>completed</b>, <b>live in-flight</b>, or <b>expired/reclaimable in-flight</b> (an ownership deadline decides liveness). SQS is at-least-once, so duplicates are expected: completed duplicates acknowledge without re-running the skill; still-in-flight duplicates return to the queue for retry; expired claims can be reclaimed by the next delivery.</p></div>
-    <div class="card"><span class="accentbar"></span><h3>Stages &amp; delayed self-publish</h3><p>Multi-step agents (secure-it’s <code>init → breakdown → revisit</code>) self-publish their next stage: <code>publish</code> goes straight to the agent’s own queue; <code>publishDelayed</code> creates a one-shot EventBridge Scheduler schedule whose name derives from <code>{agent, stage, payload}</code> — re-publishing the same logical work dedupes onto the first schedule.</p></div>
+    <div class="card"><span class="accentbar"></span><h3>Stages &amp; delayed self-publish</h3><p>Multi-step agents (bump-it’s <code>init → breakdown → revisit</code>) self-publish their next stage: <code>publish</code> goes straight to the agent’s own queue; <code>publishDelayed</code> creates a one-shot EventBridge Scheduler schedule whose name derives from <code>{agent, stage, payload}</code> — re-publishing the same logical work dedupes onto the first schedule.</p></div>
     <div class="card"><span class="accentbar"></span><h3>Skills</h3><p>The unit of agent behavior: a focused instruction set with declared input/output schemas. The runtime stages the agent’s skills (with runtime-bundled fallbacks), mounts the synced working copy, runs the coding agent as a subprocess, and validates output against the schema. Tests swap in a fake runner — no live model needed.</p></div>
     <div class="card"><span class="accentbar"></span><h3>Needs</h3><p>An agent declares what it touches (<code>github</code>, <code>sqs</code>, <code>s3</code>, …); the runtime wires typed clients and infra derives IAM from the same declaration. Undeclared access fails loudly.</p></div>
   </div>

@@ -7,10 +7,10 @@ import {
   coldStartHandler,
   fencedJson,
   listSchedules,
-  provisionSecureItStack,
+  provisionBumpItStack,
   republishCatalog,
   schedulerTickRecord,
-  SECURE_IT_ENV_VARS,
+  BUMP_IT_ENV_VARS,
   seedLocalGitRepo,
 } from "./helpers.js";
 
@@ -27,13 +27,13 @@ import {
  *     LOUDLY: batch-item failure (SQS keeps it → DLQ via maxReceiveCount)
  *     and the real DDB claim is expired so the redelivery retries.
  */
-describe("secure-it opt-in enforcement and failure paths against LocalStack", () => {
+describe("bump-it opt-in enforcement and failure paths against LocalStack", () => {
   const stack = new LocalStackHarness();
   const originalEnv: Record<string, string | undefined> = {};
 
   beforeAll(async () => {
     await stack.start();
-    for (const name of SECURE_IT_ENV_VARS) originalEnv[name] = process.env[name];
+    for (const name of BUMP_IT_ENV_VARS) originalEnv[name] = process.env[name];
   });
 
   afterAll(async () => {
@@ -45,7 +45,7 @@ describe("secure-it opt-in enforcement and failure paths against LocalStack", ()
   });
 
   beforeEach(() => {
-    for (const name of SECURE_IT_ENV_VARS) delete process.env[name];
+    for (const name of BUMP_IT_ENV_VARS) delete process.env[name];
   });
 
   function projects(repoUrl: string): {
@@ -57,12 +57,12 @@ describe("secure-it opt-in enforcement and failure paths against LocalStack", ()
       optedIn: {
         id: "leanish/sqs-codec",
         source: { url: repoUrl, branch: "main" },
-        extensions: { "secure-it": { enabled: true } },
+        extensions: { "bump-it": { enabled: true } },
       },
       optedOut: {
         id: "leanish/lcli",
         source: { url: "https://github.com/leanish/lcli.git", branch: "main" },
-        extensions: { "secure-it": { enabled: false } },
+        extensions: { "bump-it": { enabled: false } },
       },
       notConfigured: {
         id: "leanish/reviewit",
@@ -75,7 +75,7 @@ describe("secure-it opt-in enforcement and failure paths against LocalStack", ()
   it("init fans out ONLY the literal enabled:true project from the real S3 catalog", async () => {
     const repoUrl = await seedLocalGitRepo();
     const { optedIn, optedOut, notConfigured } = projects(repoUrl);
-    const ctx = await provisionSecureItStack(stack, [optedIn, optedOut, notConfigured]);
+    const ctx = await provisionBumpItStack(stack, [optedIn, optedOut, notConfigured]);
 
     const tick = await ctx.handler({ Records: [schedulerTickRecord(`tick-optin-${stack.id}`)] });
     expect(tick.results[0]?.status).toBe("handled");
@@ -92,7 +92,7 @@ describe("secure-it opt-in enforcement and failure paths against LocalStack", ()
   it("opt-in revoked between init and breakdown → idempotent skip, no skill run, no schedules", async () => {
     const repoUrl = await seedLocalGitRepo();
     const { optedIn } = projects(repoUrl);
-    const ctx = await provisionSecureItStack(stack, [optedIn]);
+    const ctx = await provisionBumpItStack(stack, [optedIn]);
 
     await ctx.handler({ Records: [schedulerTickRecord(`tick-revoke-${stack.id}`)] });
     const fanout = await stack.readMessages(ctx.queueUrl, { maxMessages: 1, timeoutMs: 10_000 });
@@ -100,7 +100,7 @@ describe("secure-it opt-in enforcement and failure paths against LocalStack", ()
 
     // Curator revokes the opt-in while the breakdown message is in flight.
     await republishCatalog(stack, ctx.bucket, [
-      { ...optedIn, extensions: { "secure-it": { enabled: false } } },
+      { ...optedIn, extensions: { "bump-it": { enabled: false } } },
     ]);
 
     // The breakdown lands on a later cold start that reads the CURRENT catalog.
@@ -117,7 +117,7 @@ describe("secure-it opt-in enforcement and failure paths against LocalStack", ()
   it("project vanished from the catalog between init and breakdown → idempotent skip", async () => {
     const repoUrl = await seedLocalGitRepo();
     const { optedIn, notConfigured } = projects(repoUrl);
-    const ctx = await provisionSecureItStack(stack, [optedIn]);
+    const ctx = await provisionBumpItStack(stack, [optedIn]);
 
     await ctx.handler({ Records: [schedulerTickRecord(`tick-vanish-${stack.id}`)] });
     const fanout = await stack.readMessages(ctx.queueUrl, { maxMessages: 1, timeoutMs: 10_000 });
@@ -138,9 +138,9 @@ describe("secure-it opt-in enforcement and failure paths against LocalStack", ()
   it("schema-violating skill output fails the record loudly and the DDB claim allows a retry", async () => {
     const repoUrl = await seedLocalGitRepo();
     const { optedIn } = projects(repoUrl);
-    const ctx = await provisionSecureItStack(stack, [optedIn]);
+    const ctx = await provisionBumpItStack(stack, [optedIn]);
     // Missing the required `pullRequests` — fails the real outputSchema.
-    ctx.fakeRunner.register("secure-it", () => fencedJson({ summary: "broken", alerts: [] }));
+    ctx.fakeRunner.register("bump-it", () => fencedJson({ summary: "broken", alerts: [] }));
 
     await ctx.handler({ Records: [schedulerTickRecord(`tick-bad-${stack.id}`)] });
     const fanout = await stack.readMessages(ctx.queueUrl, { maxMessages: 1, timeoutMs: 10_000 });

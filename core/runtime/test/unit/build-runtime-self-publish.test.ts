@@ -14,13 +14,13 @@ import type { AgentDescriptor } from "../../src/types/descriptor.js";
 const QUIET_LOGGER = new ConsoleLogger({ minLevel: "error" });
 
 const DESCRIPTOR: AgentDescriptor = {
-  identifier: "secure-it",
+  identifier: "bump-it",
   compute: "lambda",
   triggers: [{ type: "consumer", queueArnRef: "q", dlqArnRef: "dlq", signedEnvelope: false }],
   stages: ["init", "breakdown", "revisit"],
   codingAgent: "claude-code",
   model: "m",
-  skills: { entrypoints: ["secure-it"], support: [] },
+  skills: { entrypoints: ["bump-it"], support: [] },
   needs: [],
   extensions: {},
 };

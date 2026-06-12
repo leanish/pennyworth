@@ -31,7 +31,7 @@ the core/cross-cutting set.
 ## Cross-cutting
 
 - **A-X-1 — Naming aligned to folders.** Nothing is deployed, so identifiers/skills use dashed names
-  (`secure-it`, `document-it`, `triage-it`, `ship-it`; skills `secure-it`, `secure-it-revisit`, …).
+  (`bump-it`, `document-it`, `triage-it`, `ship-it`; skills `bump-it`, `bump-it-revisit`, …).
   The old `secureit` placeholder identifier is migrated.
 - **A-X-2 — Agent-owned entrypoint skills.** Entry-point skills live in each agent's own `skills/`
   dir (the ask-the-code pattern; loader precedence already supports it). Supersedes the older note
@@ -39,10 +39,10 @@ the core/cross-cutting set.
 - **A-X-3 — Opt-in keys.** Write-capable agents gate on `extensions["<agent-id>"].enabled === true`
   (strict `true`). Read-only mediated agents (ask-the-code, triage-it) rely on catalog membership +
   consumer scoping.
-- **A-X-4 — Revisit budgets.** secure-it: first revisit 3600s, pending re-check 1800s, revisitCount
+- **A-X-4 — Revisit budgets.** bump-it: first revisit 3600s, pending re-check 1800s, revisitCount
   cap 2 (per spec). ship-it code-it: cycle budget 3 (chosen, not spec'd).
-- **A-X-5 — secure-it one-pager vs skill-spec drift.** The one-pager says "one batched update PR";
-  the skill specs define per-alert draft PRs on `secure-it/<alertRef>` branches. Implementation
+- **A-X-5 — bump-it one-pager vs skill-spec drift.** The one-pager says "one batched update PR";
+  the skill specs define per-alert draft PRs on `bump-it/<alertRef>` branches. Implementation
   follows the skill specs (the engineering contract); the one-pager reads as plain-language
   simplification. Owner review requested.
-- **A-X-6 — Image-tag env vars use underscores** (`SECURE_IT_IMAGE_TAG`, …).
+- **A-X-6 — Image-tag env vars use underscores** (`BUMP_IT_IMAGE_TAG`, …).

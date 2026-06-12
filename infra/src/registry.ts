@@ -42,10 +42,10 @@ export const AGENTS: ReadonlyArray<AgentRegistration> = [
     imageTag: process.env["SHIP_IT_IMAGE_TAG"] ?? "latest",
   },
   {
-    id: "secure-it",
-    descriptorPath: join(repoRoot, "agents", "secure-it", "agent.yaml"),
-    ecrRepositoryName: "leanish/agent-secure-it",
-    imageTag: process.env["SECURE_IT_IMAGE_TAG"] ?? "latest",
+    id: "bump-it",
+    descriptorPath: join(repoRoot, "agents", "bump-it", "agent.yaml"),
+    ecrRepositoryName: "leanish/agent-bump-it",
+    imageTag: process.env["BUMP_IT_IMAGE_TAG"] ?? "latest",
     tickSchedule: "rate(1 day)",
   },
   {

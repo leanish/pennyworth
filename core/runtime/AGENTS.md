@@ -33,4 +33,4 @@ Working rules for any agent editing this repo. Key carry-overs from the shared a
 
 ## Suite siblings
 
-`../../agents/ask-the-code/` (ATC backend, package `@leanish/ask-the-code`) and `../../agents/secure-it/` (phase-2 agent) depend on this package via `file:../../core/runtime`, resolved by the root npm workspace.
+`../../agents/ask-the-code/` (ATC backend, package `@leanish/ask-the-code`) and `../../agents/bump-it/` (phase-2 agent) depend on this package via `file:../../core/runtime`, resolved by the root npm workspace.

@@ -40,17 +40,17 @@
   <p><a href="https://github.com/leanish/pennyworth/blob/main/agents/triage-it/README.md">Package README →</a></p>
 </div></section>
 
-<section class="block" id="secure-it"><div class="wrap">
+<section class="block" id="bump-it"><div class="wrap">
   <span class="tag t-prop">proposes</span>
-  <h2 style="margin-top:12px">secure-it — <span class="grad">“staying current is staying secure”</span></h2>
-  <p style="max-width:72ch">Scheduler-driven and strictly <b>opt-in</b> (<code>extensions["secure-it"].enabled === true</code> per project). A tick fans out one worker per opted-in project; each runs a full dependency-freshness + CVE pass and opens (or updates) <b>one batched draft PR per project</b> (branch <code>secure-it/dependency-refresh</code>, per-advisory outcomes tracked in the output), then schedules delayed <b>revisits</b> that flip the PR to ready-for-review when CI is green — or adapt, roll back, or defer (capped, so the loop terminates). Never merges, never force-pushes.</p>
-  <p><a href="https://github.com/leanish/pennyworth/blob/main/agents/secure-it/README.md">Package README →</a></p>
+  <h2 style="margin-top:12px">bump-it — <span class="grad">“staying current is staying secure”</span></h2>
+  <p style="max-width:72ch">Scheduler-driven and strictly <b>opt-in</b> (<code>extensions["bump-it"].enabled === true</code> per project). A tick fans out one worker per opted-in project; each runs a full dependency-freshness + CVE pass and opens (or updates) <b>one batched draft PR per project</b> (branch <code>bump-it/dependency-refresh</code>, per-advisory outcomes tracked in the output), then schedules delayed <b>revisits</b> that flip the PR to ready-for-review when CI is green — or adapt, roll back, or defer (capped, so the loop terminates). Never merges, never force-pushes.</p>
+  <p><a href="https://github.com/leanish/pennyworth/blob/main/agents/bump-it/README.md">Package README →</a></p>
 </div></section>
 
 <section class="block" id="document-it"><div class="wrap">
   <span class="tag t-prop">proposes</span>
   <h2 style="margin-top:12px">document-it — <span class="grad">“keeps the docs honest”</span></h2>
-  <p style="max-width:72ch">Scheduler-driven, opt-in, same shape as secure-it. Each audit checks in-repo docs (README, <code>docs/</code>, behavioral comments) against the code, classifies drift (<b>stale / wrong / missing</b>, with confidence), and batches corrections into one draft PR per project on a stable branch.</p>
+  <p style="max-width:72ch">Scheduler-driven, opt-in, same shape as bump-it. Each audit checks in-repo docs (README, <code>docs/</code>, behavioral comments) against the code, classifies drift (<b>stale / wrong / missing</b>, with confidence), and batches corrections into one draft PR per project on a stable branch.</p>
   <p><a href="https://github.com/leanish/pennyworth/blob/main/agents/document-it/README.md">Package README →</a></p>
 </div></section>
 

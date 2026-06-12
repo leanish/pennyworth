@@ -29,21 +29,21 @@ describe("canonicalJson", () => {
 describe("deriveScheduleName", () => {
   it("is stable across payload key order", () => {
     const n1 = deriveScheduleName({
-      agentId: "secure-it",
+      agentId: "bump-it",
       stage: "revisit",
       payload: { repo: "leanish/foo", alertRef: "GHSA-1" },
     });
     const n2 = deriveScheduleName({
-      agentId: "secure-it",
+      agentId: "bump-it",
       stage: "revisit",
       payload: { alertRef: "GHSA-1", repo: "leanish/foo" },
     });
     expect(n1).toBe(n2);
-    expect(n1).toMatch(/^secure-it-[0-9a-f]{32}$/);
+    expect(n1).toMatch(/^bump-it-[0-9a-f]{32}$/);
   });
 
   it("differs when the payload differs", () => {
-    const base = { agentId: "secure-it", stage: "revisit" as const };
+    const base = { agentId: "bump-it", stage: "revisit" as const };
     const n1 = deriveScheduleName({ ...base, payload: { alertRef: "GHSA-1" } });
     const n2 = deriveScheduleName({ ...base, payload: { alertRef: "GHSA-2" } });
     expect(n1).not.toBe(n2);
@@ -85,11 +85,11 @@ describe("createLocalSelfPublisher", () => {
 
 describe("createAwsSelfPublisher", () => {
   const baseOptions = {
-    agentId: "secure-it",
-    queueUrl: "https://sqs.us-east-1.amazonaws.com/000000000000/secure-it-requests",
-    queueArn: "arn:aws:sqs:us-east-1:000000000000:secure-it-requests",
-    scheduleGroupName: "leanish-agent-secure-it",
-    schedulerRoleArn: "arn:aws:iam::000000000000:role/secure-it-scheduler",
+    agentId: "bump-it",
+    queueUrl: "https://sqs.us-east-1.amazonaws.com/000000000000/bump-it-requests",
+    queueArn: "arn:aws:sqs:us-east-1:000000000000:bump-it-requests",
+    scheduleGroupName: "leanish-agent-bump-it",
+    schedulerRoleArn: "arn:aws:iam::000000000000:role/bump-it-scheduler",
     region: "us-east-1",
     logger: QUIET_LOGGER,
     clock: () => new Date("2026-06-10T12:00:00.000Z"),
@@ -139,7 +139,7 @@ describe("createAwsSelfPublisher", () => {
         Target: { Arn: string; RoleArn: string; Input: string };
       };
     };
-    expect(command.input.Name).toMatch(/^secure-it-[0-9a-f]{32}$/);
+    expect(command.input.Name).toMatch(/^bump-it-[0-9a-f]{32}$/);
     expect(command.input.GroupName).toBe(baseOptions.scheduleGroupName);
     expect(command.input.ScheduleExpression).toBe("at(2026-06-10T13:00:00)");
     expect(command.input.FlexibleTimeWindow.Mode).toBe("OFF");

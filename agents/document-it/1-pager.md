@@ -61,4 +61,4 @@ role get docs they can actually trust.
 ## Status
 
 Planned for a later phase, building on the foundation and the safety model proven by the earlier
-assistants — notably Secure-it's propose-and-approve flow.
+assistants — notably Bump-it's propose-and-approve flow.

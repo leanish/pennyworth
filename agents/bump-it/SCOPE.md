@@ -1,17 +1,17 @@
-# SCOPE — agent-secure-it
+# SCOPE — agent-bump-it
 
 ## In scope (implemented)
 
 - `agent.yaml` — scheduler trigger, `stages: [init, breakdown, revisit]`,
-  entrypoints `secure-it` + `secure-it-revisit`, `needs: [github]`.
+  entrypoints `bump-it` + `bump-it-revisit`, `needs: [github]`.
   Parses under the runtime's **phase-2** descriptor parser.
 - Per-stage handler (`src/handler.ts`):
   - `init` — catalog fan-out, strict explicit opt-in
-    (`extensions["secure-it"].enabled === true`), one `breakdown`
+    (`extensions["bump-it"].enabled === true`), one `breakdown`
     self-publish per eligible project;
-  - `breakdown` — opt-in re-check, working-copy sync, `secure-it` skill
+  - `breakdown` — opt-in re-check, working-copy sync, `bump-it` skill
     run, one delayed `revisit` (1h) per PR the skill opened/updated;
-  - `revisit` — `secure-it-revisit` skill run (no working copy),
+  - `revisit` — `bump-it-revisit` skill run (no working copy),
     reschedule with bumped `revisitCount` when requested, hard cap of 2.
 - The two entry-point skills (`skills/*/SKILL.md`): the batched
   dependency-refresh + CVE pass (one draft PR per project) and the

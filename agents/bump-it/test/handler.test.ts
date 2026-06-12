@@ -22,8 +22,8 @@ import {
   type Project,
 } from "@leanish/runtime/testing";
 
-import { handleSecureItMessage } from "../src/handler.js";
-import type { SecureItPayload } from "../src/payload.js";
+import { handleBumpItMessage } from "../src/handler.js";
+import type { BumpItPayload } from "../src/payload.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DESCRIPTOR_PATH = join(HERE, "..", "agent.yaml");
@@ -34,13 +34,13 @@ const QUIET_LOGGER = new ConsoleLogger({ minLevel: "error" });
 const OPTED_IN: Project = {
   id: "leanish/widget",
   source: { url: "https://github.com/leanish/widget.git", branch: "main" },
-  extensions: { "secure-it": { enabled: true } },
+  extensions: { "bump-it": { enabled: true } },
 };
 
 const OPTED_OUT: Project = {
   id: "leanish/opted-out",
   source: { url: "https://github.com/leanish/opted-out.git", branch: "main" },
-  extensions: { "secure-it": { enabled: false } },
+  extensions: { "bump-it": { enabled: false } },
 };
 
 const NOT_CONFIGURED: Project = {
@@ -79,9 +79,9 @@ async function buildScaffold(projects: ReadonlyArray<Project>): Promise<{
 
 function message(
   stage: Stage,
-  payload: SecureItPayload,
+  payload: BumpItPayload,
   sourceTrigger: SourceTrigger,
-): RuntimeMessage<SecureItPayload> {
+): RuntimeMessage<BumpItPayload> {
   return {
     stage,
     payload,
@@ -100,14 +100,14 @@ function fencedJson(value: unknown): { responseText: string } {
 
 const REVISIT_PAYLOAD = {
   repo: "leanish/widget",
-  branch: "secure-it/GHSA-aaaa",
+  branch: "bump-it/GHSA-aaaa",
   alertRef: "GHSA-aaaa",
 } as const;
 
-describe("secure-it init stage", () => {
+describe("bump-it init stage", () => {
   it("publishes one breakdown message per explicitly opted-in project (strict true only)", async () => {
     const { runtime, runner, queue } = await buildScaffold([OPTED_IN, OPTED_OUT, NOT_CONFIGURED]);
-    await handleSecureItMessage(message("init", {}, "scheduler"), runtime);
+    await handleBumpItMessage(message("init", {}, "scheduler"), runtime);
     // enabled:false AND absent extensions are both skipped — only the
     // strict `enabled === true` project fans out.
     expect(queue).toHaveLength(1);
@@ -119,15 +119,15 @@ describe("secure-it init stage", () => {
 
   it("publishes nothing when no project is opted in", async () => {
     const { runtime, queue } = await buildScaffold([OPTED_OUT, NOT_CONFIGURED]);
-    await handleSecureItMessage(message("init", {}, "scheduler"), runtime);
+    await handleBumpItMessage(message("init", {}, "scheduler"), runtime);
     expect(queue).toHaveLength(0);
   });
 });
 
-describe("secure-it breakdown stage", () => {
-  it("syncs the project, runs the secure-it skill, and schedules one delayed revisit per PR", async () => {
+describe("bump-it breakdown stage", () => {
+  it("syncs the project, runs the bump-it skill, and schedules one delayed revisit per PR", async () => {
     const { runtime, runner, queue } = await buildScaffold([OPTED_IN]);
-    runner.register("secure-it", () =>
+    runner.register("bump-it", () =>
       fencedJson({
         summary: "Opened one PR, updated one, one alert already fixed.",
         alerts: [
@@ -139,14 +139,14 @@ describe("secure-it breakdown stage", () => {
           {
             alertRef: "GHSA-aaaa",
             url: "https://github.com/leanish/widget/pull/1",
-            branch: "secure-it/GHSA-aaaa",
+            branch: "bump-it/GHSA-aaaa",
             number: 1,
             title: "fix GHSA-aaaa",
           },
           {
             alertRef: "GHSA-bbbb",
             url: "https://github.com/leanish/widget/pull/2",
-            branch: "secure-it/GHSA-bbbb",
+            branch: "bump-it/GHSA-bbbb",
             number: 2,
             title: "fix GHSA-bbbb",
           },
@@ -154,7 +154,7 @@ describe("secure-it breakdown stage", () => {
       }),
     );
 
-    await handleSecureItMessage(
+    await handleBumpItMessage(
       message("breakdown", { projectId: OPTED_IN.id }, "self"),
       runtime,
     );
@@ -164,7 +164,7 @@ describe("secure-it breakdown stage", () => {
     // rendered YAML carries the project id + source url).
     expect(runner.invocations).toHaveLength(1);
     const invocation = runner.invocations[0]!;
-    expect(invocation.entrypoint.name).toBe("secure-it");
+    expect(invocation.entrypoint.name).toBe("bump-it");
     expect(invocation.workingCopies).toHaveLength(1);
     expect(invocation.workingCopies[0]?.projectId).toBe(OPTED_IN.id);
     expect(invocation.renderedArguments).toContain("id: leanish/widget");
@@ -179,17 +179,17 @@ describe("secure-it breakdown stage", () => {
       expect(entry.afterSeconds).toBe(3600);
     }
     expect(queue.map((e) => e.body.payload)).toEqual([
-      { repo: OPTED_IN.id, branch: "secure-it/GHSA-aaaa", alertRef: "GHSA-aaaa", revisitCount: 0 },
-      { repo: OPTED_IN.id, branch: "secure-it/GHSA-bbbb", alertRef: "GHSA-bbbb", revisitCount: 0 },
+      { repo: OPTED_IN.id, branch: "bump-it/GHSA-aaaa", alertRef: "GHSA-aaaa", revisitCount: 0 },
+      { repo: OPTED_IN.id, branch: "bump-it/GHSA-bbbb", alertRef: "GHSA-bbbb", revisitCount: 0 },
     ]);
   });
 
   it("schedules no revisit when the skill opened no PRs", async () => {
     const { runtime, runner, queue } = await buildScaffold([OPTED_IN]);
-    runner.register("secure-it", () =>
+    runner.register("bump-it", () =>
       fencedJson({ summary: "No open alerts.", alerts: [], pullRequests: [] }),
     );
-    await handleSecureItMessage(
+    await handleBumpItMessage(
       message("breakdown", { projectId: OPTED_IN.id }, "self"),
       runtime,
     );
@@ -199,7 +199,7 @@ describe("secure-it breakdown stage", () => {
 
   it("skips idempotently when the project is missing from the catalog", async () => {
     const { runtime, runner, queue } = await buildScaffold([OPTED_IN]);
-    await handleSecureItMessage(
+    await handleBumpItMessage(
       message("breakdown", { projectId: "leanish/vanished" }, "self"),
       runtime,
     );
@@ -212,11 +212,11 @@ describe("secure-it breakdown stage", () => {
     // NOT_CONFIGURED is in the view but fails the strict opt-in check.
     // Both must skip without running the skill.
     const { runtime, runner, queue } = await buildScaffold([OPTED_OUT, NOT_CONFIGURED]);
-    await handleSecureItMessage(
+    await handleBumpItMessage(
       message("breakdown", { projectId: OPTED_OUT.id }, "self"),
       runtime,
     );
-    await handleSecureItMessage(
+    await handleBumpItMessage(
       message("breakdown", { projectId: NOT_CONFIGURED.id }, "self"),
       runtime,
     );
@@ -227,7 +227,7 @@ describe("secure-it breakdown stage", () => {
   it("fails loudly on a malformed breakdown payload", async () => {
     const { runtime } = await buildScaffold([OPTED_IN]);
     await expect(
-      handleSecureItMessage(message("breakdown", {} as never, "self"), runtime),
+      handleBumpItMessage(message("breakdown", {} as never, "self"), runtime),
     ).rejects.toThrow(/projectId/);
   });
 
@@ -235,18 +235,18 @@ describe("secure-it breakdown stage", () => {
     const { runtime, runner, queue } = await buildScaffold([OPTED_IN]);
     // Missing the required `pullRequests` array — must fail the REAL
     // outputSchema validation inside runSkill, not be acted upon.
-    runner.register("secure-it", () => fencedJson({ summary: "broken", alerts: [] }));
+    runner.register("bump-it", () => fencedJson({ summary: "broken", alerts: [] }));
     await expect(
-      handleSecureItMessage(message("breakdown", { projectId: OPTED_IN.id }, "self"), runtime),
+      handleBumpItMessage(message("breakdown", { projectId: OPTED_IN.id }, "self"), runtime),
     ).rejects.toThrow(/outputSchema/);
     expect(queue).toHaveLength(0); // no revisit scheduled off garbage
   });
 });
 
-describe("secure-it revisit stage", () => {
+describe("bump-it revisit stage", () => {
   it("runs the revisit skill with no working copies and reschedules with a bumped count when under the cap", async () => {
     const { runtime, runner, queue } = await buildScaffold([OPTED_IN]);
-    runner.register("secure-it-revisit", () =>
+    runner.register("bump-it-revisit", () =>
       fencedJson({
         outcome: "deferred",
         ciConclusion: "pending",
@@ -254,17 +254,17 @@ describe("secure-it revisit stage", () => {
       }),
     );
 
-    await handleSecureItMessage(
+    await handleBumpItMessage(
       message("revisit", { ...REVISIT_PAYLOAD, revisitCount: 1 }, "self"),
       runtime,
     );
 
     expect(runner.invocations).toHaveLength(1);
     const invocation = runner.invocations[0]!;
-    expect(invocation.entrypoint.name).toBe("secure-it-revisit");
+    expect(invocation.entrypoint.name).toBe("bump-it-revisit");
     expect(invocation.workingCopies).toEqual([]);
     expect(invocation.renderedArguments).toContain("repo: leanish/widget");
-    expect(invocation.renderedArguments).toContain("branch: secure-it/GHSA-aaaa");
+    expect(invocation.renderedArguments).toContain("branch: bump-it/GHSA-aaaa");
     expect(invocation.renderedArguments).toContain("revisitCount: 1");
 
     expect(queue).toHaveLength(1);
@@ -275,14 +275,14 @@ describe("secure-it revisit stage", () => {
 
   it("stops at the cap — no publish when revisitCount is already 2, even if the skill asks", async () => {
     const { runtime, runner, queue } = await buildScaffold([OPTED_IN]);
-    runner.register("secure-it-revisit", () =>
+    runner.register("bump-it-revisit", () =>
       fencedJson({
         outcome: "deferred",
         ciConclusion: "pending",
         scheduleRevisit: { afterSeconds: 1800 },
       }),
     );
-    await handleSecureItMessage(
+    await handleBumpItMessage(
       message("revisit", { ...REVISIT_PAYLOAD, revisitCount: 2 }, "self"),
       runtime,
     );
@@ -292,10 +292,10 @@ describe("secure-it revisit stage", () => {
 
   it("does not reschedule when the skill returns no scheduleRevisit", async () => {
     const { runtime, runner, queue } = await buildScaffold([OPTED_IN]);
-    runner.register("secure-it-revisit", () =>
+    runner.register("bump-it-revisit", () =>
       fencedJson({ outcome: "flipped", ciConclusion: "success" }),
     );
-    await handleSecureItMessage(
+    await handleBumpItMessage(
       message("revisit", { ...REVISIT_PAYLOAD, revisitCount: 0 }, "self"),
       runtime,
     );
@@ -306,7 +306,7 @@ describe("secure-it revisit stage", () => {
   it("fails loudly on a malformed revisit payload", async () => {
     const { runtime } = await buildScaffold([OPTED_IN]);
     await expect(
-      handleSecureItMessage(
+      handleBumpItMessage(
         message("revisit", { repo: "leanish/widget" } as never, "self"),
         runtime,
       ),
@@ -315,11 +315,11 @@ describe("secure-it revisit stage", () => {
 
   it("fails loudly when the skill outcome is outside the contract enum — never reschedules off garbage", async () => {
     const { runtime, runner, queue } = await buildScaffold([OPTED_IN]);
-    runner.register("secure-it-revisit", () =>
+    runner.register("bump-it-revisit", () =>
       fencedJson({ outcome: "merged", ciConclusion: "success" }),
     );
     await expect(
-      handleSecureItMessage(
+      handleBumpItMessage(
         message("revisit", { ...REVISIT_PAYLOAD, revisitCount: 0 }, "self"),
         runtime,
       ),
@@ -329,7 +329,7 @@ describe("secure-it revisit stage", () => {
 
   it("rejects a zero/negative scheduleRevisit delay at the schema boundary (no at(past) schedule)", async () => {
     const { runtime, runner, queue } = await buildScaffold([OPTED_IN]);
-    runner.register("secure-it-revisit", () =>
+    runner.register("bump-it-revisit", () =>
       fencedJson({
         outcome: "deferred",
         ciConclusion: "pending",
@@ -337,7 +337,7 @@ describe("secure-it revisit stage", () => {
       }),
     );
     await expect(
-      handleSecureItMessage(
+      handleBumpItMessage(
         message("revisit", { ...REVISIT_PAYLOAD, revisitCount: 0 }, "self"),
         runtime,
       ),

@@ -19,13 +19,13 @@ const QUIET_LOGGER = new ConsoleLogger({ minLevel: "error" });
 
 /** Phase-2 style scheduler-driven agent (no consumer trigger at all). */
 const SCHEDULER_DESCRIPTOR: AgentDescriptor = {
-  identifier: "secure-it",
+  identifier: "bump-it",
   compute: "lambda",
   triggers: [{ type: "scheduler", queueArnRef: "q", dlqArnRef: "dlq" }] as never,
   stages: ["init", "breakdown", "revisit"],
   codingAgent: "claude-code",
   model: "m",
-  skills: { entrypoints: ["secure-it"], support: [] },
+  skills: { entrypoints: ["bump-it"], support: [] },
   needs: [],
   extensions: {},
 };
@@ -67,7 +67,7 @@ describe("createSqsLambdaShim — self/scheduler runtime messages", () => {
   it("accepts a scheduler tick on a scheduler-trigger agent and re-stamps metadata", async () => {
     const seen: Array<RuntimeMessage<never>> = [];
     const agent = defineAgent({
-      identifier: "secure-it",
+      identifier: "bump-it",
       async handle(message) {
         seen.push(message as never);
       },
@@ -94,7 +94,7 @@ describe("createSqsLambdaShim — self/scheduler runtime messages", () => {
   it("accepts a self fan-out message and routes the payload through", async () => {
     const seen: Array<RuntimeMessage<TestPayload>> = [];
     const agent = defineAgent({
-      identifier: "secure-it",
+      identifier: "bump-it",
       async handle(message) {
         seen.push(message as never);
       },
@@ -118,7 +118,7 @@ describe("createSqsLambdaShim — self/scheduler runtime messages", () => {
   it("rejects an undeclared stage with runtime-message-rejected (kept for DLQ)", async () => {
     const handle = vi.fn(async () => {});
     const shim = createSqsLambdaShim({
-      agent: defineAgent({ identifier: "secure-it", handle }),
+      agent: defineAgent({ identifier: "bump-it", handle }),
       descriptor: { ...SCHEDULER_DESCRIPTOR, stages: ["init"] },
       runtime: {} as Runtime,
       idempotencyStore: new MemoryIdempotencyStore(),
@@ -187,7 +187,7 @@ describe("createSqsLambdaShim — self/scheduler runtime messages", () => {
   it("rejects envelope-shaped bodies on a scheduler-only agent", async () => {
     const handle = vi.fn(async () => {});
     const shim = createSqsLambdaShim({
-      agent: defineAgent({ identifier: "secure-it", handle }),
+      agent: defineAgent({ identifier: "bump-it", handle }),
       descriptor: SCHEDULER_DESCRIPTOR,
       runtime: {} as Runtime,
       idempotencyStore: new MemoryIdempotencyStore(),
@@ -210,7 +210,7 @@ describe("createSqsLambdaShim — self/scheduler runtime messages", () => {
     const handle = vi.fn(async () => {});
     const idempotency = new MemoryIdempotencyStore();
     const shim = createSqsLambdaShim({
-      agent: defineAgent({ identifier: "secure-it", handle }),
+      agent: defineAgent({ identifier: "bump-it", handle }),
       descriptor: SCHEDULER_DESCRIPTOR,
       runtime: {} as Runtime,
       idempotencyStore: idempotency,

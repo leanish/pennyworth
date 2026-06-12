@@ -1,10 +1,10 @@
-identifier: secure-it
+identifier: bump-it
 compute: lambda
 
 triggers:
   - type: scheduler
-    queueArnRef: secure-it-requests
-    dlqArnRef: secure-it-requests-dlq
+    queueArnRef: bump-it-requests
+    dlqArnRef: bump-it-requests-dlq
     # The recurring tick fires stage=init (sourceTrigger=scheduler);
     # runtime.publish fires stage=breakdown (sourceTrigger=self);
     # runtime.publishDelayed fires stage=revisit (sourceTrigger=self).
@@ -16,8 +16,8 @@ model: claude-sonnet-4-6
 
 skills:
   entrypoints:
-    - secure-it          # invoked from the breakdown handler — scans GH alerts, opens draft PRs
-    - secure-it-revisit  # invoked from the revisit handler — decides flip / adapt / rollback / defer
+    - bump-it          # invoked from the breakdown handler — scans GH alerts, opens draft PRs
+    - bump-it-revisit  # invoked from the revisit handler — decides flip / adapt / rollback / defer
   support:
     - karpathy-guidelines
 

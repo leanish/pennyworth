@@ -156,7 +156,7 @@ export async function buildRuntime(options: BuildRuntimeOptions): Promise<Runtim
  * The runtime's own bundled skills directory. Carries genuinely shared
  * support skills (e.g. `karpathy-guidelines`) that every agent inherits
  * unless it shadows them by name. Per-agent entry-point skills (`ask`,
- * `secureit-review-alert`, …) live in the agent's own package and take
+ * `bumpit-review-alert`, …) live in the agent's own package and take
  * precedence — see `SkillLoaderOptions.skillsDirs` for the multi-dir
  * search shape and ADR-0001 for the ownership decision.
  */
