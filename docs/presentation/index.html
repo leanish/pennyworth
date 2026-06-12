@@ -229,6 +229,7 @@
         </div>
       </div>
       <p class="kicker" style="font-size:clamp(15px,2vw,22px)">Every step ends with a <span class="grad">recommendation, not an action</span> — each agent hands back to a person, and <b>validate-it just comments whether it worked</b>. Humans move the ticket. Always.</p>
+      <p class="muted" style="margin-top:14px;font-size:14px">Rollout: <b style="color:var(--fg)">groom-it is live</b>; the other steps are implemented and running <b style="color:var(--fg)">dark</b>, flipped on one at a time as each earns trust.</p>
     </div>
   </section>
 
@@ -246,9 +247,9 @@
         </ul>
         <ul class="clean" style="margin:0">
           <li><b>Data stays isolated</b> — the AI never holds database credentials.</li>
-          <li><b>Cross-model review</b> — a different AI critiques the code’s author.</li>
+          <li><b>Cross-model review</b> — a different AI critiques the code’s author <span class="dim">(rolling out)</span>.</li>
           <li><b>Auditable</b> — actions logged; ticket/doc access is scoped.</li>
-          <li><b>Cost-tracked</b> — know what each ticket cost in time &amp; tokens.</li>
+          <li><b>Cost-tracked</b> — know what each ticket cost in time &amp; tokens <span class="dim">(planned)</span>.</li>
         </ul>
       </div>
     </div>
@@ -261,7 +262,7 @@
       <h2>The clever bits.</h2>
       <div class="grid g2">
         <div class="card"><span class="accentbar"></span><h3>No central brain</h3><p>Agents never call each other — they meet at the ticket and the PR. Your existing workflow is the orchestrator.</p></div>
-        <div class="card"><span class="accentbar"></span><h3>Two models argue</h3><p>Review runs as a Claude-vs-Codex debate to agreement — a genuinely independent second opinion on the code.</p></div>
+        <div class="card"><span class="accentbar"></span><h3>Two models argue</h3><p>Review can run as a Claude-vs-Codex debate to agreement (when the second runner is configured) — a genuinely independent second opinion on the code.</p></div>
         <div class="card"><span class="accentbar"></span><h3>Compose, don’t bloat</h3><p>One runtime; agents are thin. New behavior is usually just a new <i>skill</i> — small, focused, shared.</p></div>
         <div class="card"><span class="accentbar"></span><h3>Pay only for judgment</h3><p>Deterministic plumbing plus the gate mean the coding agent runs only when real judgment is needed — not on the mechanical or irrelevant parts.</p></div>
       </div>
@@ -274,9 +275,9 @@
       <p class="eyebrow">where it stands</p>
       <h2>Real progress — and honest about the rest.</h2>
       <div class="status">
-        <div class="strow"><span class="pill poc">PoC ready</span><span class="what">The catalog, the runtime, and <b>Ask-the-code</b> — working and green in dev (not yet battle-tested).</span></div>
-        <div class="strow"><span class="pill scaff">Scaffolded</span><span class="what">Infrastructure (deploys, permissions, triggers) — wired, validating.</span></div>
-        <div class="strow"><span class="pill design">Designed</span><span class="what"><b>Secure-it · Document-it · Triage-it · Ship-it</b> — specced and consensus-reviewed.</span></div>
+        <div class="strow"><span class="pill poc">Built</span><span class="what">The catalog, the runtime, and <b>all five agents</b> (+ ship-it’s webhook gate) — green test suites in dev: unit everywhere, LocalStack integration on the core seams (not yet battle-tested).</span></div>
+        <div class="strow"><span class="pill scaff">Validating</span><span class="what">Deploy wiring — every stack synthesizes and is assertion-tested (queues, schedules, permissions); container images &amp; secret-backed config still landing.</span></div>
+        <div class="strow"><span class="pill design">Designed</span><span class="what"><b>Monitor-it</b> — specced, not yet built. Ship-it’s later steps are implemented but <b>dark</b>, flipped live one at a time.</span></div>
       </div>
       <p class="muted" style="margin-top:22px;font-size:16px">Nothing here is autonomous magic — it’s familiar cloud pieces wired together with care.</p>
     </div>
@@ -286,15 +287,13 @@
   <section class="slide">
     <div class="wrap">
       <p class="eyebrow">roadmap</p>
-      <h2>A sequence, roughly costed.</h2>
+      <h2>The path from here.</h2>
       <div class="status">
-        <div class="strow"><span class="pill est">~3 wks</span><span class="what"><b>Ask-the-code</b> — first up: it brings up the whole shared foundation (infra), and its Slack bot isn’t specced yet.</span></div>
-        <div class="strow"><span class="pill est">~2 wks</span><span class="what"><b>Secure-it</b> — fast follow: mainly GitHub access on the foundation Ask-the-code stood up.</span></div>
-        <div class="strow"><span class="pill est">~2–4 wks</span><span class="what"><b>Document-it</b> — reuses Secure-it’s PR path; the doc-platform integration (which tools, how they work) is the unknown.</span></div>
-        <div class="strow"><span class="pill est">~5–7 wks</span><span class="what"><b>Triage-it</b> — the careful one: isolated data + a privacy review.</span></div>
-        <div class="strow"><span class="pill est">~2–10 wks</span><span class="what"><b>Ship-it</b> — delivered in parts, skill by skill (code-it → review-it → spec-it).</span></div>
+        <div class="strow"><span class="pill est">now</span><span class="what"><b>Harden the deploy path</b> — per-agent container images, secret-backed config, durable webhook dedupe — then the first cloud deployment.</span></div>
+        <div class="strow"><span class="pill est">next</span><span class="what"><b>Ship-it steps go live one at a time</b> — groom-it already is; code-it → review-it → spec-it → validate-it flip as each earns trust.</span></div>
+        <div class="strow"><span class="pill est">then</span><span class="what"><b>Monitor-it</b> joins the fleet, and <b>Ask-the-code</b> gets a chat front-end.</span></div>
       </div>
-      <p class="muted" style="margin-top:20px;font-size:15px">Rough <b style="color:var(--fg)">engineering effort, not calendar</b> — Ask-the-code stands up the shared foundation, so the rest are largely incremental. Add buffer for review + real-world hardening.</p>
+      <p class="muted" style="margin-top:20px;font-size:15px">Rollout is <b style="color:var(--fg)">trust-driven, not date-driven</b> — everything ships dark first, proves itself in review, then flips. The honest open-items list lives in <span style="font-family:var(--mono)">docs/future.md</span>.</p>
     </div>
   </section>
 
@@ -305,6 +304,7 @@
       <h1 style="max-width:18ch;margin:0 auto 22px">A calmer, faster way to <span class="grad">build</span>.</h1>
       <p class="lede" style="margin:0 auto 32px">AI does the toil. Humans make the calls. The whole suite rides one foundation you can extend in an afternoon.</p>
       <p class="big grad" style="font-weight:800;font-size:clamp(28px,5vw,52px);margin:0">Contribute!</p>
+      <p class="muted" style="margin-top:28px;font-size:15px;font-family:var(--mono)"><a href="https://github.com/leanish/pennyworth" style="color:var(--cyan);text-decoration:none">github.com/leanish/pennyworth</a> · <a href="https://github.com/leanish/pennyworth/tree/main/docs" style="color:var(--violet);text-decoration:none">the docs</a></p>
     </div>
   </section>
 
