@@ -4,10 +4,8 @@
 runtime: they handle the toil (questions, dependencies, docs, triage, drafts) and hand everything
 back **for your review**. Focus on the product, not the plumbing.
 
-📖 **[Documentation hub](docs/README.md)** ·
-🎞️ **[Presentation](docs/presentation/index.html)**
-([view online](https://htmlpreview.github.io/?https://github.com/leanish/pennyworth/blob/main/docs/presentation/index.html) —
-interim link until GitHub Pages is enabled)
+🌐 **[The docs site](https://leanish.github.io/pennyworth/)** ·
+🎞️ **[The presentation](https://leanish.github.io/pennyworth/presentation/)**
 
 ## Why
 
@@ -15,7 +13,7 @@ Engineering runs on toil: answering the same code questions, chasing dependency 
 docs drift, re-triaging familiar problems. Each is small; together they crowd out product work —
 and each is exactly what a coding agent does well *if* it's pointed at one narrow job and never
 allowed to act on its own conclusions. That's the whole idea here: **AI does the legwork, a person
-makes every call** ([overview](docs/overview.md)).
+makes every call** ([overview](https://leanish.github.io/pennyworth/overview.html)).
 
 ## The fleet
 
@@ -32,11 +30,11 @@ makes every call** ([overview](docs/overview.md)).
 
 **Proposes** means draft PRs and comments only: no agent merges, approves, deploys, or transitions
 final state. Write-capable agents also require a per-project **opt-in** in the catalog. The full
-tour is in [fleet.md](docs/fleet.md).
+tour is on [the fleet page](https://leanish.github.io/pennyworth/fleet.html).
 
 ## How it's built
 
-Four layers ([architecture](docs/architecture.md)): a **catalog** of projects + per-agent opt-ins,
+Four layers ([architecture](https://leanish.github.io/pennyworth/architecture.html)): a **catalog** of projects + per-agent opt-ins,
 one shared **runtime** that does all the mechanical plumbing in deterministic code and starts a
 coding agent (Claude/Codex) only where judgment is needed, the **fleet** of thin independently
 deployable agents, and **CDK infra** that provisions each agent from its own descriptor. Signed
@@ -63,8 +61,10 @@ silently skips.
   curation CLI)
 - **`agents/`** — the fleet (each independently deployable)
 - **`infra/`** — AWS CDK; provisions every agent from its descriptor (app repos carry zero IaC)
-- **`docs/`** — [the documentation hub](docs/README.md) and the
-  [presentation](docs/presentation/index.html)
+- **`docs/`** — the source of [the docs site](https://leanish.github.io/pennyworth/) and the
+  [presentation](https://leanish.github.io/pennyworth/presentation/) (GitHub Pages serves this
+  directory), plus the engineering records ([assumptions](docs/assumptions.md),
+  [consolidation history](docs/consolidation-history.md))
 
 ## About this repo
 

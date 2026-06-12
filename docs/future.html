@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Future — leanish</title>
+<meta name="description" content="What's validating, what blocks the first deploy, what's committed, and what's explicitly speculative." />
+<link rel="stylesheet" href="assets/site.css" />
+</head>
+<body>
+
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="./"><b>leanish</b> · agent suite</a>
+  <a class="lnk" href="./">Home</a>
+  <a class="lnk" href="overview.html">Overview</a>
+  <a class="lnk" href="architecture.html">Architecture</a>
+  <a class="lnk" href="fleet.html">Fleet</a>
+  <a class="lnk on" href="future.html">Future</a>
+  <a class="lnk" href="presentation/">Presentation</a>
+  <a class="lnk" href="https://github.com/leanish/pennyworth">GitHub</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <p class="eyebrow">future</p>
+  <h1>What’s next, what’s open, <span class="grad">what’s possible</span>.</h1>
+  <p class="lede">Four honest buckets, no dates. Rollout here is <b style="color:var(--fg)">trust-driven, not date-driven</b> — everything ships dark first, proves itself in review, then flips.</p>
+</div></header>
+
+<section class="block"><div class="wrap">
+  <h2><span class="pill poc" style="vertical-align:middle">validating</span>&nbsp; Implemented, being hardened.</h2>
+  <div class="status">
+    <div class="strow"><span class="pill poc">tests</span><span class="what"><b>Integration coverage across the fleet</b> — LocalStack-backed suites for the core packages and every agent, plus registry⇄descriptor consistency tests and CDK template assertions in infra.</span></div>
+    <div class="strow"><span class="pill poc">infra</span><span class="what"><b>Deploy wiring</b> — per-agent queue/DLQ pairs, recurring scheduler ticks, self-publish env + grants, and the webhook gate’s stack all synthesize and are assertion-tested; not yet exercised against a real AWS account.</span></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <h2><span class="pill scaff" style="vertical-align:middle">blockers</span>&nbsp; Known distance to a first cloud deploy.</h2>
+  <div class="status">
+    <div class="strow"><span class="pill scaff">images</span><span class="what"><b>Per-agent container images</b> — the base image + ask-the-code’s Dockerfile exist (and rehearse through the AWS Runtime Interface Emulator); the other agents and the normalizer still need their image pipelines.</span></div>
+    <div class="strow"><span class="pill scaff">secrets</span><span class="what"><b>Secret-backed env resolution</b> — <code>github</code>/<code>jira</code> credentials and the normalizer’s webhook secrets should resolve from SSM SecureStrings at cold start; today they ride plain env vars.</span></div>
+    <div class="strow"><span class="pill scaff">dedupe</span><span class="what"><b>Durable webhook dedupe</b> — the normalizer’s dedupe store is in-memory (documented production blocker); it needs the DynamoDB-backed store before real webhook traffic.</span></div>
+    <div class="strow"><span class="pill scaff">bootstrap</span><span class="what"><b>Operator bootstrap</b> — consumer-registry rows (e.g. the normalizer’s) are a documented deploy-time operator step; no tooling for it yet.</span></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <h2><span class="pill design" style="vertical-align:middle">committed</span>&nbsp; Direction set, no dates.</h2>
+  <div class="status">
+    <div class="strow"><span class="pill design">ship-it</span><span class="what"><b>Step rollout</b> — the steps are implemented and dark; each flips live one boolean at a time once the previous earns trust: groom-it (live) → code-it → review-it → spec-it → validate-it.</span></div>
+    <div class="strow"><span class="pill design">monitor-it</span><span class="what"><b>The sixth specialist</b> (alerts → triaged recommendation): designed, not built.</span></div>
+    <div class="strow"><span class="pill design">chat</span><span class="what"><b>A chat front-end for ask-the-code</b> — answers currently land on a reply queue; a Slack-style surface is the natural consumer. Not specced yet.</span></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <h2><span class="pill est" style="vertical-align:middle">possibilities</span>&nbsp; Explicitly speculative.</h2>
+  <div class="grid g2">
+    <div class="card"><h3>More entry points</h3><p>Additional trackers and chat surfaces normalize into the same envelope shape the gate already produces — each new consumer is a registry row, not a new architecture.</p></div>
+    <div class="card"><h3><code>run-local</code> fan-out drain</h3><p>Local mode currently processes one message; draining self-published follow-ups (with a depth cap) would make whole multi-stage flows replayable on a laptop.</p></div>
+    <div class="card"><h3>Cost / execution observability</h3><p>Per-run token + time accounting rolled up per ticket/project, making “what did this cost?” a queryable fact. The presentation’s <i>cost-tracked</i> card is this, stated as intent.</p></div>
+    <div class="card"><h3>More coding agents</h3><p>The runner seam is already plural (Claude + Codex); anything with a CLI and structured output could slot in.</p></div>
+    <div class="card"><h3>validate-it as its own agent</h3><p>Post-deploy validation needs a real deploy signal and a per-project validation contract; if that grows, it may graduate from a ship-it step to a standalone specialist.</p></div>
+    <div class="card"><h3>How to read this page</h3><p>Validating/blockers are follow-through on decisions already made (see the <a href="https://github.com/leanish/pennyworth/blob/main/docs/assumptions.md">assumptions record</a>). Possibilities are deliberately uncommitted — if you pick one up, write the one-pager first, the way every existing agent started.</p></div>
+  </div>
+</div></section>
+
+<footer class="pfoot"><div class="wrap">
+  <a href="fleet.html">← The fleet</a>
+  <a class="next" href="presentation/">Finish with the presentation →</a>
+</div></footer>
+
+</body>
+</html>

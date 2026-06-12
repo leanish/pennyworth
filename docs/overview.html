@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Overview — leanish</title>
+<meta name="description" content="What pennyworth solves, how it works, and what it optimizes for." />
+<link rel="stylesheet" href="assets/site.css" />
+</head>
+<body>
+
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="./"><b>leanish</b> · agent suite</a>
+  <a class="lnk" href="./">Home</a>
+  <a class="lnk on" href="overview.html">Overview</a>
+  <a class="lnk" href="architecture.html">Architecture</a>
+  <a class="lnk" href="fleet.html">Fleet</a>
+  <a class="lnk" href="future.html">Future</a>
+  <a class="lnk" href="presentation/">Presentation</a>
+  <a class="lnk" href="https://github.com/leanish/pennyworth">GitHub</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <p class="eyebrow">overview</p>
+  <h1>What it is, <span class="grad">and why</span>.</h1>
+  <p class="lede"><b style="color:var(--fg)">pennyworth</b> is the home of <b style="color:var(--fg)">leanish</b> — <i>a butler for your codebase</i>: focused, human-gated AI agents on one shared runtime. They handle the recurring toil; everything consequential comes back to a person for review.</p>
+</div></header>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">the problem it solves</p>
+  <h2>A steady tax of <span class="grad">necessary-but-mechanical</span> work.</h2>
+  <ul class="clean">
+    <li>Answering <i>“how does this part work?”</i> for the hundredth time.</li>
+    <li>Chasing dependency updates until something falls behind — and becomes a security problem.</li>
+    <li>Docs that quietly drift away from what the code actually does.</li>
+    <li>Re-triaging the same kinds of problems from scratch, every time.</li>
+    <li>Shepherding well-understood tickets through the same lifecycle steps.</li>
+  </ul>
+  <p class="kicker">Each item is small; together they crowd out product work. And each is exactly what a coding agent does well — <span class="grad">if</span> it’s pointed at one narrow job and never allowed to act on its own conclusions.</p>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">how it works</p>
+  <h2>The one-paragraph version.</h2>
+  <p style="max-width:72ch">A <b>catalog</b> records which projects exist and which agents each project has opted into. A shared <b>runtime</b> does all the mechanical plumbing in plain, deterministic code — queues, signatures, idempotency, working copies, skill staging — and starts a <b>coding agent</b> (Claude or Codex) only for the step that needs judgment. Each <b>agent</b> in the fleet is a thin, independently deployable specialist over that runtime. <b>Infrastructure-as-code</b> reads each agent’s descriptor and provisions exactly what it declares. Nothing consequential leaves the system without a human decision.</p>
+  <div class="grid g3">
+    <div class="card"><span class="tag t-read">reads</span><h3 style="margin-top:10px">Touches nothing</h3><p>Answers questions about the code.<br><b>ask-the-code</b></p></div>
+    <div class="card"><span class="tag t-adv">advises</span><h3 style="margin-top:10px">Mutates nothing</h3><p>Produces a diagnosis or recommendation.<br><b>triage-it</b> · <i>(future)</i> <b>monitor-it</b></p></div>
+    <div class="card"><span class="tag t-prop">proposes</span><h3 style="margin-top:10px">Never merges</h3><p>Opens <b>draft</b> PRs or comments; never approves, deploys, or transitions final state.<br><b>secure-it · document-it · ship-it</b></p></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">what it optimizes for</p>
+  <h2>Five deliberate <span class="grad">trade-offs</span>.</h2>
+  <div class="grid g2">
+    <div class="card"><span class="accentbar"></span><h3>1 · Human judgment stays human</h3><p>Proposing agents stop at draft PRs and comments. There is no path that merges, deploys, or closes a ticket on its own — a person sits at every gate.</p></div>
+    <div class="card"><span class="accentbar"></span><h3>2 · Cost discipline</h3><p>The <b>gate</b> filters webhooks so irrelevant events never start an agent; <b>deterministic plumbing</b> means the coding agent — the expensive part — runs only where judgment is needed.</p></div>
+    <div class="card"><span class="accentbar"></span><h3>3 · Trust by construction</h3><p>Write-capable agents require a per-project <b>opt-in</b> (strictly <code>enabled: true</code>). Consumer messages are HMAC-signed and registry-verified. IAM is scoped per descriptor. Secrets are redacted; runs are correlated and auditable.</p></div>
+    <div class="card"><span class="accentbar"></span><h3>4 · Operability through boring tech</h3><p>SQS, Lambda, DynamoDB, S3, EventBridge — pieces an ops team already knows, provisioned by CDK from each agent’s descriptor. And it all runs locally: <code>run-local</code> + LocalStack reproduce the production seams on a laptop.</p></div>
+    <div class="card"><span class="accentbar"></span><h3>5 · Extensibility without bloat</h3><p>Agents are thin; shared behavior lives in the runtime; new behavior is usually just a new <b>skill</b>. Agents never call each other — they meet at the ticket and the PR — so the suite grows without a central brain.</p></div>
+    <div class="card"><h3>What it deliberately is not</h3><p><b>Not autonomous</b> — “propose, never act” is the contract.<br><b>Not an orchestration platform</b> — your workflow (tickets, PRs, reviews) is the orchestrator.<br><b>Not a monolith</b> — adopt or drop one agent at a time, per project.</p></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <p class="eyebrow">where things stand</p>
+  <h2>Built, validating, honest.</h2>
+  <p style="max-width:72ch">All five agents (plus ship-it’s webhook gate) are implemented on the shared runtime with unit and LocalStack-backed integration suites; CDK stacks synthesize and are assertion-tested. The remaining distance to a first cloud deployment is wiring, not design — the honest list is on the <a href="future.html">future page</a>, and the plain-language status is on the <a href="presentation/#10">presentation’s status slide</a>.</p>
+</div></section>
+
+<footer class="pfoot"><div class="wrap">
+  <a href="./">← Home</a>
+  <a class="next" href="architecture.html">Next: Architecture →</a>
+</div></footer>
+
+</body>
+</html>
