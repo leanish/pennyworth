@@ -63,15 +63,13 @@ silently skips.
 - **`infra/`** — AWS CDK; provisions every agent from its descriptor (app repos carry zero IaC)
 - **`docs/`** — the source of [the docs site](https://leanish.github.io/pennyworth/) and the
   [presentation](https://leanish.github.io/pennyworth/presentation/) (GitHub Pages serves this
-  directory), plus the engineering records ([assumptions](docs/assumptions.md),
-  [consolidation history](docs/consolidation-history.md))
+  directory), plus the engineering record ([assumptions](docs/assumptions.md))
 
 ## About this repo
 
 A monorepo consolidation of what were previously separate component repos — **full git history
-preserved** for each (audited in
-[consolidation-history.md](docs/consolidation-history.md)). Packages still publish and deploy
-independently; the monorepo just makes the suite easy to find and work in.
+preserved** for each. Packages still publish and deploy independently; the monorepo just makes the
+suite easy to find and work in.
 
 > The engineering **design docs** (CONTEXT / overview / ADRs) are maintained separately. This repo
 > carries the code, the docs above, and the public front door.
