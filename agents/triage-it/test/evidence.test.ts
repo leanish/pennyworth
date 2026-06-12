@@ -145,6 +145,22 @@ describe("extractEvidenceArchive", () => {
     ).rejects.toThrow(/max per file is 63/);
   });
 
+  it("rejects an archive whose entries total over the extracted-size cap", async () => {
+    // Each entry is under the per-file cap; only the running total trips.
+    await expect(
+      extractEvidenceArchive({
+        archive: makeTarGz([
+          { path: "manifest.md", content: "# manifest" },
+          { path: "a.json", content: "x".repeat(40) },
+          { path: "b.json", content: "x".repeat(40) },
+          { path: "c.json", content: "x".repeat(40) },
+        ]),
+        limits: { ...EVIDENCE_LIMITS, maxEntryBytes: 64, maxTotalBytes: 100 },
+      }),
+    ).rejects.toThrow(/entries total more than 100 bytes/);
+    expect(await readdir(tmpBase)).toEqual([]);
+  });
+
   it("rejects an archive over the entry-count cap", async () => {
     await expect(
       extractEvidenceArchive({
@@ -201,6 +217,7 @@ describe("extractEvidenceArchive", () => {
       maxArchiveBytes: 64 * 1024 * 1024,
       maxEntryCount: 2000,
       maxEntryBytes: 8 * 1024 * 1024,
+      maxTotalBytes: 256 * 1024 * 1024,
     });
   });
 });

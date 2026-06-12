@@ -201,16 +201,6 @@ export class MissingNeedError extends RuntimeError {
 }
 
 /**
- * The agent called a phase-2+ helper (`runtime.publish` / `publishDelayed`)
- * but the running implementation only ships the phase-1 surface.
- */
-export class PhaseUnavailableError extends RuntimeError {
-  constructor(readonly feature: string) {
-    super(`'${feature}' is a phase-2+ runtime helper and is not available in this build`);
-  }
-}
-
-/**
  * `runtime.routeProjects(...)` was called but no router was wired into
  * `buildRuntime(...)`. This is a deploy-time misconfiguration, not a
  * runtime-data error — handlers should map this to `config-error` (not

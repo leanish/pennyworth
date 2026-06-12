@@ -20,9 +20,12 @@ that is already accurate.
 
 ## Status
 
-Handler, skill, and Lambda entry implemented; deploy wiring (Dockerfile, scheduler/queue
-provisioning) is deferred — see `ASSUMPTIONS.md` for the provisional decisions, including the
-invented `docSet` shape and the deferred published-suggestion delivery channel.
+Handler, skill, and Lambda entry implemented. The infra package provisions the deploy wiring
+(input queue + DLQ, recurring `rate(1 day)` scheduler tick, per-agent schedule group + delivery
+role, and the `SELF_QUEUE_URL` / `SELF_QUEUE_ARN` / `SCHEDULE_GROUP_NAME` / `SCHEDULER_ROLE_ARN`
+Lambda env contract). The Dockerfile / container-image pipeline is still deferred — see
+`ASSUMPTIONS.md` for the remaining provisional decisions, including the invented `docSet` shape
+and the deferred published-suggestion delivery channel.
 
 ## Layout
 
@@ -36,6 +39,7 @@ src/
   lambda.ts                   # AWS Lambda entry (env vars documented in-file)
   index.ts                    # public re-exports
 test/                         # vitest specs (hermetic — fakes from @leanish/runtime/testing)
+test-integration/             # LocalStack-backed end-to-end specs (real SQS/DDB/S3/Scheduler)
 ```
 
 ## Scripts
@@ -44,6 +48,8 @@ test/                         # vitest specs (hermetic — fakes from @leanish/r
 npm install
 npm run typecheck
 npm run build
-npm test           # vitest run
-npm run check      # typecheck + build + test
+npm test                  # vitest run (hermetic unit specs)
+npm run check             # typecheck + build + test
+npm run test:integration  # LocalStack-backed end-to-end specs (docker compose up -d localstack)
+npm run check:full        # check + test:integration
 ```

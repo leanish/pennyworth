@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -89,7 +90,7 @@ describe("ATC ask end-to-end against LocalStack", () => {
 
     // ---- Publish a small catalog (one ATC-enabled project) ----
     const project: Project = {
-      id: "demo",
+      id: "example/demo",
       source: { url: "https://example.invalid/demo.git", branch: "main" },
       description: "Demo project for end-to-end test",
       extensions: { "ask-the-code": { enabled: true } },
@@ -216,7 +217,7 @@ describe("ATC ask end-to-end against LocalStack", () => {
     expect(reply.status).toBe("completed");
     if (reply.status === "completed") {
       expect(reply.result.answer).toContain("End-to-end fake answer");
-      expect(reply.result.projectScope.projects[0]?.id).toBe("demo");
+      expect(reply.result.projectScope.projects[0]?.id).toBe("example/demo");
       expect(reply.result.agent.kind).toBe("claude-code");
     }
 
@@ -293,6 +294,84 @@ describe("ATC ask end-to-end against LocalStack", () => {
 
     expect(detailTypes).toContain("ask-the-code.ask.started");
     expect(detailTypes).toContain("ask-the-code.ask.completed");
+  });
+
+  it("ATC materialises S3 attachments (deduped by blobUri) into the skill input and cleans up after the run", async () => {
+    const ctx = await buildAtcStack();
+
+    // Stage one attachment blob in S3, exactly as a consumer would have.
+    const attachmentBucket = await stack.createBucket("ask-the-code-att");
+    const attachmentKey = "atc-attachments/atc-ui/req-att/notes.txt";
+    const attachmentBody = "attachment payload for the materialisation e2e test";
+    await stack.putObject(attachmentBucket, attachmentKey, attachmentBody, "text/plain");
+    const attachmentRef = {
+      name: "notes.txt",
+      mediaType: "text/plain",
+      sizeBytes: attachmentBody.length,
+      blobUri: `s3://${attachmentBucket}/${attachmentKey}`,
+    };
+
+    // Capture the skill-side view WHILE the scratch file is still on disk
+    // (the handler's finally-cleanup runs after runSkill returns).
+    let renderedDuringRun = "";
+    let onDiskDuringRun: string | undefined;
+    ctx.fakeRunner.register("ask", (invocation) => {
+      renderedDuringRun = invocation.renderedArguments;
+      const firstPath = renderedDuringRun.match(/path: (\S+)/)?.[1];
+      if (firstPath !== undefined) {
+        onDiskDuringRun = readFileSync(firstPath, "utf8");
+      }
+      return {
+        responseText: ["```json", JSON.stringify({ answer: "attachment read ok" }), "```"].join("\n"),
+      };
+    });
+
+    const requestId = `req-att-${Date.now()}`;
+    const envelope = makeSignedEnvelope({
+      consumer: ctx.consumerId,
+      kind: "ask",
+      endUser: "u:att",
+      requestId,
+      replyTo: arnFromQueueUrl(ctx.replyQueueUrl),
+      payload: {
+        question: "what does the attached note say?",
+        audience: "general",
+        includeAll: true,
+        noSync: true,
+        // Same blobUri referenced from the current turn AND a transcript
+        // turn — must be fetched once and share one local path.
+        attachments: [attachmentRef],
+        transcript: [{ role: "user", text: "earlier turn", attachments: [attachmentRef] }],
+      },
+      secret: ctx.secretValue,
+    });
+
+    const result = await ctx.handler({
+      Records: [{ messageId: requestId, body: JSON.stringify(envelope) }],
+    });
+    expect(result.batchItemFailures).toHaveLength(0);
+    expect(result.results[0]?.status).toBe("handled");
+
+    // The skill input carried materialized local paths — one per reference,
+    // deduped to a single scratch file — and no raw S3 refs.
+    const paths = [...renderedDuringRun.matchAll(/path: (\S+)/g)].map((m) => m[1]!);
+    expect(paths).toHaveLength(2);
+    expect(new Set(paths).size).toBe(1);
+    expect(renderedDuringRun).not.toContain("blobUri");
+
+    // The blob really was on disk (with the S3 content) during the run...
+    expect(onDiskDuringRun).toBe(attachmentBody);
+    // ...and the scratch file is gone once the handler returned.
+    expect(existsSync(paths[0]!)).toBe(false);
+
+    // Terminal reply still completed.
+    const replies = await stack.readMessages(ctx.replyQueueUrl, {
+      maxMessages: 1,
+      timeoutMs: 10_000,
+    });
+    expect(replies).toHaveLength(1);
+    const reply = JSON.parse(replies[0]!.body) as AtcTerminalReply;
+    expect(reply.status).toBe("completed");
   });
 
   it("ATC rejects envelope with bad signature (DLQ via maxReceiveCount path)", async () => {

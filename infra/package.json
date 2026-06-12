@@ -20,12 +20,12 @@
   },
   "dependencies": {
     "@leanish/runtime": "file:../core/runtime",
-    "aws-cdk-lib": "^2.160.0",
+    "aws-cdk-lib": "^2.258.1",
     "constructs": "^10.3.0"
   },
   "devDependencies": {
     "@types/node": "^24.12.4",
-    "aws-cdk": "^2.160.0",
+    "aws-cdk": "^2.1126.0",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.7"

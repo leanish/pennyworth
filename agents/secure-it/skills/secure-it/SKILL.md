@@ -1,6 +1,6 @@
 ---
 name: secure-it
-description: Full dependency-freshness + CVE pass over one project — deps, Gradle wrapper, workflow actions — folded into ONE draft upgrade PR.
+description: Full dependency-freshness + CVE pass over one project — deps, Gradle wrapper, workflow actions, Docker image pins, doc version references — folded into ONE draft upgrade PR.
 compatibleCodingAgents:
   - claude-code
   - codex
@@ -72,7 +72,7 @@ handles CI results later — you never wait for CI.
    Treat `gh repo view` as the source of truth for GitHub metadata.
 
 2. **Enumerate open PRs unfiltered** (`gh pr list --state open --limit 30 --json
-   number,title,author,headRefName,url`) before any filtered search. Identify Dependabot PRs from
+   number,title,author,headRefName,baseRefName,url`) before any filtered search. Identify Dependabot PRs from
    the full list; read their exact diffs (`gh pr diff <n> --patch`) and treat them as primary
    upgrade signals — FOLD their concrete changes into your upgrade branch instead of paraphrasing.
 
@@ -82,6 +82,11 @@ handles CI results later — you never wait for CI.
      in scope;
    - **GitHub Actions** pins in `.github/workflows/*.yml` and local composite actions — they are
      dependencies too (omit `aws-actions/amazon-ecr-login` unless explicitly requested);
+   - **Docker image pins** anywhere in the repo — test code (testcontainers image tags),
+     `docker-compose*.yml`, Dockerfiles, CI service containers. A pinned image tag goes stale
+     exactly like a library coordinate (`rg -n '(image:|DockerImageName|FROM )' …` finds most);
+   - **version references in docs** — README/docs badges, install/usage snippets, documented tool
+     versions. When a bump changes a version the docs state, the doc text is part of the upgrade;
    - never conclude "already up to date" from library coordinates alone.
 
 4. **Discover candidates with a temporary updater** where the ecosystem has one (Gradle: add
@@ -93,6 +98,9 @@ handles CI results later — you never wait for CI.
    - Wrapper bumps: `./gradlew wrapper --gradle-version <target>` then `./gradlew wrapper` again;
      revert unrelated generated churn before committing.
    - Workflow actions: update the `uses:` pins deliberately.
+   - Docker image pins and doc version references: update them on the same branch when the bump
+     they track moved (or the pinned image itself has a newer stable tag) — don't leave docs or
+     test pins contradicting the upgraded build.
    - Run the project's own quality gate locally (`./gradlew check` or equivalent) and fix what the
      upgrades broke when it's clearly mechanical; drop (and note) any single upgrade that can't be
      made safe — keep the rest.
@@ -113,7 +121,8 @@ handles CI results later — you never wait for CI.
 8. **Open or update the draft PR**:
    - branch `secure-it/dependency-refresh`, **draft** PR against the default branch, label
      `leanish:agent:secure-it`, marker footer `<!-- leanish:agent=secure-it; alertRef=dependency-refresh -->`;
-   - PR body: what was upgraded (deps / wrapper / actions), what was deliberately skipped and why,
+   - PR body: what was upgraded (deps / wrapper / actions / image pins / docs), what was
+     deliberately skipped and why,
      the CVE findings with their resolution state, and which Dependabot PRs it folds in
      (mention them with `Closes #<n>` ONLY when the fold is exact);
    - idempotent re-runs: if an open `secure-it/dependency-refresh` PR exists, UPDATE that branch

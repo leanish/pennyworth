@@ -59,10 +59,14 @@ import agent from "./agent.js";
  *                               `/tmp/document-it-workspaces`.
  *   AGENT_CONFIG_PATH         — optional, override the path to agent.yaml.
  *                               Defaults to the bundled `<pkg>/agent.yaml`.
- *   GITHUB_TOKEN              — the `github` need; resolved at cold start
- *                               from SSM Parameter Store SecureString and
- *                               inherited by the coding-agent subprocess
- *                               (the `verify-docs` skill drives `gh`).
+ *   GITHUB_TOKEN              — the `github` need; expected in the Lambda
+ *                               environment and inherited by the coding-agent
+ *                               subprocess (the `verify-docs` skill drives
+ *                               `gh`). ADR-0010 plans cold-start resolution
+ *                               from SSM Parameter Store SecureString, but
+ *                               neither the runtime nor infra implements that
+ *                               yet — provisioning the secret into the env is
+ *                               currently a deploy-time concern.
  */
 export interface CreateDocumentItLambdaOptions {
   /** Override per-runner config (timeouts, captureCap, etc.). Optional. */

@@ -69,7 +69,6 @@ const EXPECTED_VALUES = [
   "EnvelopeVerificationError",
   "ExecutionResolveError",
   "MissingNeedError",
-  "PhaseUnavailableError",
   "RouterNotConfiguredError",
   "RuntimeError",
   "UnhandledStageError",

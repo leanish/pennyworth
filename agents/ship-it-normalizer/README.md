@@ -78,6 +78,18 @@ first delivery, the registry **must** contain:
 with key material matching this Lambda's `ENVELOPE_SIGNING_KEY`. Without that record every
 envelope is rejected as `unknown-consumer`; with a mismatched key, as `bad-signature`.
 
+## Scripts
+
+```bash
+npm install
+npm run typecheck
+npm run build
+npm test
+npm run check             # typecheck + build + test
+npm run test:integration  # LocalStack-backed end-to-end suite (docker compose up -d localstack)
+npm run check:full        # check + test:integration
+```
+
 ## Known first-draft limits
 
 See [ASSUMPTIONS.md](./ASSUMPTIONS.md) — most importantly: the in-memory dedupe store only covers

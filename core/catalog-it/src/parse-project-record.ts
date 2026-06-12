@@ -1,4 +1,5 @@
 import type { Project } from "./project.js";
+import { isCanonicalId } from "./repo-id.js";
 import { assertNoUnknownKeys, PROJECT_SOURCE_KEYS, PROJECT_SPINE_KEYS } from "./spine-keys.js";
 
 /** Extension namespace keys match this (data-format.md §Validation). */
@@ -16,7 +17,10 @@ const EXTENSION_KEY_RE = /^[a-z][a-z0-9-]*$/;
  * `project YAML at <path>` or `S3Catalog: <src> projects[3]`.
  *
  * Spine rules (data-format.md §Validation):
- *   - `id` — required, non-empty string
+ *   - `id` — required, canonical lowercase `owner/slug` (the slug patterns
+ *     from §Spine reference; `add`/`discover` lowercase at the boundary, so
+ *     a record that fails this was written by other means and would break
+ *     the filename⇄id invariant)
  *   - `source` — required object; `source.url` required non-empty string;
  *     `source.branch` optional (defaults to `"main"`), non-empty string when present
  *   - `description` — optional; any string when present (empty allowed)
@@ -29,6 +33,11 @@ export function parseProjectRecord(value: Record<string, unknown>, locate: strin
   const id = value["id"];
   if (typeof id !== "string" || id.length === 0) {
     throw new Error(`${locate} requires non-empty string 'id'`);
+  }
+  if (!isCanonicalId(id)) {
+    throw new Error(
+      `${locate} requires 'id' in canonical lowercase owner/slug form, got '${id}'`,
+    );
   }
 
   const source = value["source"];

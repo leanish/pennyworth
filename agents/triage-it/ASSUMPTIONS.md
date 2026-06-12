@@ -11,10 +11,11 @@ Decisions made while building v1 that are contracts with components that don't e
    only ever reads the files it shipped and never connects to a datastore.
 
 2. **Extraction safety caps.** The archive crosses a trust boundary, so extraction enforces:
-   max **64 MiB** compressed archive, max **2000** entries, max **8 MiB** per file; absolute
-   paths, `..` traversal, backslash separators, symlinks, hardlinks and every non-file/directory
-   entry type are rejected; a missing root `manifest.md` rejects the archive. Rejections produce
-   a terminal `validation-error` reply ("invalid evidence archive: …"). The caps are sized for
+   max **64 MiB** compressed archive, max **2000** entries, max **8 MiB** per file, max
+   **256 MiB** total extracted; absolute paths, `..` traversal, backslash separators, symlinks,
+   hardlinks and every non-file/directory entry type are rejected; a missing root `manifest.md`
+   rejects the archive. Rejections produce a terminal `validation-error` reply
+   ("invalid evidence archive: …"). The caps are sized for
    "curated evidence bundle", not "data dump" — raise them deliberately if the collector's
    curation grows.
 

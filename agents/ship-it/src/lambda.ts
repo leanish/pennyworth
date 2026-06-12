@@ -47,10 +47,13 @@ import { createSigningKeyResolver } from "./signing-key-resolver.js";
  *   CONSUMER_REGISTRY_TABLE_NAME  — DynamoDB table holding consumer records
  *                                   (the webhook normalizer's signing key).
  *   CATALOG_BUCKET                — S3 bucket holding the catalog bundle.
- *   SHIP_IT_QUEUE_URL             — the agent's own input queue URL (self-publish target).
- *   SHIP_IT_QUEUE_ARN             — same queue as ARN (Scheduler targets take ARNs).
- *   SHIP_IT_SCHEDULE_GROUP_NAME   — per-agent EventBridge Scheduler group.
- *   SHIP_IT_SCHEDULER_ROLE_ARN    — role Scheduler assumes to SendMessage to the queue.
+ *   SELF_QUEUE_URL                — the agent's own input queue URL (self-publish target).
+ *   SELF_QUEUE_ARN                — same queue as ARN (Scheduler targets take ARNs).
+ *   SCHEDULE_GROUP_NAME           — per-agent EventBridge Scheduler group.
+ *   SCHEDULER_ROLE_ARN            — role Scheduler assumes to SendMessage to the queue.
+ *
+ * The four self-publish names are the fleet's generic set (the same
+ * contract secure-it / document-it read); infra emits them for every agent.
  *
  * Optional env vars:
  *
@@ -92,10 +95,10 @@ export async function createShipItLambdaHandler(
   const catalogKey = process.env["CATALOG_KEY"] ?? "catalog.json";
   const catalogTtlMs = parseOptionalInt("CATALOG_TTL_MS");
   const workspaceRoot = process.env["WORKSPACE_ROOT"] ?? "/tmp/ship-it-workspaces";
-  const selfQueueUrl = requireEnv("SHIP_IT_QUEUE_URL");
-  const selfQueueArn = requireEnv("SHIP_IT_QUEUE_ARN");
-  const scheduleGroupName = requireEnv("SHIP_IT_SCHEDULE_GROUP_NAME");
-  const schedulerRoleArn = requireEnv("SHIP_IT_SCHEDULER_ROLE_ARN");
+  const selfQueueUrl = requireEnv("SELF_QUEUE_URL");
+  const selfQueueArn = requireEnv("SELF_QUEUE_ARN");
+  const scheduleGroupName = requireEnv("SCHEDULE_GROUP_NAME");
+  const schedulerRoleArn = requireEnv("SCHEDULER_ROLE_ARN");
 
   const agentConfigPath = process.env["AGENT_CONFIG_PATH"] ?? defaultAgentYamlPath();
   const descriptor = await loadDescriptorFromFile(agentConfigPath);

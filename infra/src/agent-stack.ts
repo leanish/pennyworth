@@ -5,6 +5,8 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import * as logs from "aws-cdk-lib/aws-logs";
+import * as scheduler from "aws-cdk-lib/aws-scheduler";
+import * as schedulerTargets from "aws-cdk-lib/aws-scheduler-targets";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import type { AgentDescriptor, ConsumerTrigger } from "@leanish/runtime";
 import type { Construct } from "constructs";
@@ -29,14 +31,36 @@ const DLQ_MAX_RECEIVE = 5;
 /**
  * Per-agent stack: the idempotency + consumer-registry tables, the input
  * queue + DLQ, the container Lambda, its least-privilege IAM role (runtime-
- * internal grants + needs-derived grants), and the SQS event-source mapping.
+ * internal grants + needs-derived grants), the SQS event-source mapping,
+ * and — for multi-stage / scheduler-trigger agents — the EventBridge
+ * Scheduler wiring (schedule group, delivery role, recurring tick).
  * Provisioned from the agent's descriptor + the runtime needs registry
- * (contract §2–§3).
+ * (contract §2–§3, §8).
  */
 export class AgentStack extends Stack {
+  /** The agent's input queue — exposed for sibling stacks (e.g. the ship-it webhook normalizer). */
+  readonly inputQueue: sqs.Queue;
+
   constructor(scope: Construct, id: string, props: AgentStackProps) {
     super(scope, id, props);
     const { registration, descriptor, shared } = props;
+
+    const schedulerTrigger = descriptor.triggers.find((t) => t.type === "scheduler");
+    if (schedulerTrigger !== undefined && registration.tickSchedule === undefined) {
+      throw new Error(
+        `agent-infra: agent '${registration.id}' declares a scheduler trigger but its registration has no tickSchedule`,
+      );
+    }
+    if (schedulerTrigger === undefined && registration.tickSchedule !== undefined) {
+      throw new Error(
+        `agent-infra: agent '${registration.id}' has a tickSchedule but its descriptor declares no scheduler trigger`,
+      );
+    }
+    if (schedulerTrigger !== undefined && !descriptor.stages.includes("init")) {
+      throw new Error(
+        `agent-infra: agent '${registration.id}' declares a scheduler trigger but no 'init' stage for the tick to fire`,
+      );
+    }
 
     // --- Idempotency table (ADR-0006/0007): PK=requestId, 30-day TTL on `ttl`.
     const idempotency = new dynamodb.Table(this, "Idempotency", {
@@ -66,6 +90,18 @@ export class AgentStack extends Stack {
       visibilityTimeout: QUEUE_VISIBILITY,
       deadLetterQueue: { queue: dlq, maxReceiveCount: DLQ_MAX_RECEIVE },
     });
+    this.inputQueue = inputQueue;
+
+    // --- EventBridge Scheduler wiring (contract §8). Stages beyond the
+    // externally-delivered first one arrive via runtime.publish /
+    // publishDelayed (ADR-0011/0012), so multi-stage agents need the
+    // schedule group + delivery role; scheduler-trigger agents need them
+    // for the recurring tick as well.
+    const selfPublishes = descriptor.stages.length > 1;
+    const schedulerWiring =
+      selfPublishes || schedulerTrigger !== undefined
+        ? this.provisionSchedulerWiring(descriptor.identifier, inputQueue)
+        : undefined;
 
     // --- Lambda (container image from ECR; the handler is the image CMD).
     const repo = ecr.Repository.fromRepositoryName(this, "Repo", registration.ecrRepositoryName);
@@ -88,6 +124,9 @@ export class AgentStack extends Stack {
         CATALOG_BUCKET: shared.catalogBucket.bucketName,
         EVENT_BUS_NAME: shared.eventBus.eventBusName,
         WORKSPACE_ROOT: `/tmp/${descriptor.identifier}-workspaces`,
+        ...(schedulerWiring !== undefined
+          ? selfPublishEnv(inputQueue, schedulerWiring)
+          : {}),
       },
     });
 
@@ -122,6 +161,54 @@ export class AgentStack extends Stack {
       }
     }
 
+    // --- Self-publish grants (ADR-0011): runtime.publish sends to the
+    // agent's own queue; publishDelayed creates one-shot schedules in the
+    // agent's group, passing the Scheduler delivery role.
+    if (schedulerWiring !== undefined) {
+      inputQueue.grantSendMessages(fn);
+      fn.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: ["scheduler:CreateSchedule"],
+          resources: [
+            `arn:aws:scheduler:${this.region}:${this.account}:schedule/${schedulerWiring.scheduleGroup.scheduleGroupName}/*`,
+          ],
+        }),
+      );
+      fn.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: ["iam:PassRole"],
+          resources: [schedulerWiring.schedulerRole.roleArn],
+          conditions: { StringEquals: { "iam:PassedToService": "scheduler.amazonaws.com" } },
+        }),
+      );
+    }
+
+    // --- Trigger: scheduler → the recurring stage=init tick (contract §8).
+    // The body is the runtime-message wire shape the SQS shim admits for
+    // `sourceTrigger: "scheduler"`; the shim re-stamps requestId/receivedAt
+    // from the SQS delivery.
+    if (schedulerTrigger !== undefined && registration.tickSchedule !== undefined) {
+      if (schedulerWiring === undefined) {
+        throw new Error(
+          `agent-infra: agent '${registration.id}' has a scheduler trigger but no scheduler wiring (bug)`,
+        );
+      }
+      new scheduler.Schedule(this, "Tick", {
+        scheduleName: `leanish-agent-${descriptor.identifier}-tick`,
+        scheduleGroup: schedulerWiring.scheduleGroup,
+        description: `Recurring stage=init tick for ${descriptor.identifier}`,
+        schedule: scheduler.ScheduleExpression.expression(registration.tickSchedule),
+        target: new schedulerTargets.SqsSendMessage(inputQueue, {
+          role: schedulerWiring.schedulerRole,
+          input: scheduler.ScheduleTargetInput.fromObject({
+            stage: "init",
+            payload: {},
+            metadata: { sourceTrigger: "scheduler" },
+          }),
+        }),
+      });
+    }
+
     // --- Trigger: consumer → SQS event-source mapping (partial-batch reporting).
     fn.addEventSource(new SqsEventSource(inputQueue, { reportBatchItemFailures: true, batchSize: 10 }));
 
@@ -129,4 +216,46 @@ export class AgentStack extends Stack {
     new CfnOutput(this, "DlqArn", { value: dlq.queueArn });
     new CfnOutput(this, "FunctionName", { value: fn.functionName });
   }
+
+  /**
+   * The per-agent EventBridge Scheduler group (named so the runtime's
+   * `SCHEDULE_GROUP_NAME` is stable) and the role Scheduler assumes to
+   * deliver schedule payloads to the agent's input queue. Shared by the
+   * recurring tick and the runtime's one-shot `publishDelayed` schedules.
+   */
+  private provisionSchedulerWiring(identifier: string, inputQueue: sqs.Queue): SchedulerWiring {
+    const scheduleGroup = new scheduler.ScheduleGroup(this, "ScheduleGroup", {
+      scheduleGroupName: `leanish-agent-${identifier}`,
+    });
+    const schedulerRole = new iam.Role(this, "SchedulerRole", {
+      assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com", {
+        conditions: { StringEquals: { "aws:SourceAccount": this.account } },
+      }),
+      description: `Assumed by EventBridge Scheduler to deliver ${identifier} schedule payloads to its input queue`,
+    });
+    inputQueue.grantSendMessages(schedulerRole);
+    return { scheduleGroup, schedulerRole };
+  }
+}
+
+interface SchedulerWiring {
+  readonly scheduleGroup: scheduler.ScheduleGroup;
+  readonly schedulerRole: iam.Role;
+}
+
+/**
+ * Env vars backing the AWS self-publisher (`createAwsSelfPublisher`). The
+ * whole fleet reads the generic `SELF_*`/`SCHEDULE_*` names (ship-it
+ * converged from its identifier-prefixed set).
+ */
+function selfPublishEnv(
+  inputQueue: sqs.Queue,
+  wiring: SchedulerWiring,
+): Record<string, string> {
+  return {
+    SELF_QUEUE_URL: inputQueue.queueUrl,
+    SELF_QUEUE_ARN: inputQueue.queueArn,
+    SCHEDULE_GROUP_NAME: wiring.scheduleGroup.scheduleGroupName,
+    SCHEDULER_ROLE_ARN: wiring.schedulerRole.roleArn,
+  };
 }

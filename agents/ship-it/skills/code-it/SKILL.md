@@ -115,7 +115,8 @@ Use `gh` (the environment inherits `GITHUB_TOKEN`):
 
 1. Push the branch and open a **draft** PR (`gh pr create --draft`).
 2. Reference the ticket key in the PR title and body; summarise the change and how it was verified.
-3. Apply the label `leanish:agent:ship-it` to the PR.
+3. Apply the label `leanish:agent:ship-it` to the PR (best-effort: the label may not exist in the
+   repo yet — if labeling fails, continue and record it in `notes`).
 4. Do NOT mark the PR ready for review — a later revisit flips it once CI is green.
 
 ## Comment back on the ticket (best-effort)

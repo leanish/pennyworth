@@ -37,11 +37,13 @@ import { runLocal } from "./run-local.js";
  *
  * Surface (deliberately small for phase 1):
  *
- *   agent-runtime run-local --agent-config <path> --agent-module <path>
+ *   agent-runtime run-local --agent-config <path> [--agent-module <path>]
  *                          [--message <path>]
  *                          [--catalog-root <path>]
  *                          [--workspace-root <path>]
+ *                          [--skills-dir <path>]
  *                          [--fake-runner]
+ *                          [--consumer-secret <secret>]
  *                          [--log-level <debug|info|warn|error>]
  *
  * Reading the message: `--message <path>` loads from disk; otherwise stdin
@@ -422,7 +424,8 @@ Inputs:
 Adapters:
   --catalog-root   FilesystemCatalog root (defaults to an empty InMemoryCatalog)
   --workspace-root LocalGitWorkspace root (defaults to InMemoryWorkspace)
-  --skills-dir     where bundled skills live (defaults to the runtime's own skills/)
+  --skills-dir     single skills directory override (default search order:
+                   <agent-config-dir>/skills, then the runtime's bundled skills/)
   --fake-runner    use FakeCodingAgentRunner instead of spawning 'claude'
 
 Misc:

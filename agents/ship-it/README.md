@@ -56,7 +56,9 @@ npm install
 npm run typecheck
 npm run build
 npm test
-npm run check      # typecheck + build + test
+npm run check             # typecheck + build + test
+npm run test:integration  # LocalStack-backed end-to-end suite (docker compose up -d localstack)
+npm run check:full        # check + test:integration
 ```
 
 ## Layout
@@ -66,12 +68,20 @@ agent.yaml                     # descriptor (consumer trigger + init/revisit sta
 skills/
   code-it/SKILL.md             # implement → draft PR
   code-it-revisit/SKILL.md     # CI poll → flip / adapt / rollback / defer
+  groom-it/SKILL.md            # ticket-quality assessment + groomed rewrite (released)
+  spec-it/SKILL.md             # code-grounded spec iteration (dark)
+  review-it/SKILL.md           # independent PR review (dark)
+  validate-it/SKILL.md         # read-only post-deploy verification (dark)
 src/
   payload.ts                   # per-stage payload types (+ revisit validator)
   request-schema.ts            # consumer request type + validator
-  handler.ts                   # gates, skill selection, revisit loop
+  steps.ts                     # step registry — the per-step `released` launch switch
+  handler.ts                   # gates, step selection, revisit loop
   agent.ts                     # defineAgent entry point
-  lambda.ts                    # AWS Lambda cold-start wiring
+  lambda.ts                    # AWS Lambda cold-start wiring (env vars documented in-file;
+                               # self-publish reads the fleet-generic SELF_QUEUE_URL /
+                               # SELF_QUEUE_ARN / SCHEDULE_GROUP_NAME / SCHEDULER_ROLE_ARN)
   signing-key-resolver.ts      # ConsumerRecord signing key → HMAC bytes
 test/                          # vitest specs
+test-integration/              # LocalStack-backed end-to-end specs (npm run test:integration)
 ```

@@ -32,6 +32,7 @@ outputSchema:
       properties:
         afterSeconds:
           type: number
+          minimum: 1
 ---
 
 # secure-it-revisit

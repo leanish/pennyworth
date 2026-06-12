@@ -21,6 +21,21 @@ describe("parseProjectRecord", () => {
     });
   });
 
+  it("rejects a mixed-case id (canonical ids are lowercase owner/slug)", () => {
+    // Regression: a mixed-case record (hand-edited, or left behind by older
+    // tooling on a case-insensitive filesystem) used to parse fine and then
+    // break the filename⇄id invariant once `add` lowercased over it.
+    expect(() => parseProjectRecord({ ...base(), id: "Acme/Widget-Lib" }, LOCATE)).toThrowError(
+      /requires 'id' in canonical lowercase owner\/slug form, got 'Acme\/Widget-Lib'/,
+    );
+  });
+
+  it("rejects an id without an owner/slug separator", () => {
+    expect(() => parseProjectRecord({ ...base(), id: "no-slash" }, LOCATE)).toThrowError(
+      /requires 'id' in canonical lowercase owner\/slug form/,
+    );
+  });
+
   it("allows an empty-string description (spec: 'absent or a string')", () => {
     const project = parseProjectRecord({ ...base(), description: "" }, LOCATE);
     expect(project.description).toBe("");

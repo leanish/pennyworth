@@ -3,24 +3,26 @@
 Decisions taken while building the phase-1 `code-it` slice that are not (yet) backed by a deployed
 counterpart, plus the trust acknowledgments an operator should know about.
 
-## 1. Consumer-envelope stand-in for the future webhook normalizer
+## 1. The webhook normalizer is just another registered consumer
 
-The producer of ship-it's input is a **webhook normalizer** that does not exist yet. Phase 1 treats
-it as just another registered consumer: it signs envelopes of kind **`ship-it-event`** whose inner
+The producer of ship-it's input is the **webhook normalizer**
+([`agents/ship-it-normalizer`](../ship-it-normalizer)) — designed here first, landed since. It is
+just another registered consumer: it signs envelopes of kind **`ship-it-event`** whose inner
 payload carries the ticket content (`ticketKey`, `projectId`, `ticketStatus`, `labels`,
 `ticketSummary`, `ticketDescription?`, `acceptanceCriteria?`). Because the payload carries the
 ticket content, the handler performs **no Jira fetch in v1** — what the normalizer sends is what
-code-it implements. When the normalizer lands, it registers in the ConsumerRegistry like any other
-consumer; nothing in this package changes.
+code-it implements. It registers in the ConsumerRegistry like any other consumer; nothing in this
+package special-cases it.
 
 ## 2. The `ship-it` ticket-label gate is re-asserted in-handler
 
-The normalizer is specified to emit a message only when the ticket carries the `ship-it` label, so
-the in-handler check on `request.labels` is defense in depth. A message without the label is logged
-and skipped, not failed. *(Owner-confirmed.)* Owner note folded in: a ticket comment mentioning
-`@ship-it` (or similar) is an accepted ALTERNATIVE queueing trigger — the normalizer carries that
-explicitly on the request rather than synthesizing the label, and the handler gate becomes
-"label OR explicit mention" when that path lands.
+The normalizer emits a message only when the ticket carries the `ship-it` label (or an approved
+alternative trigger, below), so the in-handler check on `request.labels` is defense in depth. A
+message without the label is logged and skipped, not failed. *(Owner-confirmed.)* Owner note
+folded in: a ticket comment mentioning `@ship-it` (or similar) is an accepted ALTERNATIVE queueing
+trigger — the normalizer carries that explicitly on the request (`trigger.mode: "mention"`) rather
+than synthesizing the label, and the handler gate is "label OR explicit mention OR PR trigger"
+(see §9 for the PR case).
 
 ## 3. `statusSkillMap`, the step registry, and later phases
 
@@ -80,9 +82,10 @@ ship-it image for the cross-model path to be the norm.
 ## 9. PR-shaped events ride the same request shape
 
 `prNumber` is an optional request field (review-it requires it; PR-less review events are advisory
-skips). The global `ship-it` label gate currently applies to ALL init events — the label-less
-GitHub-webhook path (gating on repo opt-in only) is part of the future normalizer work and will be
-revisited when review-it is released.
+skips). PR-shaped events carry `trigger.mode: "pull-request"` and **no ticket labels** (PRs have
+none) — the handler admits them on repo opt-in alone, exactly what the normalizer's GitHub route
+emits. The events route to the dark review-it step via the synthetic `"PR Ready for Review"`
+status, so they stay advisory skips until review-it is released.
 
 ## 10. Rollout starts from groom-it; code-it goes dark until then
 

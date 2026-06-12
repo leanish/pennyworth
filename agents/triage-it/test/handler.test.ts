@@ -26,7 +26,7 @@ import {
   type Project,
 } from "@leanish/runtime/testing";
 
-import { handleTriageMessage } from "../src/handler.js";
+import { EVIDENCE_MOUNT_ID, handleTriageMessage } from "../src/handler.js";
 import type { TriagePayload } from "../src/payload.js";
 
 import { makeTarGz } from "./helpers/tar-fixture.js";
@@ -190,11 +190,15 @@ describe("handleTriageMessage", () => {
     });
     expect(events.entries[1]!.detail).toMatchObject({ codeScope: "code+evidence" });
 
-    // The skill ran with the synced working copy and a populated evidence dir…
+    // The skill ran with the synced working copy first (spawn cwd) and the
+    // evidence dir mounted last — the coding-agent sandbox only reads
+    // mounted directories, so the evidence must ride along.
     expect(runner.invocations).toHaveLength(1);
     expect(runner.invocations[0]!.workingCopies.map((wc) => wc.projectId)).toEqual([
       PROJECT.id,
+      EVIDENCE_MOUNT_ID,
     ]);
+    expect(runner.invocations[0]!.workingCopies.at(-1)!.path).toBe(observed.evidenceDir);
     expect(runner.invocations[0]!.renderedArguments).toContain("codeScope: code+evidence");
     expect(runner.invocations[0]!.renderedArguments).toContain("ticketKey: SUP-1234");
     expect(observed.manifestExisted).toBe(true);
@@ -202,13 +206,18 @@ describe("handleTriageMessage", () => {
     expect(existsSync(observed.evidenceDir!)).toBe(false);
   });
 
-  it("no projectIds — evidence-only fallback with no working copies", async () => {
-    const { runtime, sqs, runner } = await buildHarness();
+  it("no projectIds — evidence-only fallback with only the evidence mount", async () => {
+    const { runtime, sqs, runner, observed } = await buildHarness();
 
     await handleTriageMessage(makeMessage(VALID_REQUEST), runtime);
 
     expect(runner.invocations).toHaveLength(1);
-    expect(runner.invocations[0]!.workingCopies).toEqual([]);
+    // No project working copies — but the evidence dir is still mounted
+    // (it becomes the spawn cwd), or the skill could not read it.
+    expect(runner.invocations[0]!.workingCopies.map((wc) => wc.projectId)).toEqual([
+      EVIDENCE_MOUNT_ID,
+    ]);
+    expect(runner.invocations[0]!.workingCopies[0]!.path).toBe(observed.evidenceDir);
     expect(runner.invocations[0]!.renderedArguments).toContain("codeScope: evidence-only");
     const delivered = JSON.parse(sqs.messages[0]!.request.body);
     expect(delivered.result.codeScope).toBe("evidence-only");

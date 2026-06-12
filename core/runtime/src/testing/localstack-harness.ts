@@ -36,6 +36,12 @@ import {
   EventBridgeClient,
   type EventBridgeClientConfig,
 } from "@aws-sdk/client-eventbridge";
+import {
+  CreateScheduleGroupCommand,
+  DeleteScheduleGroupCommand,
+  SchedulerClient,
+  type SchedulerClientConfig,
+} from "@aws-sdk/client-scheduler";
 
 /**
  * Configuration + lifecycle for a LocalStack-backed integration test.
@@ -374,6 +380,35 @@ export class LocalStackHarness {
       await client.send(new DeleteEventBusCommand({ Name: busName })).catch(() => undefined);
     });
     return busName;
+  }
+
+  // ---------- EventBridge Scheduler ----------
+
+  schedulerClient(extra: SchedulerClientConfig = {}): SchedulerClient {
+    return new SchedulerClient({ ...this.#commonConfig(), ...extra });
+  }
+
+  /**
+   * Create an EventBridge Scheduler schedule group (the `GroupName` a
+   * `CreateSchedule` call targets must exist first). Returns the unique
+   * group name. Deleting the group on cleanup also removes any schedules
+   * created inside it.
+   *
+   * Note: LocalStack Community (4.x) backs the `scheduler` service with a
+   * CRUD-only store — schedules round-trip but are never *executed*, so
+   * tests can assert on `CreateSchedule` semantics (dedupe, target shape)
+   * but must simulate the fire themselves.
+   */
+  async createScheduleGroup(suffix = "schedules"): Promise<string> {
+    const groupName = `${this.id}-${suffix}-${randomUUID().slice(0, 6)}`;
+    const client = this.schedulerClient();
+    await client.send(new CreateScheduleGroupCommand({ Name: groupName }));
+    this.#cleanups.push(async () => {
+      await client
+        .send(new DeleteScheduleGroupCommand({ Name: groupName }))
+        .catch(() => undefined);
+    });
+    return groupName;
   }
 
   // ---------- internals ----------

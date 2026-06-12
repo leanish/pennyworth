@@ -194,7 +194,6 @@ export {
   EnvelopeVerificationError,
   ExecutionResolveError,
   MissingNeedError,
-  PhaseUnavailableError,
   RouterNotConfiguredError,
   RuntimeError,
   SelfPublishNotConfiguredError,

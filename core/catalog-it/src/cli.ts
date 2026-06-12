@@ -63,7 +63,7 @@ export async function catalogitCli(
       case "publish":
         return await runPublish(rest, stdout, stderr, options.s3Client);
       case "pull":
-        return await runPullCmd(rest, stdout, stderr);
+        return await runPullCmd(rest, stdout, stderr, options.s3Client);
       case "add":
         return await runAddCmd(rest, stdout, stderr);
       case "discover":
@@ -182,15 +182,7 @@ async function runPublish(
   }
 
   // Build the S3 client (or use injected one for tests)
-  // Retry knobs mirror agent-runtime's `awsClientDefaults()` — kept inline
-  // here to preserve catalogit's "no agent-runtime dependency" invariant.
-  const client =
-    injectedClient ??
-    new AwsS3Client({
-      maxAttempts: 5,
-      retryMode: "adaptive",
-      ...(args.strings["region"] !== undefined ? { region: args.strings["region"] } : {}),
-    });
+  const client = injectedClient ?? buildS3Client(args.strings["region"]);
 
   let result: import("./publish.js").PublishCatalogResult;
   try {
@@ -242,6 +234,7 @@ async function runPullCmd(
   argv: ReadonlyArray<string>,
   stdout: NodeJS.WritableStream,
   stderr: NodeJS.WritableStream,
+  injectedClient?: import("@aws-sdk/client-s3").S3Client,
 ): Promise<number> {
   const args = parseMixedFlags(argv, {
     strings: ["catalog-root", "bucket", "key", "region"],
@@ -264,11 +257,7 @@ async function runPullCmd(
   const pruneMode = hasPrune ? "always" : hasNoPrune ? "never" : "ask";
   const catalogRoot = resolveCatalogRoot(args.strings);
 
-  const client = new AwsS3Client({
-    maxAttempts: 5,
-    retryMode: "adaptive",
-    ...(args.strings["region"] !== undefined ? { region: args.strings["region"] } : {}),
-  });
+  const client = injectedClient ?? buildS3Client(args.strings["region"]);
 
   try {
     const summary = await pullCatalog(
@@ -290,6 +279,24 @@ async function runPullCmd(
     stderr.write(`catalogit pull failed: ${message}\n`);
     return 2;
   }
+}
+
+/**
+ * S3 client for the CLI-built (non-injected) `publish`/`pull` paths.
+ *
+ * Retry knobs mirror agent-runtime's `awsClientDefaults()` — kept inline
+ * here to preserve catalogit's "no agent-runtime dependency" invariant.
+ * Path-style addressing for custom S3 endpoints (`AWS_ENDPOINT_URL`, e.g.
+ * LocalStack or MinIO) follows the fleet convention: virtual-host bucket
+ * URLs don't route on such endpoints, while real AWS S3 accepts both.
+ */
+function buildS3Client(region: string | undefined): AwsS3Client {
+  return new AwsS3Client({
+    maxAttempts: 5,
+    retryMode: "adaptive",
+    ...(region !== undefined ? { region } : {}),
+    ...(process.env["AWS_ENDPOINT_URL"] !== undefined ? { forcePathStyle: true } : {}),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -400,10 +407,10 @@ export function buildDiscoverOptionsFromFlags(args: MixedFlags): DiscoverOptions
 export function runProcess(
   cmd: string,
   args: readonly string[],
-  opts: { cwd?: string; input?: string; timeoutMs?: number },
+  opts: { cwd?: string; input?: string; timeoutMs?: number; env?: NodeJS.ProcessEnv },
 ): Promise<RunResult> {
   return new Promise((resolve) => {
-    const child = spawn(cmd, [...args], { cwd: opts.cwd });
+    const child = spawn(cmd, [...args], { cwd: opts.cwd, env: opts.env });
     let stdout = "";
     let stderr = "";
     let timedOut = false;
@@ -446,7 +453,23 @@ export function runProcess(
 const GH_TIMEOUT_MS = 60_000;
 const GIT_TIMEOUT_MS = 5 * 60_000;
 
-const runGit: RunGit = (args) => runProcess("git", args, { timeoutMs: GIT_TIMEOUT_MS });
+// Inspection clones must never wait on credentials: a nonexistent (or
+// private) repo makes GitHub ask for auth, and a configured credential
+// helper (e.g. macOS `osxkeychain`) can block indefinitely on a prompt the
+// CLI never shows. Reset configured helpers (`credential.helper=`), route
+// auth through the `gh` CLI that `add`/`discover` already require (ambient
+// login, non-interactive), and disable terminal prompts so failures surface
+// immediately as a clear CloneError instead of a multi-minute hang.
+const GIT_NONINTERACTIVE_ARGS: readonly string[] = [
+  "-c", "credential.helper=",
+  "-c", "credential.helper=!gh auth git-credential",
+];
+
+const runGit: RunGit = (args) =>
+  runProcess("git", [...GIT_NONINTERACTIVE_ARGS, ...args], {
+    timeoutMs: GIT_TIMEOUT_MS,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+  });
 const runGh: RunGh = (args) => runProcess("gh", args, { timeoutMs: GH_TIMEOUT_MS });
 
 const confirm = (message: string): Promise<boolean> =>

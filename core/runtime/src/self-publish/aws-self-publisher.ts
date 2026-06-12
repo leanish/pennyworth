@@ -51,7 +51,17 @@ export interface AwsSelfPublisherOptions {
 export function createAwsSelfPublisher(options: AwsSelfPublisherOptions): SelfPublisher {
   const sqs =
     options.sqsClient ??
-    new SQSClient({ ...awsClientDefaults(), region: options.region });
+    new SQSClient({
+      ...awsClientDefaults(),
+      region: options.region,
+      // When `AWS_ENDPOINT_URL` is set (LocalStack, dev gateway), respect
+      // the configured endpoint instead of letting the SDK override it
+      // with the QueueUrl's host (same rationale as the `sqs` need's
+      // client in needs/sqs.ts). In production this flag is a no-op.
+      ...(process.env["AWS_ENDPOINT_URL"] !== undefined
+        ? { useQueueUrlAsEndpoint: false }
+        : {}),
+    });
   const scheduler =
     options.schedulerClient ??
     new SchedulerClient({ ...awsClientDefaults(), region: options.region });
